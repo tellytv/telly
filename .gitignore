@@ -1,4 +1,4 @@
 *.m3u
 build/*
 telly
-
+.DS_Store
