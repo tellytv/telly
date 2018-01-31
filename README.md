@@ -24,4 +24,4 @@ IPTV proxy for Plex Live written in Golang
 
 # Troubleshooting
 
-Please free to open an issue if you run into any issues (_no pun intended_) at all, I'll be more than happy to help.
+Please free to open an issue if you run into any issues at all, I'll be more than happy to help.
