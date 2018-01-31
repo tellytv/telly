@@ -201,9 +201,15 @@ func main() {
 		for _, track := range usedTracks {
 
 			parsedTrack := showNameRegex.FindStringSubmatch(track.Name)
-			finalName := parsedTrack[0]
-			finalName = strings.Replace(finalName, "tvg-name=\"", "", -1)
-			finalName = strings.Replace(finalName, "\" tvg", "", -1)
+			var finalName string
+			if len(parsedTrack) == 0 {
+				// TODO: Find other ways of parsing it
+				finalName = track.Name
+			} else {
+				finalName = parsedTrack[0]
+				finalName = strings.Replace(finalName, "tvg-name=\"", "", -1)
+				finalName = strings.Replace(finalName, "\" tvg", "", -1)
+			}
 			lu := LineupItem{
 				GuideNumber: strconv.Itoa(gn),
 				GuideName:   finalName,
