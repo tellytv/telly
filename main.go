@@ -19,6 +19,7 @@ var m3uFile *string
 var listenAddress *string
 var logRequests *bool
 var concurrentStreams *int
+var useRegex *string
 
 type DiscoveryData struct {
 	FriendlyName    string
@@ -53,6 +54,7 @@ func init() {
 	m3uFile = flag.String("file", "iptv.m3u", "Location of m3u file")
 	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
+	useRegex = flag.String("useregex", ".*", "Use regex to filter for channels that you want. Basic example would be .*UK.*")
 	flag.Parse()
 }
 
@@ -85,7 +87,7 @@ func main() {
 	showNameRegex, _ := regexp.Compile("tvg-name=\"(.*)\" tvg")
 
 	for _, track := range playlist.Tracks {
-		if *useRegex && *filterUkTv {
+		if *filterRegex && *filterUkTv {
 			if !episodeRegex.MatchString(track.Name) {
 				if !twentyFourSevenRegex.MatchString(track.Name) {
 					if ukTv.MatchString(track.Name) {
@@ -93,14 +95,14 @@ func main() {
 					}
 				}
 			}
-		} else if *useRegex && !*filterUkTv {
+		} else if *filterRegex && !*filterUkTv {
 			if !episodeRegex.MatchString(track.Name) {
 				if !twentyFourSevenRegex.MatchString(track.Name) {
 					usedTracks = append(usedTracks, track)
 				}
 			}
 
-		} else if !*useRegex && *filterUkTv {
+		} else if !*filterRegex && *filterUkTv {
 			if ukTv.MatchString(track.Name) {
 				usedTracks = append(usedTracks, track)
 			}
@@ -109,7 +111,7 @@ func main() {
 		}
 	}
 
-	if !*useRegex {
+	if !*filterRegex {
 		fmt.Println("[telly] [warning] telly is not attempting to strip out unneeded channels, please use the flag -filterregex if telly returns too many channels")
 	}
 
