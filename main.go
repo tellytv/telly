@@ -54,7 +54,7 @@ func init() {
 	m3uFile = flag.String("file", "iptv.m3u", "Location of m3u file")
 	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
-	useRegex = flag.String("useregex", ".*", "Use regex to filter for channels that you want. Basic example would be .*UK.*")
+	useRegex = flag.String("useregex", ".*", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this -uktv and -filterregex will NOT work")
 	flag.Parse()
 }
 
@@ -86,28 +86,37 @@ func main() {
 
 	showNameRegex, _ := regexp.Compile("tvg-name=\"(.*)\" tvg")
 
+	userRegex, _ := regexp.Compile(*useRegex)
+
 	for _, track := range playlist.Tracks {
-		if *filterRegex && *filterUkTv {
-			if !episodeRegex.MatchString(track.Name) {
-				if !twentyFourSevenRegex.MatchString(track.Name) {
-					if ukTv.MatchString(track.Name) {
+		if *useRegex == ".*" {
+			if *filterRegex && *filterUkTv {
+				if !episodeRegex.MatchString(track.Name) {
+					if !twentyFourSevenRegex.MatchString(track.Name) {
+						if ukTv.MatchString(track.Name) {
+							usedTracks = append(usedTracks, track)
+						}
+					}
+				}
+			} else if *filterRegex && !*filterUkTv {
+				if !episodeRegex.MatchString(track.Name) {
+					if !twentyFourSevenRegex.MatchString(track.Name) {
 						usedTracks = append(usedTracks, track)
 					}
 				}
-			}
-		} else if *filterRegex && !*filterUkTv {
-			if !episodeRegex.MatchString(track.Name) {
-				if !twentyFourSevenRegex.MatchString(track.Name) {
+
+			} else if !*filterRegex && *filterUkTv {
+				if ukTv.MatchString(track.Name) {
 					usedTracks = append(usedTracks, track)
 				}
-			}
-
-		} else if !*filterRegex && *filterUkTv {
-			if ukTv.MatchString(track.Name) {
+			} else {
 				usedTracks = append(usedTracks, track)
 			}
 		} else {
-			usedTracks = append(usedTracks, track)
+			// Use regex
+			if userRegex.MatchString(track.Name) {
+				usedTracks = append(usedTracks, track)
+			}
 		}
 	}
 
