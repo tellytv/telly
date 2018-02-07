@@ -13,7 +13,7 @@ import (
 
 var usedTracks []m3u.Track
 var deviceXml string
-var useRegex *bool
+var filterRegex *bool
 var filterUkTv *bool
 var m3uFile *string
 var listenAddress *string
@@ -47,7 +47,7 @@ type LineupItem struct {
 }
 
 func init() {
-	useRegex = flag.Bool("useregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
+	filterRegex = flag.Bool("filterregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
 	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
 	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
 	m3uFile = flag.String("file", "iptv.m3u", "Location of m3u file")
@@ -110,7 +110,7 @@ func main() {
 	}
 
 	if !*useRegex {
-		fmt.Println("[telly] [warning] telly is not attempting to strip out unneeded channels, please use the flag -useregex if telly returns too many channels")
+		fmt.Println("[telly] [warning] telly is not attempting to strip out unneeded channels, please use the flag -filterregex if telly returns too many channels")
 	}
 
 	if !*filterUkTv {
