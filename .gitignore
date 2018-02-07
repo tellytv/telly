@@ -2,3 +2,5 @@
 build/*
 telly
 .DS_Store
+/.GOPATH
+/bin
