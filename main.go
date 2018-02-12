@@ -80,7 +80,7 @@ func main() {
 	}
 
 	episodeRegex, _ := regexp.Compile("S\\d{1,3}E\\d{1,3}")
-	twentyFourSevenRegex, _ := regexp.Compile("24\\/7")
+	twentyFourSevenRegex, _ := regexp.Compile("24/7")
 	ukTv, _ := regexp.Compile("UK")
 
 	showNameRegex, _ := regexp.Compile("tvg-name=\"(.*)\" tvg")
