@@ -142,7 +142,7 @@ func main() {
 		}
 	}
 
-	log("info", "Reading m3u file" + *m3uFile + "...")
+	log("info", "Reading m3u file " + *m3uFile + "...")
 	playlist, err := m3u.Parse(*m3uFile)
 	if err != nil {
 		log("error", "unable to read m3u file, error below")
