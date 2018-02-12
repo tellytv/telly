@@ -199,7 +199,7 @@ func main() {
 		log("info", "telly is currently not filtering for only uk television. if you would like it to, please use the flag -uktv")
 	}
 
-	log("info", "found" + strconv.Itoa(len(usedTracks)) + "channels")
+	log("info", "found " + strconv.Itoa(len(usedTracks)) + " channels")
 
 	log("info", "creating discovery data")
 	discoveryData := DiscoveryData{
