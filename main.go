@@ -53,7 +53,7 @@ func init() {
 	filterRegex = flag.Bool("filterregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
 	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
 	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
-	m3uFile = flag.String("file", "iptv.m3u", "Location of m3u file")
+	m3uFile = flag.String("playlist", "iptv.m3u", "Location of playlist m3u file")
 	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
 	useRegex = flag.String("useregex", ".*", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this -uktv and -filterregex will NOT work")
@@ -126,7 +126,7 @@ func main() {
 	usedTracks := make([]m3u.Track, 0)
 
 	if *m3uFile == "iptv.m3u" {
-		log("warning", "using default m3u option, 'iptv.m3u'. launch telly with the -file=yourfile.m3u option to change this!")
+		log("warning", "using default m3u option, 'iptv.m3u'. launch telly with the -playlist=yourfile.m3u option to change this!")
 	} else {
 		if strings.HasPrefix(strings.ToLower(*m3uFile), "http") {
 			tempFilename := os.TempDir() + "/" + "telly.m3u"
