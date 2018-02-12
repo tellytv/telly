@@ -9,6 +9,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"errors"
+	"os"
+	"io"
 )
 
 var deviceXml string
@@ -63,11 +66,46 @@ func logRequest(r string) {
 	}
 }
 
+func downloadFile(url string, dest string) (error) {
+	out, err := os.Create(dest)
+	defer out.Close()
+	if err != nil {
+		return errors.New("Could not create file: " + dest + " ; " + err.Error())
+	}
+
+	fmt.Println("[telly] [info] Downloading file " + url)
+	resp, err := http.Get(url)
+	defer resp.Body.Close()
+	if err != nil {
+		return errors.New("Could not download file: " + err.Error())
+	}
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return errors.New("Could not copy file: " + err.Error())
+	}
+
+	return nil
+}
+
 func main() {
 	usedTracks := make([]m3u.Track, 0)
 
 	if *m3uFile == "iptv.m3u" {
 		fmt.Println("[telly] [warning] using default m3u option, 'iptv.m3u'. launch telly with the -file=yourfile.m3u option to change this!")
+	} else {
+		if strings.HasPrefix(strings.ToLower(*m3uFile), "http") {
+			tempFilename := os.TempDir() + "/" + "telly.m3u"
+
+			err := downloadFile(*m3uFile, tempFilename)
+			if err != nil {
+				fmt.Println("[telly] [error] " + err.Error())
+				os.Exit(1)
+			}
+
+			*m3uFile = tempFilename
+			defer os.Remove(tempFilename)
+		}
 	}
 
 	fmt.Println("[telly] [parser] Reading m3u file", *m3uFile, "...")
