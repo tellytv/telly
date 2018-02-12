@@ -60,9 +60,13 @@ func init() {
 	flag.Parse()
 }
 
+func log(level string, msg string) {
+	fmt.Println("[telly] [" + level + "] " + msg)
+}
+
 func logRequest(r string) {
 	if *logRequests {
-		fmt.Println("[telly] [request]", r)
+		log("request", r)
 	}
 }
 
@@ -73,7 +77,7 @@ func downloadFile(url string, dest string) (error) {
 		return errors.New("Could not create file: " + dest + " ; " + err.Error())
 	}
 
-	fmt.Println("[telly] [info] Downloading file " + url)
+	log("info", "Downloading file " + url)
 	resp, err := http.Get(url)
 	defer resp.Body.Close()
 	if err != nil {
@@ -92,14 +96,14 @@ func main() {
 	usedTracks := make([]m3u.Track, 0)
 
 	if *m3uFile == "iptv.m3u" {
-		fmt.Println("[telly] [warning] using default m3u option, 'iptv.m3u'. launch telly with the -file=yourfile.m3u option to change this!")
+		log("warning", "using default m3u option, 'iptv.m3u'. launch telly with the -file=yourfile.m3u option to change this!")
 	} else {
 		if strings.HasPrefix(strings.ToLower(*m3uFile), "http") {
 			tempFilename := os.TempDir() + "/" + "telly.m3u"
 
 			err := downloadFile(*m3uFile, tempFilename)
 			if err != nil {
-				fmt.Println("[telly] [error] " + err.Error())
+				log("error", err.Error())
 				os.Exit(1)
 			}
 
@@ -108,12 +112,12 @@ func main() {
 		}
 	}
 
-	fmt.Println("[telly] [parser] Reading m3u file", *m3uFile, "...")
+	log("info", "Reading m3u file" + *m3uFile + "...")
 	playlist, err := m3u.Parse(*m3uFile)
 	if err != nil {
-		fmt.Println("[telly] [error] unable to read m3u file, error below")
-		fmt.Println("[telly] [error] m3u files need to have specific formats, see the github page for more information")
-		fmt.Println("[telly] [error] future versions of telly will attempt to parse this better")
+		log("error", "unable to read m3u file, error below")
+		log("error", "m3u files need to have specific formats, see the github page for more information")
+		log("error", "future versions of telly will attempt to parse this better")
 		panic(err)
 	}
 
@@ -158,18 +162,16 @@ func main() {
 	}
 
 	if !*filterRegex {
-		fmt.Println("[telly] [warning] telly is not attempting to strip out unneeded channels, please use the flag -filterregex if telly returns too many channels")
+		log("warning", "telly is not attempting to strip out unneeded channels, please use the flag -filterregex if telly returns too many channels")
 	}
 
 	if !*filterUkTv {
-		fmt.Println("[telly] [info] telly is currently not filtering for only uk television. if you would like it to, please use the flag -uktv")
+		log("info", "telly is currently not filtering for only uk television. if you would like it to, please use the flag -uktv")
 	}
 
-	fmt.Println("[telly] [info] found", len(usedTracks), "channels")
+	log("info", "found" + strconv.Itoa(len(usedTracks)) + "channels")
 
-	fmt.Println("")
-
-	fmt.Println("[telly] [info] creating discovery data")
+	log("info", "creating discovery data")
 	discoveryData := DiscoveryData{
 		FriendlyName:    "telly",
 		Manufacturer:    "Silicondust",
@@ -182,7 +184,8 @@ func main() {
 		BaseURL:         fmt.Sprintf("http://%s", *listenAddress),
 		LineupURL:       fmt.Sprintf("http://%s/lineup.json", *listenAddress),
 	}
-	fmt.Println("[telly] [info] creating lineup status")
+
+	log("info", "creating lineup status")
 	lineupStatus := LineupStatus{
 		ScanInProgress: 0,
 		ScanPossible:   1,
@@ -190,7 +193,7 @@ func main() {
 		SourceList:     []string{"Cable"},
 	}
 
-	fmt.Println("[telly] [info] creating device xml")
+	log("info", "creating device xml")
 	deviceXml = `<root xmlns="urn:schemas-upnp-org:device-1-0">
     <specVersion>
         <major>1</major>
@@ -214,7 +217,7 @@ func main() {
 	deviceXml = strings.Replace(deviceXml, "$ModelNumber", discoveryData.ModelNumber, -1)
 	deviceXml = strings.Replace(deviceXml, "$DeviceID", discoveryData.DeviceID, -1)
 
-	fmt.Println("[telly] [info] creating webserver routes")
+	log("info", "creating webserver routes")
 
 	http.HandleFunc("/discover.json", func(w http.ResponseWriter, r *http.Request) {
 		logRequest("/discover.json")
@@ -273,6 +276,6 @@ func main() {
 
 	})
 
-	fmt.Println("[telly] [info] listening on", *listenAddress)
+	log("info", "listening on " + *listenAddress)
 	http.ListenAndServe(*listenAddress, nil)
 }
