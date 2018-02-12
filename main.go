@@ -11,7 +11,6 @@ import (
 	"strings"
 )
 
-var usedTracks []m3u.Track
 var deviceXml string
 var filterRegex *bool
 var filterUkTv *bool
