@@ -55,7 +55,7 @@ func init() {
 	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
 	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
 	//TODO: remove m3uFileOld
-	m3uFileOld = flag.String("file", "iptv.m3u", "Filepath of the playlist m3u file (DEPRECATED, use -playlist instead)")
+	m3uFileOld = flag.String("file", "", "Filepath of the playlist m3u file (DEPRECATED, use -playlist instead)")
 	m3uPath = flag.String("playlist", "iptv.m3u", "Location of playlist m3u file")
 	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
