@@ -92,6 +92,36 @@ func downloadFile(url string, dest string) (error) {
 	return nil
 }
 
+func buildChannels(usedTracks []m3u.Track, filterRegex *regexp.Regexp) ([]LineupItem) {
+	lineup := make([]LineupItem, 0)
+	gn := 10000
+
+	for _, track := range usedTracks {
+
+		parsedTrack := filterRegex.FindStringSubmatch(track.Name)
+		var finalName string
+		if len(parsedTrack) == 0 {
+			// TODO: Find other ways of parsing it
+			finalName = track.Name
+		} else {
+			finalName = parsedTrack[0]
+			finalName = strings.Replace(finalName, "tvg-name=\"", "", -1)
+			finalName = strings.Replace(finalName, "\" tvg", "", -1)
+		}
+		lu := LineupItem{
+			GuideNumber: strconv.Itoa(gn),
+			GuideName:   finalName,
+			URL:         track.URI,
+		}
+
+		lineup = append(lineup, lu)
+
+		gn = gn + 1
+	}
+
+	return lineup
+}
+
 func main() {
 	usedTracks := make([]m3u.Track, 0)
 
@@ -245,34 +275,12 @@ func main() {
 		w.Write([]byte(deviceXml))
 	})
 
+	log("info", "Building lineup")
+	lineupItems := buildChannels(usedTracks, showNameRegex)
+
 	http.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
 		logRequest("/lineup.json")
-		lineup := make([]LineupItem, 0)
-		gn := 10000
-		for _, track := range usedTracks {
-
-			parsedTrack := showNameRegex.FindStringSubmatch(track.Name)
-			var finalName string
-			if len(parsedTrack) == 0 {
-				// TODO: Find other ways of parsing it
-				finalName = track.Name
-			} else {
-				finalName = parsedTrack[0]
-				finalName = strings.Replace(finalName, "tvg-name=\"", "", -1)
-				finalName = strings.Replace(finalName, "\" tvg", "", -1)
-			}
-			lu := LineupItem{
-				GuideNumber: strconv.Itoa(gn),
-				GuideName:   finalName,
-				URL:         track.URI,
-			}
-
-			lineup = append(lineup, lu)
-
-			gn = gn + 1
-		}
-
-		json.NewEncoder(w).Encode(lineup)
+		json.NewEncoder(w).Encode(lineupItems)
 
 	})
 
