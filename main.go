@@ -131,8 +131,8 @@ func main() {
 	// TODO: remove m3uFileOld
 	// give warning about -file
 	if *m3uFileOld != "" {
-		log("warning", "argument -file is deprecated, use -playlist instead !!")
-		m3uPath = m3uFileOld
+		log("error", "argument -file is deprecated, use -playlist instead")
+		os.Exit(1)
 	}
 
 	if *m3uPath == "iptv.m3u" {
