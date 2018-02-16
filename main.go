@@ -17,6 +17,7 @@ import (
 var deviceXml string
 var filterRegex *bool
 var filterUkTv *bool
+//TODO: remove m3uFileOld in next release (deprecated)
 var m3uFileOld *string
 var m3uPath *string
 var listenAddress *string
@@ -54,7 +55,7 @@ func init() {
 	filterRegex = flag.Bool("filterregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
 	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
 	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
-	//TODO: remove m3uFileOld
+	//TODO: remove m3uFileOld in next release (deprecated)
 	m3uFileOld = flag.String("file", "", "Filepath of the playlist m3u file (DEPRECATED, use -playlist instead)")
 	m3uPath = flag.String("playlist", "iptv.m3u", "Location of playlist m3u file")
 	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
@@ -129,7 +130,6 @@ func main() {
 	usedTracks := make([]m3u.Track, 0)
 
 	// TODO: remove m3uFileOld
-	// give warning about -file
 	if *m3uFileOld != "" {
 		log("error", "argument -file is deprecated, use -playlist instead")
 		os.Exit(1)
