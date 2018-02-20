@@ -68,10 +68,17 @@ func log(level string, msg string) {
 	fmt.Println("[telly] [" + level + "] " + msg)
 }
 
-func logRequest(r string) {
-	if *logRequests {
-		log("request", r)
-	}
+func logRequestHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if *logRequests {
+			log("request", r.RemoteAddr + " -> " + r.Method + " " + r.RequestURI)
+
+			if r.Method == "POST" {
+				r.ParseForm()
+				log("request", "POST body: " + r.Form.Encode())
+			}
+		}
+	})
 }
 
 func downloadFile(url string, dest string) (error) {
@@ -260,27 +267,23 @@ func main() {
 	log("info", "creating webserver routes")
 
 	http.HandleFunc("/discover.json", func(w http.ResponseWriter, r *http.Request) {
-		logRequest("/discover.json")
 		json.NewEncoder(w).Encode(discoveryData)
 	})
 
 	http.HandleFunc("/lineup_status.json", func(w http.ResponseWriter, r *http.Request) {
-		logRequest("/lineup_status.json")
 		json.NewEncoder(w).Encode(lineupStatus)
 	})
 
 	http.HandleFunc("/lineup.post", func(w http.ResponseWriter, r *http.Request) {
-		logRequest("/lineup.post")
+		// empty
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		logRequest("/")
 		w.Header().Set("Content-Type", "application/xml")
 		w.Write([]byte(deviceXml))
 	})
 
 	http.HandleFunc("/device.xml", func(w http.ResponseWriter, r *http.Request) {
-		logRequest("/device.xml")
 		w.Header().Set("Content-Type", "application/xml")
 		w.Write([]byte(deviceXml))
 	})
@@ -289,11 +292,13 @@ func main() {
 	lineupItems := buildChannels(usedTracks, showNameRegex)
 
 	http.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
-		logRequest("/lineup.json")
 		json.NewEncoder(w).Encode(lineupItems)
 
 	})
 
 	log("info", "listening on " + *listenAddress)
-	http.ListenAndServe(*listenAddress, nil)
+	if err := http.ListenAndServe(*listenAddress, logRequestHandler()); err != nil {
+		log("error", err.Error())
+		os.Exit(1)
+	}
 }
