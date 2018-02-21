@@ -1,4 +1,4 @@
-FROM golang:alpine as builder
+FROM golang:onbuild
 WORKDIR /go/src/app
 ADD . .
 RUN find . -type f -print0 | xargs -0 sed -i 's/localhost/0.0.0.0/g' \
