@@ -222,9 +222,9 @@ func main() {
 		log("info", "telly is currently not filtering for only uk television. if you would like it to, please use the flag -uktv")
 	}
 
-	channelCount := strconv.Itoa(len(usedTracks))
+	channelCount := len(usedTracks)
 
-	log("info", "found "+channelCount+" channels")
+	log("info", "found "+strconv.Itoa(channelCount)+" channels")
 
 	if channelCount > 420 {
 		fmt.Println("")
