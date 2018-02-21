@@ -222,7 +222,17 @@ func main() {
 		log("info", "telly is currently not filtering for only uk television. if you would like it to, please use the flag -uktv")
 	}
 
-	log("info", "found "+strconv.Itoa(len(usedTracks))+" channels")
+	channelCount := strconv.Itoa(len(usedTracks))
+
+	log("info", "found "+channelCount+" channels")
+
+	if channelCount > 420 {
+		fmt.Println("")
+		fmt.Println("* * * * * * * * * * *")
+		log("warning", "telly has loaded more than 420 channels. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You have been warned!")
+		fmt.Println("* * * * * * * * * * *")
+		fmt.Println("")
+	}
 
 	log("info", "creating discovery data")
 	discoveryData := DiscoveryData{
