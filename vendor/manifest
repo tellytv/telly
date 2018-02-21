@@ -10,6 +10,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/tombowditch/telly-m3u-parser",
+			"repository": "https://github.com/tombowditch/telly-m3u-parser",
+			"vcs": "git",
+			"revision": "f31ea4221f11c659b47135e00610b7f8d364d27c",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/wadey/gocovmerge",
 			"repository": "https://github.com/wadey/gocovmerge",
 			"vcs": "git",
