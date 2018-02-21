@@ -146,7 +146,7 @@ func main() {
 		log("warning", "using default m3u option, 'iptv.m3u'. launch telly with the -playlist=yourfile.m3u option to change this!")
 	} else {
 		if strings.HasPrefix(strings.ToLower(*m3uPath), "http") {
-			tempFilename := os.TempDir() + "/" + "telly.m3u"
+			tempFilename := os.TempDir() + "telly.m3u"
 
 			err := downloadFile(*m3uPath, tempFilename)
 			if err != nil {
