@@ -2,21 +2,22 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	"github.com/jamesnetherton/m3u"
+	"github.com/tombowditch/telly-m3u-parser"
+	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"errors"
-	"os"
-	"io"
 )
 
 var deviceXml string
 var filterRegex *bool
 var filterUkTv *bool
+
 //TODO: remove m3uFileOld in next release (deprecated)
 var m3uFileOld *string
 var m3uPath *string
@@ -71,24 +72,24 @@ func log(level string, msg string) {
 func logRequestHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if *logRequests {
-			log("request", r.RemoteAddr + " -> " + r.Method + " " + r.RequestURI)
+			log("request", r.RemoteAddr+" -> "+r.Method+" "+r.RequestURI)
 
 			if r.Method == "POST" {
 				r.ParseForm()
-				log("request", "POST body: " + r.Form.Encode())
+				log("request", "POST body: "+r.Form.Encode())
 			}
 		}
 	})
 }
 
-func downloadFile(url string, dest string) (error) {
+func downloadFile(url string, dest string) error {
 	out, err := os.Create(dest)
 	defer out.Close()
 	if err != nil {
 		return errors.New("Could not create file: " + dest + " ; " + err.Error())
 	}
 
-	log("info", "Downloading file " + url)
+	log("info", "Downloading file "+url)
 	resp, err := http.Get(url)
 	defer resp.Body.Close()
 	if err != nil {
@@ -103,7 +104,7 @@ func downloadFile(url string, dest string) (error) {
 	return nil
 }
 
-func buildChannels(usedTracks []m3u.Track, filterRegex *regexp.Regexp) ([]LineupItem) {
+func buildChannels(usedTracks []m3u.Track, filterRegex *regexp.Regexp) []LineupItem {
 	lineup := make([]LineupItem, 0)
 	gn := 10000
 
@@ -159,7 +160,7 @@ func main() {
 		}
 	}
 
-	log("info", "Reading m3u file " + *m3uPath + "...")
+	log("info", "Reading m3u file "+*m3uPath+"...")
 	playlist, err := m3u.Parse(*m3uPath)
 	if err != nil {
 		log("error", "unable to read m3u file, error below")
@@ -216,7 +217,7 @@ func main() {
 		log("info", "telly is currently not filtering for only uk television. if you would like it to, please use the flag -uktv")
 	}
 
-	log("info", "found " + strconv.Itoa(len(usedTracks)) + " channels")
+	log("info", "found "+strconv.Itoa(len(usedTracks))+" channels")
 
 	log("info", "creating discovery data")
 	discoveryData := DiscoveryData{
@@ -296,7 +297,7 @@ func main() {
 
 	})
 
-	log("info", "listening on " + *listenAddress)
+	log("info", "listening on "+*listenAddress)
 	if err := http.ListenAndServe(*listenAddress, logRequestHandler()); err != nil {
 		log("error", err.Error())
 		os.Exit(1)
