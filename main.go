@@ -69,7 +69,7 @@ func log(level string, msg string) {
 	fmt.Println("[telly] [" + level + "] " + msg)
 }
 
-func logRequestHandler() http.Handler {
+func logRequestHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if *logRequests {
 			log("request", r.RemoteAddr+" -> "+r.Method+" "+r.RequestURI)
@@ -79,6 +79,9 @@ func logRequestHandler() http.Handler {
 				log("request", "POST body: "+r.Form.Encode())
 			}
 		}
+
+		next.ServeHTTP(w, r)
+
 	})
 }
 
@@ -269,24 +272,26 @@ func main() {
 
 	log("info", "creating webserver routes")
 
-	http.HandleFunc("/discover.json", func(w http.ResponseWriter, r *http.Request) {
+	h := http.NewServeMux()
+
+	h.HandleFunc("/discover.json", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(discoveryData)
 	})
 
-	http.HandleFunc("/lineup_status.json", func(w http.ResponseWriter, r *http.Request) {
+	h.HandleFunc("/lineup_status.json", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(lineupStatus)
 	})
 
-	http.HandleFunc("/lineup.post", func(w http.ResponseWriter, r *http.Request) {
+	h.HandleFunc("/lineup.post", func(w http.ResponseWriter, r *http.Request) {
 		// empty
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	h.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
 		w.Write([]byte(deviceXml))
 	})
 
-	http.HandleFunc("/device.xml", func(w http.ResponseWriter, r *http.Request) {
+	h.HandleFunc("/device.xml", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
 		w.Write([]byte(deviceXml))
 	})
@@ -294,13 +299,13 @@ func main() {
 	log("info", "Building lineup")
 	lineupItems := buildChannels(usedTracks, showNameRegex)
 
-	http.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
+	h.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(lineupItems)
 
 	})
 
 	log("info", "listening on "+*listenAddress)
-	if err := http.ListenAndServe(*listenAddress, logRequestHandler()); err != nil {
+	if err := http.ListenAndServe(*listenAddress, logRequestHandler(h)); err != nil {
 		log("error", err.Error())
 		os.Exit(1)
 	}
