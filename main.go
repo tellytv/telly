@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
+	"github.com/namsral/flag"
 	"github.com/tombowditch/telly-m3u-parser"
 	"io"
 	"net/http"

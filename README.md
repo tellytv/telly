@@ -6,12 +6,12 @@ IPTV proxy for Plex Live written in Golang
 
 1) Go to the releases page and download the correct version for your Operating System
 2) Have the .m3u file on hand from your IPTV provider of choice
+**Any command arguments can also be supplied as environment variables, for example -playlist can also be provided as the PLAYLIST environment variable**
 3) Run `telly` with the `-playlist` commandline argument pointing to your .m3u file. (This can be a local file or a URL) For example: `./telly -playlist=/home/github/myiptv.m3u`  
 4) If you would like multiple streams/tuners use the `-streams` commandline option. Default is 1
 5) If you would like `telly` to attempt to the filter the m3u a bit, add the `-filterregex` commandline option. If you would like UK only tv, run `telly` with the `-uktv` commandline option. If you would like to use your own regex, run `telly` with `-useregex <regex>`, for example `-useregex .*UK.*`
 6) If `telly` tells you `[telly] [info] listening on ...` - great! Your .m3u file was successfully parsed and `telly` is running. Check below for how to add it into Plex.
-7) If `telly` fails to run, check the error. More than likely it's the formatting of the .m3u file. Common problems can be the format of the run time. Open your .m3u file in your favourite text editor and check lines starting with `#EXTINF:-1` or `#EXTINF:0`. They should be `#EXTINF:-1,` or `#EXTINF:0,` - the comma is the more important part. You can run a simple `sed` command to fix this, something like `sed -i 's/#EXTINF:-1/#EXTINF:-1,/g' myiptv.m3u` or `sed -i '' 's/#EXTINF:-1/#EXTINF:-1,/g' myiptv.m3u` if you are on macOS. If all else fails, open an issue and I'll be more than happy to help you out.
-
+7) If `telly` fails to run, check the error. As of telly v0.4 `sed` commands are no longer needed. Woop!
 
 # Adding it into Plex
 
@@ -22,6 +22,10 @@ IPTV proxy for Plex Live written in Golang
 5) Once you get to the channel listing, `telly` currently doesn't have any idea of EPG data so it starts the channel numbers at 10000 to avoid complications with selecting channels at this stage. EPG APIs will come in the future, but for now you'll have to manually match up what `telly` is telling Plex to the actual channel numbers. For UK folk, `Freeview` is the best option I've found.
 6) Once you've matched up all the channels, hit next and Plex will start downloading necessary EPG data.
 7) You're done! Enjoy using `telly`
+
+# Docker
+
+telly is automatically built at the [Docker Hub](https://hub.docker.com/r/tombowditch/telly/)
 
 # Troubleshooting
 

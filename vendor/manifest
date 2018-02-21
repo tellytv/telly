@@ -10,6 +10,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/namsral/flag",
+			"repository": "https://github.com/namsral/flag",
+			"vcs": "git",
+			"revision": "67f268f20922975c067ed799e4be6bacf152208c",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/tombowditch/telly-m3u-parser",
 			"repository": "https://github.com/tombowditch/telly-m3u-parser",
 			"vcs": "git",
