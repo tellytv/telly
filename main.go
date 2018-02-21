@@ -135,6 +135,8 @@ func buildChannels(usedTracks []m3u.Track, filterRegex *regexp.Regexp) []LineupI
 }
 
 func main() {
+	tellyVersion := "v0.4"
+	log("info", "booting telly "+tellyVersion)
 	usedTracks := make([]m3u.Track, 0)
 
 	// TODO: remove m3uFileOld
