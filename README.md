@@ -25,3 +25,7 @@ IPTV proxy for Plex Live written in Golang
 # Troubleshooting
 
 Please free to open an issue if you run into any issues at all, I'll be more than happy to help.
+
+# Social
+
+We have [a Discord server you can join!](https://discord.gg/bnNC8qX)
