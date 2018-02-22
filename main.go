@@ -121,7 +121,7 @@ func buildChannels(usedTracks []m3u.Track, filterRegex *regexp.Regexp) []LineupI
 		} else {
 			finalName = parsedTrack[0]
 			finalName = strings.Replace(finalName, "tvg-name=\"", "", -1)
-			finalName = strings.Replace(finalName, "\" tvg", "", -1)
+			finalName = strings.Replace(finalName, "\"", "", -1)
 		}
 		lu := LineupItem{
 			GuideNumber: strconv.Itoa(gn),
@@ -178,7 +178,7 @@ func main() {
 	twentyFourSevenRegex, _ := regexp.Compile("24/7")
 	ukTv, _ := regexp.Compile("UK")
 
-	showNameRegex, _ := regexp.Compile("tvg-name=\"(.*)\" tvg")
+	showNameRegex, _ := regexp.Compile("tvg-name=\"([^\"]+)\"")
 
 	userRegex, _ := regexp.Compile(*useRegex)
 
