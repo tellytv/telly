@@ -5,7 +5,7 @@ IPTV proxy for Plex Live written in Golang
 # Setup
 
 1) Go to the releases page and download the correct version for your Operating System
-2) Have the .m3u file on hand from your IPTV provider of choice
+2) Have the .m3u file on hand from your IPTV provider of choice  
 **Any command arguments can also be supplied as environment variables, for example -playlist can also be provided as the PLAYLIST environment variable**
 3) Run `telly` with the `-playlist` commandline argument pointing to your .m3u file. (This can be a local file or a URL) For example: `./telly -playlist=/home/github/myiptv.m3u`  
 4) If you would like multiple streams/tuners use the `-streams` commandline option. Default is 1
