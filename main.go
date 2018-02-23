@@ -94,10 +94,10 @@ func downloadFile(url string, dest string) error {
 
 	log("info", "Downloading file "+url)
 	resp, err := http.Get(url)
-	defer resp.Body.Close()
 	if err != nil {
 		return errors.New("Could not download file: " + err.Error())
 	}
+	defer resp.Body.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
