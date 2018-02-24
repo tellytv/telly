@@ -62,7 +62,7 @@ func Parse(fileName string) (playlist Playlist, err error) {
 				err = errors.New("Unable to parse length. Line: " + line)
 				return
 			}
-			track := &Track{trackInfo[1], length, ""}
+			track := &Track{strings.Join(trackInfo[1:], " "), length, ""}
 			playlist.Tracks = append(playlist.Tracks, *track)
 		} else if strings.HasPrefix(line, "#") || line == "" {
 			continue
