@@ -26,6 +26,8 @@ var logRequests *bool
 var concurrentStreams *int
 var useRegex *string
 var deviceId *string
+var deviceAuth *string
+var friendlyName *string
 
 type DiscoveryData struct {
 	FriendlyName    string
@@ -63,7 +65,9 @@ func init() {
 	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
 	useRegex = flag.String("useregex", ".*", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this -uktv and -filterregex will NOT work")
-	deviceId = flag.String("deviceid", "12345678", "Set this if you would like to run two instances of telly. 8 characters, must be numbers")
+	deviceId = flag.String("deviceid", "12345678", "8 characters, must be numbers. Only change this if you know what you're doing")
+	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
+	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
 	flag.Parse()
 }
 
@@ -238,14 +242,14 @@ func main() {
 
 	log("info", "creating discovery data")
 	discoveryData := DiscoveryData{
-		FriendlyName:    "telly",
+		FriendlyName:    *friendlyName,
 		Manufacturer:    "Silicondust",
 		ModelNumber:     "HDHR-2US",
 		FirmwareName:    "hdhomeruntc_atsc",
 		TunerCount:      *concurrentStreams,
 		FirmwareVersion: "20150826",
 		DeviceID:        *deviceId,
-		DeviceAuth:      "telly123",
+		DeviceAuth:      *deviceAuth,
 		BaseURL:         fmt.Sprintf("http://%s", *listenAddress),
 		LineupURL:       fmt.Sprintf("http://%s/lineup.json", *listenAddress),
 	}
