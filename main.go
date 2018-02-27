@@ -1,11 +1,12 @@
 package main
 
 import (
+	"github.com/namsral/flag"
+	"github.com/tombowditch/telly-m3u-parser"
+	"github.com/koron/go-ssdp"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/namsral/flag"
-	"github.com/tombowditch/telly-m3u-parser"
 	"io"
 	"net/http"
 	"os"
@@ -141,6 +142,23 @@ func buildChannels(usedTracks []m3u.Track, filterRegex *regexp.Regexp) []LineupI
 	}
 
 	return lineup
+}
+
+func advertiseSSDP( deviceUUID string ) error {
+	ad, err := ssdp.Advertise(
+		"tombowditch:telly",
+		deviceUUID,
+		"http://" + *listenAddress,
+		"telly",
+		1800)
+
+	if err != nil {
+		return err
+	}
+
+	defer ad.Close()
+
+	return nil
 }
 
 func main() {
@@ -320,9 +338,18 @@ func main() {
 
 	})
 
+	log("info", "advertising telly service on network")
+	if err = advertiseSSDP(*deviceId); err != nil {
+		log("error", err.Error())
+		os.Exit(1)
+	}
+
 	log("info", "listening on "+*listenAddress)
 	if err := http.ListenAndServe(*listenAddress, logRequestHandler(h)); err != nil {
 		log("error", err.Error())
 		os.Exit(1)
 	}
+
+
+
 }
