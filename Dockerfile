@@ -9,4 +9,4 @@ FROM scratch
 COPY --from=builder /go/bin/app /app
 EXPOSE 6077
 ENTRYPOINT ["/app"]
-CMD ["-temp /"]
+CMD ["-temp /telly.m3u"]
