@@ -100,16 +100,16 @@ func downloadFile(url string, dest string) error {
 		return errors.New("Could not create file: " + dest + " ; " + err.Error())
 	}
 
-	log("info", "Downloading file "+url)
+	log("info", "Downloading file " + url + " to " + dest)
 	resp, err := http.Get(url)
 	if err != nil {
-		return errors.New("Could not download file: " + err.Error())
+		return errors.New("Could not download: " + err.Error())
 	}
 	defer resp.Body.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return errors.New("Could not copy file: " + err.Error())
+		return errors.New("Could not download to output file: " + err.Error())
 	}
 
 	return nil
