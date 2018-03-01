@@ -69,7 +69,7 @@ func init() {
 	deviceId = flag.String("deviceid", "12345678", "8 characters, must be numbers. Only change this if you know what you're doing")
 	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
 	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
-	tempPath = flag.String("temp", os.TempDir() + "telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
+	tempPath = flag.String("temp", os.TempDir()+"telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
 	flag.Parse()
 }
 
@@ -100,7 +100,7 @@ func downloadFile(url string, dest string) error {
 		return errors.New("Could not create file: " + dest + " ; " + err.Error())
 	}
 
-	log("info", "Downloading file " + url + " to " + dest)
+	log("info", "Downloading file "+url+" to "+dest)
 	resp, err := http.Get(url)
 	if err != nil {
 		return errors.New("Could not download: " + err.Error())
@@ -146,7 +146,7 @@ func buildChannels(usedTracks []m3u.Track, filterRegex *regexp.Regexp) []LineupI
 }
 
 func main() {
-	tellyVersion := "v0.4.3"
+	tellyVersion := "v0.4.4"
 	log("info", "booting telly "+tellyVersion)
 	usedTracks := make([]m3u.Track, 0)
 
