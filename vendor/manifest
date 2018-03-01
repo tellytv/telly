@@ -37,7 +37,7 @@
 			"importpath": "golang.org/x/tools/cmd/goimports",
 			"repository": "https://go.googlesource.com/tools",
 			"vcs": "git",
-			"revision": "2ae76fd1560b622911f444c1e66b70a857e1de67",
+			"revision": "73e16cff9e0d4a802937444bebb562458548241d",
 			"branch": "master",
 			"path": "/cmd/goimports",
 			"notests": true
@@ -46,7 +46,7 @@
 			"importpath": "golang.org/x/tools/cover",
 			"repository": "https://go.googlesource.com/tools",
 			"vcs": "git",
-			"revision": "2ae76fd1560b622911f444c1e66b70a857e1de67",
+			"revision": "73e16cff9e0d4a802937444bebb562458548241d",
 			"branch": "master",
 			"path": "/cover",
 			"notests": true
@@ -55,7 +55,7 @@
 			"importpath": "golang.org/x/tools/go/ast/astutil",
 			"repository": "https://go.googlesource.com/tools",
 			"vcs": "git",
-			"revision": "2ae76fd1560b622911f444c1e66b70a857e1de67",
+			"revision": "73e16cff9e0d4a802937444bebb562458548241d",
 			"branch": "master",
 			"path": "go/ast/astutil",
 			"notests": true
@@ -64,7 +64,7 @@
 			"importpath": "golang.org/x/tools/imports",
 			"repository": "https://go.googlesource.com/tools",
 			"vcs": "git",
-			"revision": "2ae76fd1560b622911f444c1e66b70a857e1de67",
+			"revision": "73e16cff9e0d4a802937444bebb562458548241d",
 			"branch": "master",
 			"path": "imports",
 			"notests": true
