@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -15,9 +16,11 @@ type Playlist struct {
 
 // Track represents an m3u track
 type Track struct {
-	Name   string
-	Length int
-	URI    string
+	Name    string
+	Length  int
+	URI     string
+	TvgID   string
+	TvgName string
 }
 
 // Parse parses an m3u playlist with the given file name and returns a Playlist
@@ -31,6 +34,9 @@ func Parse(fileName string) (playlist Playlist, err error) {
 
 	onFirstLine := true
 	scanner := bufio.NewScanner(f)
+
+	tvgNameRegex, _ := regexp.Compile("tvg-name=\"([^\"]+)\"")
+	tvgIDRegex, _ := regexp.Compile("tvg-id=\"([^\"]+)\"")
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -62,7 +68,26 @@ func Parse(fileName string) (playlist Playlist, err error) {
 				err = errors.New("Unable to parse length. Line: " + line)
 				return
 			}
-			track := &Track{strings.Join(trackInfo[1:], " "), length, ""}
+			trackName := strings.Join(trackInfo[1:], " ")
+			tvgName := ""
+			tvgID := ""
+
+			nameFind := tvgNameRegex.FindStringSubmatch(trackName)
+			if len(nameFind) != 0 {
+				tvgName = nameFind[0]
+				tvgName = strings.Replace(tvgName, "tvg-name=\"", "", -1)
+				tvgName = strings.Replace(tvgName, "\"", "", -1)
+			}
+
+			idFind := tvgIDRegex.FindStringSubmatch(trackName)
+			if len(idFind) != 0 {
+				tvgID = idFind[0]
+				tvgID = strings.Replace(tvgID, "tvg-id=\"", "", -1)
+				tvgID = strings.Replace(tvgID, "\"", "", -1)
+
+			}
+
+			track := &Track{trackName, length, "", tvgID, tvgName}
 			playlist.Tracks = append(playlist.Tracks, *track)
 		} else if strings.HasPrefix(line, "#") || line == "" {
 			continue
