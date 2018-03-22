@@ -129,7 +129,7 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 		}
 
 		var channNum string
-		if track.TvgID == "" {
+		if _, err := strconv.Atoi(track.TvgID); track.TvgID == "" ||  err != nil {
 			channNum = strconv.Itoa(gn)
 			gn += 1
 		} else {
