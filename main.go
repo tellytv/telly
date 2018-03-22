@@ -12,6 +12,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"github.com/AlekSi/xmltv"
+	"encoding/xml"
+	"io/ioutil"
 )
 
 var deviceXml string
@@ -29,6 +32,7 @@ var deviceId *string
 var deviceAuth *string
 var friendlyName *string
 var tempPath *string
+var xmlTvFile *string
 
 type DiscoveryData struct {
 	FriendlyName    string
@@ -70,8 +74,11 @@ func init() {
 	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
 	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
 	tempPath = flag.String("temp", os.TempDir()+"/telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
+	xmlTvFile = flag.String("xmltv", "xmltv.xml", "XMLTV file where the EPG data is stored")
 	flag.Parse()
 }
+
+
 
 func log(level string, msg string) {
 	fmt.Println("[telly] [" + level + "] " + msg)
@@ -91,6 +98,29 @@ func logRequestHandler(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 
 	})
+}
+
+/*
+	Returns a map with "Channel Name" => "Channel Id" mapping
+ */
+func getChannelMappings(reader io.Reader) (map[string]string, error) {
+	decoder := xml.NewDecoder(reader)
+
+	tvSetup := new(xmltv.Tv)
+
+	if err := decoder.Decode(tvSetup); err != nil {
+		return nil, errors.New("Could not decode xmltv programme: " + err.Error())
+	}
+
+	channelMap := make(map[string]string)
+
+	for _, tvChann := range tvSetup.Channels {
+		for _, displayName := range tvChann.DisplayNames {
+			channelMap[displayName] = tvChann.Id
+		}
+	}
+
+	return channelMap, nil
 }
 
 func downloadFile(url string, dest string) error {
@@ -115,9 +145,15 @@ func downloadFile(url string, dest string) error {
 	return nil
 }
 
-func buildChannels(usedTracks []m3u.Track) []LineupItem {
+func buildChannels(xmltv string, usedTracks []m3u.Track) []LineupItem {
 	lineup := make([]LineupItem, 0)
-	gn := 10000
+	gn := -1
+
+	chanMap, err := getChannelMappings(strings.NewReader(xmltv))
+	if err != nil {
+		log("info", "Disabling XMLTV channel matching because of: " + err.Error())
+		gn = 10000
+	}
 
 	for _, track := range usedTracks {
 
@@ -129,11 +165,22 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 		}
 
 		var channNum string
-		if _, err := strconv.Atoi(track.TvgID); track.TvgID == "" ||  err != nil {
+		if gn == -1 {
+			for _, chanMapName := range chanMap {
+				if strings.Contains(strings.ToLower(chanMapName), strings.ToLower(channName)) {
+					channNum = chanMap[chanMapName]
+					break;
+				}
+			}
+
+			if channNum == "" {
+				log("info", "No XMLTV entry found for channel: " + channName + ", defaulting to index")
+				channNum = strconv.Itoa(gn)
+				gn += 1
+			}
+		} else {
 			channNum = strconv.Itoa(gn)
 			gn += 1
-		} else {
-			channNum = track.TvgID
 		}
 
 		lu := LineupItem{
@@ -176,7 +223,7 @@ func main() {
 		}
 	}
 
-	log("info", "Reading m3u file "+*m3uPath+"...")
+	log("info", "Reading m3u file " + *m3uPath+"...")
 	playlist, err := m3u.Parse(*m3uPath)
 	if err != nil {
 		log("error", "unable to read m3u file, error below")
@@ -315,8 +362,18 @@ func main() {
 		w.Write([]byte(deviceXml))
 	})
 
+	var xmlEpg string
+	if *xmlTvFile != "" {
+		log("info", "Trying to load xmltv")
+		xmlEpgBytes, err := ioutil.ReadFile(*xmlTvFile)
+		if err != nil {
+			log("error", "Skipping XMLTV: " + err.Error())
+		}
+		xmlEpg = string(xmlEpgBytes)
+	}
+
 	log("info", "Building lineup")
-	lineupItems := buildChannels(usedTracks)
+	lineupItems := buildChannels(xmlEpg, usedTracks)
 
 	h.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(lineupItems)
