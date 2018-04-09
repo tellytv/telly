@@ -68,7 +68,7 @@ func init() {
 	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
 	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
 	tempPath = flag.String("temp", os.TempDir()+"/telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
-	base64Mode = flag.Bool("base64mode", false, "Encode the stream URL in case you are having parameter problems with Plex.")
+	base64Mode = flag.Bool("encode", false, "Encode the stream URL in case you are having parameter problems with Plex.")
 	flag.Parse()
 }
 
