@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"encoding/base64"
 )
 
 var deviceXml string
@@ -124,10 +125,14 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 			finalName = track.TvgName
 		}
 
+		// base64 url
+		trackUri := base64.StdEncoding.EncodeToString([]byte(track.URI))
+		fullTrackUri := fmt.Sprintf("http://%s", *listenAddress) + "/stream/" + trackUri
+
 		lu := LineupItem{
 			GuideNumber: strconv.Itoa(gn),
 			GuideName:   finalName,
-			URL:         track.URI,
+			URL:         fullTrackUri,
 		}
 
 		lineup = append(lineup, lu)
@@ -136,6 +141,20 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 	}
 
 	return lineup
+}
+
+func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamUrl string) {
+	log("debug", "Stream base64: " + base64StreamUrl)
+
+	decodedStreamURI, err := base64.StdEncoding.DecodeString(base64StreamUrl)
+	if err != nil {
+		log("error", "Invalid base64: " + base64StreamUrl)
+		w.WriteHeader(400)
+		return
+	}
+
+	log("debug", "Redirecting to: " + string(decodedStreamURI))
+	http.Redirect(w, r, string(decodedStreamURI), 301)
 }
 
 func main() {
@@ -304,7 +323,10 @@ func main() {
 
 	h.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(lineupItems)
+	})
 
+	h.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
+		base64StreamHandler(w, r, strings.Split(r.RequestURI, "/")[2])
 	})
 
 	log("info", "listening on "+*listenAddress)
