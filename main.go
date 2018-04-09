@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"encoding/base64"
+	"net/url"
 )
 
 var deviceXml string
@@ -331,7 +332,9 @@ func main() {
 	})
 
 	h.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
-		base64StreamHandler(w, r, strings.Split(r.RequestURI, "/")[2])
+		u, _ := url.Parse(r.RequestURI)
+		uriPart := strings.Split(u.Path, "/")[2]
+		base64StreamHandler(w, r, uriPart)
 	})
 
 	log("info", "listening on "+*listenAddress)
