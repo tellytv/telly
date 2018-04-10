@@ -154,7 +154,7 @@ func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamUrl
 
 	decodedStreamURI, err := base64.StdEncoding.DecodeString(base64StreamUrl)
 	if err != nil {
-		log("error", "Invalid base64: " + base64StreamUrl)
+		log("error", "Invalid base64: " + base64StreamUrl + ": " + err.Error())
 		w.WriteHeader(400)
 		return
 	}
@@ -333,7 +333,8 @@ func main() {
 
 	h.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
 		u, _ := url.Parse(r.RequestURI)
-		uriPart := strings.Split(u.Path, "/")[2]
+		uriPart := strings.Replace(u.Path, "/stream/", "", -1)
+		log("debug", "Parsing URI " + r.RequestURI + " to " + uriPart)
 		base64StreamHandler(w, r, uriPart)
 	})
 
