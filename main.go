@@ -12,14 +12,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"encoding/base64"
+	"net/url"
 )
 
 var deviceXml string
 var filterRegex *bool
 var filterUkTv *bool
+var directMode *bool
 
-//TODO: remove m3uFileOld in next release (deprecated)
-var m3uFileOld *string
 var m3uPath *string
 var listenAddress *string
 var logRequests *bool
@@ -60,8 +61,6 @@ func init() {
 	filterRegex = flag.Bool("filterregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
 	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
 	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
-	//TODO: remove m3uFileOld in next release (deprecated)
-	m3uFileOld = flag.String("file", "", "Filepath of the playlist m3u file (DEPRECATED, use -playlist instead)")
 	m3uPath = flag.String("playlist", "iptv.m3u", "Location of playlist m3u file")
 	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
@@ -70,6 +69,7 @@ func init() {
 	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
 	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
 	tempPath = flag.String("temp", os.TempDir()+"/telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
+	directMode = flag.Bool("direct", false, "Does not encode the stream URL and redirect to the correct one.")
 	flag.Parse()
 }
 
@@ -128,10 +128,17 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 			finalName = track.TvgName
 		}
 
+		// base64 url
+		fullTrackUri := track.URI
+		if ! *directMode {
+			trackUri := base64.StdEncoding.EncodeToString([]byte(track.URI))
+			fullTrackUri = fmt.Sprintf("http://%s", *listenAddress) + "/stream/" + trackUri
+		}
+
 		lu := LineupItem{
 			GuideNumber: strconv.Itoa(gn),
 			GuideName:   finalName,
-			URL:         track.URI,
+			URL:         fullTrackUri,
 		}
 
 		lineup = append(lineup, lu)
@@ -142,16 +149,23 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 	return lineup
 }
 
+func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamUrl string) {
+	decodedStreamURI, err := base64.StdEncoding.DecodeString(base64StreamUrl)
+
+	if err != nil {
+		log("error", "Invalid base64: " + base64StreamUrl + ": " + err.Error())
+		w.WriteHeader(400)
+		return
+	}
+
+	log("debug", "Redirecting to: " + string(decodedStreamURI))
+	http.Redirect(w, r, string(decodedStreamURI), 301)
+}
+
 func main() {
 	tellyVersion := "v0.4.5"
 	log("info", "booting telly "+tellyVersion)
 	usedTracks := make([]m3u.Track, 0)
-
-	// TODO: remove m3uFileOld
-	if *m3uFileOld != "" {
-		log("error", "argument -file is deprecated, use -playlist instead")
-		os.Exit(1)
-	}
 
 	if *m3uPath == "iptv.m3u" {
 		log("warning", "using default m3u option, 'iptv.m3u'. launch telly with the -playlist=yourfile.m3u option to change this!")
@@ -314,7 +328,13 @@ func main() {
 
 	h.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(lineupItems)
+	})
 
+	h.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
+		u, _ := url.Parse(r.RequestURI)
+		uriPart := strings.Replace(u.Path, "/stream/", "", 1)
+		log("debug", "Parsing URI " + r.RequestURI + " to " + uriPart)
+		base64StreamHandler(w, r, uriPart)
 	})
 
 	log("info", "listening on "+*listenAddress)
