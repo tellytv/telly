@@ -19,7 +19,7 @@ import (
 var deviceXml string
 var filterRegex *bool
 var filterUkTv *bool
-var base64Mode *bool
+var directMode *bool
 
 var m3uPath *string
 var listenAddress *string
@@ -69,7 +69,7 @@ func init() {
 	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
 	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
 	tempPath = flag.String("temp", os.TempDir()+"/telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
-	base64Mode = flag.Bool("encode", false, "Encode the stream URL in case you are having parameter problems with Plex.")
+	directMode = flag.Bool("direct", false, "Does not encode the stream URL and redirect to the correct one.")
 	flag.Parse()
 }
 
@@ -130,7 +130,7 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 
 		// base64 url
 		fullTrackUri := track.URI
-		if *base64Mode {
+		if ! *directMode {
 			trackUri := base64.StdEncoding.EncodeToString([]byte(track.URI))
 			fullTrackUri = fmt.Sprintf("http://%s", *listenAddress) + "/stream/" + trackUri
 		}
@@ -150,9 +150,8 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 }
 
 func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamUrl string) {
-	log("debug", "Stream base64: " + base64StreamUrl)
-
 	decodedStreamURI, err := base64.StdEncoding.DecodeString(base64StreamUrl)
+
 	if err != nil {
 		log("error", "Invalid base64: " + base64StreamUrl + ": " + err.Error())
 		w.WriteHeader(400)
@@ -333,7 +332,7 @@ func main() {
 
 	h.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
 		u, _ := url.Parse(r.RequestURI)
-		uriPart := strings.Replace(u.Path, "/stream/", "", -1)
+		uriPart := strings.Replace(u.Path, "/stream/", "", 1)
 		log("debug", "Parsing URI " + r.RequestURI + " to " + uriPart)
 		base64StreamHandler(w, r, uriPart)
 	})
