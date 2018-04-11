@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,12 +9,11 @@ import (
 	"github.com/tombowditch/telly-m3u-parser"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"encoding/base64"
-	"net/url"
 )
 
 var deviceXml string
@@ -130,7 +130,7 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 
 		// base64 url
 		fullTrackUri := track.URI
-		if ! *directMode {
+		if !*directMode {
 			trackUri := base64.StdEncoding.EncodeToString([]byte(track.URI))
 			fullTrackUri = fmt.Sprintf("http://%s", *listenAddress) + "/stream/" + trackUri
 		}
@@ -153,17 +153,17 @@ func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamUrl
 	decodedStreamURI, err := base64.StdEncoding.DecodeString(base64StreamUrl)
 
 	if err != nil {
-		log("error", "Invalid base64: " + base64StreamUrl + ": " + err.Error())
+		log("error", "Invalid base64: "+base64StreamUrl+": "+err.Error())
 		w.WriteHeader(400)
 		return
 	}
 
-	log("debug", "Redirecting to: " + string(decodedStreamURI))
+	log("debug", "Redirecting to: "+string(decodedStreamURI))
 	http.Redirect(w, r, string(decodedStreamURI), 301)
 }
 
 func main() {
-	tellyVersion := "v0.4.5"
+	tellyVersion := "v0.5"
 	log("info", "booting telly "+tellyVersion)
 	usedTracks := make([]m3u.Track, 0)
 
@@ -333,7 +333,7 @@ func main() {
 	h.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
 		u, _ := url.Parse(r.RequestURI)
 		uriPart := strings.Replace(u.Path, "/stream/", "", 1)
-		log("debug", "Parsing URI " + r.RequestURI + " to " + uriPart)
+		log("debug", "Parsing URI "+r.RequestURI+" to "+uriPart)
 		base64StreamHandler(w, r, uriPart)
 	})
 
