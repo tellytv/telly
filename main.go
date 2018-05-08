@@ -4,11 +4,13 @@ import (
 	"github.com/namsral/flag"
 	"github.com/tombowditch/telly-m3u-parser"
 	"github.com/koron/go-ssdp"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -19,9 +21,8 @@ import (
 var deviceXml string
 var filterRegex *bool
 var filterUkTv *bool
+var directMode *bool
 
-//TODO: remove m3uFileOld in next release (deprecated)
-var m3uFileOld *string
 var m3uPath *string
 var listenAddress *string
 var logRequests *bool
@@ -30,6 +31,7 @@ var useRegex *string
 var deviceId *string
 var deviceAuth *string
 var friendlyName *string
+var tempPath *string
 
 type DiscoveryData struct {
 	FriendlyName    string
@@ -61,8 +63,6 @@ func init() {
 	filterRegex = flag.Bool("filterregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
 	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
 	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
-	//TODO: remove m3uFileOld in next release (deprecated)
-	m3uFileOld = flag.String("file", "", "Filepath of the playlist m3u file (DEPRECATED, use -playlist instead)")
 	m3uPath = flag.String("playlist", "iptv.m3u", "Location of playlist m3u file")
 	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
@@ -70,6 +70,8 @@ func init() {
 	deviceId = flag.String("deviceid", "12345678", "8 characters, must be numbers. Only change this if you know what you're doing")
 	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
 	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
+	tempPath = flag.String("temp", os.TempDir()+"/telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
+	directMode = flag.Bool("direct", false, "Does not encode the stream URL and redirect to the correct one.")
 	flag.Parse()
 }
 
@@ -100,41 +102,45 @@ func downloadFile(url string, dest string) error {
 		return errors.New("Could not create file: " + dest + " ; " + err.Error())
 	}
 
-	log("info", "Downloading file "+url)
+	log("info", "Downloading file "+url+" to "+dest)
 	resp, err := http.Get(url)
 	if err != nil {
-		return errors.New("Could not download file: " + err.Error())
+		return errors.New("Could not download: " + err.Error())
 	}
 	defer resp.Body.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return errors.New("Could not copy file: " + err.Error())
+		return errors.New("Could not download to output file: " + err.Error())
 	}
 
 	return nil
 }
 
-func buildChannels(usedTracks []m3u.Track, filterRegex *regexp.Regexp) []LineupItem {
+func buildChannels(usedTracks []m3u.Track) []LineupItem {
 	lineup := make([]LineupItem, 0)
 	gn := 10000
 
 	for _, track := range usedTracks {
 
-		parsedTrack := filterRegex.FindStringSubmatch(track.Name)
 		var finalName string
-		if len(parsedTrack) == 0 {
-			// TODO: Find other ways of parsing it
+		if track.TvgName == "" {
 			finalName = track.Name
 		} else {
-			finalName = parsedTrack[0]
-			finalName = strings.Replace(finalName, "tvg-name=\"", "", -1)
-			finalName = strings.Replace(finalName, "\"", "", -1)
+			finalName = track.TvgName
 		}
+
+		// base64 url
+		fullTrackUri := track.URI
+		if !*directMode {
+			trackUri := base64.StdEncoding.EncodeToString([]byte(track.URI))
+			fullTrackUri = fmt.Sprintf("http://%s", *listenAddress) + "/stream/" + trackUri
+		}
+
 		lu := LineupItem{
 			GuideNumber: strconv.Itoa(gn),
 			GuideName:   finalName,
-			URL:         track.URI,
+			URL:         fullTrackUri,
 		}
 
 		lineup = append(lineup, lu)
@@ -163,8 +169,8 @@ func sendAlive( advertiser *ssdp.Advertiser ) {
 func advertiseSSDP( deviceUUID string ) (*ssdp.Advertiser, error) {
 	adv, err := ssdp.Advertise(
 		"upnp:rootdevice",
-		"uuid:" + deviceUUID + "::upnp:rootdevice",
-		"http://" + *listenAddress + "/device.xml",
+		"uuid:"+deviceUUID+"::upnp:rootdevice",
+		"http://" + *listenAddress+"/device.xml",
 		"telly",
 		1800)
 
@@ -177,22 +183,29 @@ func advertiseSSDP( deviceUUID string ) (*ssdp.Advertiser, error) {
 	return adv, nil
 }
 
+func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamUrl string) {
+	decodedStreamURI, err := base64.StdEncoding.DecodeString(base64StreamUrl)
+
+	if err != nil {
+		log("error", "Invalid base64: "+base64StreamUrl+": "+err.Error())
+		w.WriteHeader(400)
+		return
+	}
+
+	log("debug", "Redirecting to: "+string(decodedStreamURI))
+	http.Redirect(w, r, string(decodedStreamURI), 301)
+}
+
 func main() {
-	tellyVersion := "v0.4.3"
+	tellyVersion := "v0.5"
 	log("info", "booting telly "+tellyVersion)
 	usedTracks := make([]m3u.Track, 0)
-
-	// TODO: remove m3uFileOld
-	if *m3uFileOld != "" {
-		log("error", "argument -file is deprecated, use -playlist instead")
-		os.Exit(1)
-	}
 
 	if *m3uPath == "iptv.m3u" {
 		log("warning", "using default m3u option, 'iptv.m3u'. launch telly with the -playlist=yourfile.m3u option to change this!")
 	} else {
 		if strings.HasPrefix(strings.ToLower(*m3uPath), "http") {
-			tempFilename := os.TempDir() + "/" + "telly.m3u"
+			tempFilename := *tempPath
 
 			err := downloadFile(*m3uPath, tempFilename)
 			if err != nil {
@@ -217,8 +230,6 @@ func main() {
 	episodeRegex, _ := regexp.Compile("S\\d{1,3}E\\d{1,3}")
 	twentyFourSevenRegex, _ := regexp.Compile("24/7")
 	ukTv, _ := regexp.Compile("UK")
-
-	showNameRegex, _ := regexp.Compile("tvg-name=\"([^\"]+)\"")
 
 	userRegex, _ := regexp.Compile(*useRegex)
 
@@ -347,11 +358,17 @@ func main() {
 	})
 
 	log("info", "Building lineup")
-	lineupItems := buildChannels(usedTracks, showNameRegex)
+	lineupItems := buildChannels(usedTracks)
 
 	h.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(lineupItems)
+	})
 
+	h.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
+		u, _ := url.Parse(r.RequestURI)
+		uriPart := strings.Replace(u.Path, "/stream/", "", 1)
+		log("debug", "Parsing URI "+r.RequestURI+" to "+uriPart)
+		base64StreamHandler(w, r, uriPart)
 	})
 
 	log("info", "advertising telly service on network")
