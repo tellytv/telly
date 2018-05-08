@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var deviceXml string
@@ -144,21 +145,33 @@ func buildChannels(usedTracks []m3u.Track, filterRegex *regexp.Regexp) []LineupI
 	return lineup
 }
 
-func advertiseSSDP( deviceUUID string ) error {
-	ad, err := ssdp.Advertise(
-		"tombowditch:telly",
-		deviceUUID,
-		"http://" + *listenAddress,
+func sendAlive( advertiser *ssdp.Advertiser ) {
+	aliveTick := time.Tick(300 * time.Second)
+
+	for {
+		select {
+		case <-aliveTick:
+			log("debug", "Sending alive")
+			advertiser.Alive()
+		}
+	}
+}
+
+func advertiseSSDP( deviceUUID string ) (*ssdp.Advertiser, error) {
+	adv, err := ssdp.Advertise(
+		"upnp:rootdevice",
+		"uuid:" + deviceUUID + "::upnp:rootdevice",
+		"http://" + *listenAddress + "/device.xml",
 		"telly",
 		1800)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	defer ad.Close()
+	go sendAlive(adv)
 
-	return nil
+	return adv, nil
 }
 
 func main() {
@@ -339,7 +352,9 @@ func main() {
 	})
 
 	log("info", "advertising telly service on network")
-	if err = advertiseSSDP(*deviceId); err != nil {
+	adv, err2 := advertiseSSDP(*deviceId);
+	defer adv.Close()
+	if err2 != nil {
 		log("error", err.Error())
 		os.Exit(1)
 	}
