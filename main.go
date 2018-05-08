@@ -151,8 +151,11 @@ func sendAlive( advertiser *ssdp.Advertiser ) {
 	for {
 		select {
 		case <-aliveTick:
-			log("debug", "Sending alive")
-			advertiser.Alive()
+			log("debug", "Sending alive for " + "http://" + *listenAddress + "/device.xml")
+			if err := advertiser.Alive(); err != nil {
+				log("error", err.Error())
+				os.Exit(1)
+			}
 		}
 	}
 }
@@ -353,18 +356,16 @@ func main() {
 
 	log("info", "advertising telly service on network")
 	adv, err2 := advertiseSSDP(*deviceId);
-	defer adv.Close()
 	if err2 != nil {
 		log("error", err.Error())
 		os.Exit(1)
 	}
+	defer adv.Bye()
+	defer adv.Close()
 
 	log("info", "listening on "+*listenAddress)
 	if err := http.ListenAndServe(*listenAddress, logRequestHandler(h)); err != nil {
 		log("error", err.Error())
 		os.Exit(1)
 	}
-
-
-
 }
