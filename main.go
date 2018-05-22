@@ -71,7 +71,7 @@ func init() {
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
 	useRegex = flag.String("useregex", ".*", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this -uktv and -filterregex will NOT work")
 	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
-	friendlyName = flag.String("friendlyname", "HDHomerun (telly)", "Useful if you are running two instances of telly and want to differentiate between them.")
+	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
 	tempPath = flag.String("temp", os.TempDir()+"/telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
 	directMode = flag.Bool("direct", false, "Does not encode the stream URL and redirect to the correct one.")
 	flag.Parse()
@@ -377,13 +377,11 @@ func main() {
 	})
 
 	log("info", "advertising telly service on network")
-	adv, err2 := advertiseSSDP(*friendlyName, deviceUuid);
+	_, err2 := advertiseSSDP(*friendlyName, deviceUuid);
 	if err2 != nil {
 		log("error", err.Error())
 		os.Exit(1)
 	}
-	defer adv.Bye()
-	defer adv.Close()
 
 	log("info", "listening on "+*listenAddress)
 	if err := http.ListenAndServe(*listenAddress, logRequestHandler(h)); err != nil {
