@@ -167,13 +167,14 @@ func sendAlive( advertiser *ssdp.Advertiser ) {
 	}
 }
 
-func advertiseSSDP( deviceUUID string ) (*ssdp.Advertiser, error) {
-	log("debug", "Advertising telly as " + deviceUUID)
+func advertiseSSDP( deviceName string, deviceUUID string ) (*ssdp.Advertiser, error) {
+	log("debug", "Advertising telly as " + deviceName + " (" + deviceUUID + ")")
+
 	adv, err := ssdp.Advertise(
 		"upnp:rootdevice",
 		"uuid:"+deviceUUID+"::upnp:rootdevice",
 		"http://" + *listenAddress+"/device.xml",
-		"telly",
+		deviceName,
 		1800)
 
 	if err != nil {
@@ -287,6 +288,8 @@ func main() {
 		fmt.Println("")
 	}
 
+	*friendlyName = "HDHomerun (" + *friendlyName + ")"
+
 	log("info", "creating discovery data")
 	discoveryData := DiscoveryData{
 		FriendlyName:    *friendlyName,
@@ -374,7 +377,7 @@ func main() {
 	})
 
 	log("info", "advertising telly service on network")
-	adv, err2 := advertiseSSDP(deviceUuid);
+	adv, err2 := advertiseSSDP(*friendlyName, deviceUuid);
 	if err2 != nil {
 		log("error", err.Error())
 		os.Exit(1)
