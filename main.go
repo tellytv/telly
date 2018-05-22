@@ -71,7 +71,7 @@ func init() {
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
 	useRegex = flag.String("useregex", ".*", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this -uktv and -filterregex will NOT work")
 	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
-	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
+	friendlyName = flag.String("friendlyname", "HDHomerun (telly)", "Useful if you are running two instances of telly and want to differentiate between them.")
 	tempPath = flag.String("temp", os.TempDir()+"/telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
 	directMode = flag.Bool("direct", false, "Does not encode the stream URL and redirect to the correct one.")
 	flag.Parse()
@@ -159,7 +159,6 @@ func sendAlive( advertiser *ssdp.Advertiser ) {
 	for {
 		select {
 		case <-aliveTick:
-			log("debug", "Sending alive for " + "http://" + *listenAddress + "/device.xml")
 			if err := advertiser.Alive(); err != nil {
 				log("error", err.Error())
 				os.Exit(1)
@@ -319,7 +318,7 @@ func main() {
     <URLBase>$BaseURL</URLBase>
     <device>
         <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
-        <friendlyName>$FriendlyName</friendlyName>
+        <Name>$FriendlyName</friendlyName>
         <manufacturer>$Manufacturer</manufacturer>
         <modelName>$ModelNumber</modelName>
         <modelNumber>$ModelNumber</modelNumber>
