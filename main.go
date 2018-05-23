@@ -134,7 +134,7 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 		fullTrackUri := track.URI
 		if !*directMode {
 			trackUri := base64.StdEncoding.EncodeToString([]byte(track.URI))
-			fullTrackUri = fmt.Sprintf("http://%s", *listenAddress) + "/stream/" + trackUri
+			fullTrackUri = fmt.Sprintf("http://%s", *baseURL) + "/stream/" + trackUri
 		}
 
 		lu := LineupItem{
