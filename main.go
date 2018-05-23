@@ -23,6 +23,7 @@ var directMode *bool
 
 var m3uPath *string
 var listenAddress *string
+var baseURL *string
 var logRequests *bool
 var concurrentStreams *int
 var useRegex *string
@@ -61,6 +62,7 @@ func init() {
 	filterRegex = flag.Bool("filterregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
 	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
 	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
+    baseURL = flag.String("base", "localhost:6077", "example.com:port (useful with reverse proxy)")
 	m3uPath = flag.String("playlist", "iptv.m3u", "Location of playlist m3u file")
 	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
@@ -261,8 +263,8 @@ func main() {
 		FirmwareVersion: "20150826",
 		DeviceID:        *deviceId,
 		DeviceAuth:      *deviceAuth,
-		BaseURL:         fmt.Sprintf("http://%s", *listenAddress),
-		LineupURL:       fmt.Sprintf("http://%s/lineup.json", *listenAddress),
+		BaseURL:         fmt.Sprintf("http://%s", *baseURL),
+		LineupURL:       fmt.Sprintf("http://%s/lineup.json", *baseURL),
 	}
 
 	log("info", "creating lineup status")
