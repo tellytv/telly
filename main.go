@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/namsral/flag"
-	"github.com/tombowditch/telly-m3u-parser"
-	"github.com/koron/go-ssdp"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/koron/go-ssdp"
+	"github.com/namsral/flag"
+	"github.com/tombowditch/telly-m3u-parser"
 	"io"
 	"net/http"
 	"net/url"
@@ -67,7 +67,7 @@ func init() {
 	filterRegex = flag.Bool("filterregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
 	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
 	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
-    baseURL = flag.String("base", "localhost:6077", "example.com:port (useful with reverse proxy)")
+	baseURL = flag.String("base", "localhost:6077", "example.com:port (useful with reverse proxy)")
 	m3uPath = flag.String("playlist", "iptv.m3u", "Location of playlist m3u file")
 	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
 	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
@@ -155,7 +155,7 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 	return lineup
 }
 
-func sendAlive( advertiser *ssdp.Advertiser ) {
+func sendAlive(advertiser *ssdp.Advertiser) {
 	aliveTick := time.Tick(15 * time.Second)
 
 	for {
@@ -169,13 +169,13 @@ func sendAlive( advertiser *ssdp.Advertiser ) {
 	}
 }
 
-func advertiseSSDP( deviceName string, deviceUUID string ) (*ssdp.Advertiser, error) {
-	log("debug", "Advertising telly as " + deviceName + " (" + deviceUUID + ")")
+func advertiseSSDP(deviceName string, deviceUUID string) (*ssdp.Advertiser, error) {
+	log("debug", "Advertising telly as "+deviceName+" ("+deviceUUID+")")
 
 	adv, err := ssdp.Advertise(
 		"upnp:rootdevice",
 		"uuid:"+deviceUUID+"::upnp:rootdevice",
-		"http://" + *listenAddress+"/device.xml",
+		"http://"+*listenAddress+"/device.xml",
 		deviceName,
 		1800)
 
@@ -202,7 +202,7 @@ func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamUrl
 }
 
 func main() {
-	tellyVersion := "v0.5"
+	tellyVersion := "v0.6"
 	log("info", "booting telly "+tellyVersion)
 	usedTracks := make([]m3u.Track, 0)
 
@@ -379,7 +379,7 @@ func main() {
 	})
 
 	log("info", "advertising telly service on network")
-	_, err2 := advertiseSSDP(*friendlyName, deviceUuid);
+	_, err2 := advertiseSSDP(*friendlyName, deviceUuid)
 	if err2 != nil {
 		log("error", err.Error())
 		os.Exit(1)
