@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build linux darwin
-// +build !appengine
+#include "textflag.h"
 
-package imports
+TEXT	·sysvicall6(SB),NOSPLIT,$0-88
+	JMP	syscall·sysvicall6(SB)
 
-import "syscall"
-
-func direntInode(dirent *syscall.Dirent) uint64 {
-	return uint64(dirent.Ino)
-}
+TEXT	·rawSysvicall6(SB),NOSPLIT,$0-88
+	JMP	syscall·rawSysvicall6(SB)
