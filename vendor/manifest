@@ -10,6 +10,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/koron/go-ssdp",
+			"repository": "https://github.com/koron/go-ssdp",
+			"vcs": "git",
+			"revision": "4a0ed625a78b6858dc8d3a55fb7728968b712122",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/namsral/flag",
 			"repository": "https://github.com/namsral/flag",
 			"vcs": "git",
@@ -34,10 +42,46 @@
 			"notests": true
 		},
 		{
+			"importpath": "golang.org/x/net/bpf",
+			"repository": "https://go.googlesource.com/net",
+			"vcs": "git",
+			"revision": "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389",
+			"branch": "master",
+			"path": "bpf",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/net/internal/iana",
+			"repository": "https://go.googlesource.com/net",
+			"vcs": "git",
+			"revision": "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389",
+			"branch": "master",
+			"path": "internal/iana",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/net/internal/socket",
+			"repository": "https://go.googlesource.com/net",
+			"vcs": "git",
+			"revision": "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389",
+			"branch": "master",
+			"path": "internal/socket",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/net/ipv4",
+			"repository": "https://go.googlesource.com/net",
+			"vcs": "git",
+			"revision": "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389",
+			"branch": "master",
+			"path": "/ipv4",
+			"notests": true
+		},
+		{
 			"importpath": "golang.org/x/tools/cmd/goimports",
 			"repository": "https://go.googlesource.com/tools",
 			"vcs": "git",
-			"revision": "faed997d2c50aac9885d111f84817ba5a3a71455",
+			"revision": "1937f90a1bb43667aff4059b1bab13eb15121e8e",
 			"branch": "master",
 			"path": "/cmd/goimports",
 			"notests": true
@@ -46,7 +90,7 @@
 			"importpath": "golang.org/x/tools/cover",
 			"repository": "https://go.googlesource.com/tools",
 			"vcs": "git",
-			"revision": "faed997d2c50aac9885d111f84817ba5a3a71455",
+			"revision": "1937f90a1bb43667aff4059b1bab13eb15121e8e",
 			"branch": "master",
 			"path": "/cover",
 			"notests": true
@@ -55,7 +99,7 @@
 			"importpath": "golang.org/x/tools/go/ast/astutil",
 			"repository": "https://go.googlesource.com/tools",
 			"vcs": "git",
-			"revision": "faed997d2c50aac9885d111f84817ba5a3a71455",
+			"revision": "1937f90a1bb43667aff4059b1bab13eb15121e8e",
 			"branch": "master",
 			"path": "go/ast/astutil",
 			"notests": true
@@ -64,7 +108,7 @@
 			"importpath": "golang.org/x/tools/imports",
 			"repository": "https://go.googlesource.com/tools",
 			"vcs": "git",
-			"revision": "faed997d2c50aac9885d111f84817ba5a3a71455",
+			"revision": "1937f90a1bb43667aff4059b1bab13eb15121e8e",
 			"branch": "master",
 			"path": "imports",
 			"notests": true

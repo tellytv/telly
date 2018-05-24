@@ -22,7 +22,8 @@ IPTV proxy for Plex Live written in Golang
 4) Plex will find your device (in some cases it continues to load but the continue button becomes orange, i.e. clickable. Click it) - select the country in the bottom left and ensure Plex has found the channels. Proceed.
 5) Once you get to the channel listing, `telly` currently __doesn't__ have any idea of EPG data so it __starts the channel numbers at 10000 to avoid complications__ with selecting channels at this stage. EPG APIs will come in the future, but for now you'll have to manually match up what `telly` is telling Plex to the actual channel numbers. For UK folk, `Sky HD` is the best option I've found.
 6) Once you've matched up all the channels, hit next and Plex will start downloading necessary EPG data.
-7) You're done! Enjoy using `telly`
+7) Once that is done, you might need to restart Plex so the telly tuner is not marked as dead.
+8) You're done! Enjoy using `telly`. :-)
 
 # Docker
 
