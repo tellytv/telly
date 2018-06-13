@@ -323,7 +323,7 @@ func main() {
     <URLBase>$BaseURL</URLBase>
     <device>
         <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
-        <Name>$FriendlyName</friendlyName>
+        <friendlyName>$FriendlyName</friendlyName>
         <manufacturer>$Manufacturer</manufacturer>
         <modelName>$ModelNumber</modelName>
         <modelNumber>$ModelNumber</modelNumber>
