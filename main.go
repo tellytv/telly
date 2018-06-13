@@ -381,8 +381,7 @@ func main() {
 	log("info", "advertising telly service on network")
 	_, err2 := advertiseSSDP(*friendlyName, deviceUuid)
 	if err2 != nil {
-		log("error", err.Error())
-		os.Exit(1)
+		log("warning", "telly cannot advertise over ssdp: "+err2.Error())
 	}
 
 	log("info", "listening on "+*listenAddress)
