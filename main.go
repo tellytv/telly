@@ -206,7 +206,7 @@ func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamUrl
 }
 
 func main() {
-	tellyVersion := "v0.6"
+	tellyVersion := "v0.6.1"
 	log("info", "booting telly "+tellyVersion)
 	usedTracks := make([]m3u.Track, 0)
 
