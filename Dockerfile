@@ -3,7 +3,7 @@ WORKDIR /go/src/app
 ADD . .
 # install ca root certificates + listen on 0.0.0.0 + build
 RUN apk add --no-cache ca-certificates \
-	&& find . -type f -print0 | xargs -0 sed -i 's/localhost/0.0.0.0/g' \
+	&& find . -type f -print0 | xargs -0 sed -i 's/"listen", "localhost/"listen", "0.0.0.0/g' \
 	&& CGO_ENABLED=0 GOOS=linux go install -ldflags '-w -s -extldflags "-static"'
 
 FROM scratch
