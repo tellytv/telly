@@ -34,6 +34,7 @@ var deviceAuth *string
 var friendlyName *string
 var tempPath *string
 var deviceUuid string
+var noSsdp *bool
 
 type DiscoveryData struct {
 	FriendlyName    string
@@ -76,6 +77,7 @@ func init() {
 	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
 	tempPath = flag.String("temp", os.TempDir()+"/telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
 	directMode = flag.Bool("direct", false, "Does not encode the stream URL and redirect to the correct one.")
+	noSsdp = flag.Bool("nossdp", false, "Turn off SSDP")
 	flag.Parse()
 }
 
@@ -385,10 +387,16 @@ func main() {
 		log("error", "Please use the -base option and set it to the (local) IP address telly is running on")
 	}
 
-	log("info", "advertising telly service on network")
-	_, err2 := advertiseSSDP(*friendlyName, deviceUuid)
-	if err2 != nil {
-		log("warning", "telly cannot advertise over ssdp: "+err2.Error())
+	if strings.Contains(*listenAddress, "0.0.0.0") && strings.Contains(*baseURL, "localhost") {
+		log("warning", "You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
+	}
+
+	if !*noSsdp {
+		log("info", "advertising telly service on network")
+		_, err2 := advertiseSSDP(*friendlyName, deviceUuid)
+		if err2 != nil {
+			log("warning", "telly cannot advertise over ssdp: "+err2.Error())
+		}
 	}
 
 	log("info", "listening on "+*listenAddress)
