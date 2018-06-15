@@ -142,7 +142,7 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 		}
 
 		if strings.Contains(track.URI, ".m3u8") {
-			log("warning", "your .m3u contains .m3u8's. Plex has stopped supporting these - please use .ts! telly will automatically convert these in a future version")
+			log("warning", "your .m3u contains .m3u8's. Plex has either stopped supporting m3u8 or it is a bug in a recent version - please use .ts! telly will automatically convert these in a future version. See telly github issue #108")
 		}
 
 		lu := LineupItem{
