@@ -380,6 +380,11 @@ func main() {
 		base64StreamHandler(w, r, uriPart)
 	})
 
+	if strings.Contains(*baseURL, "0.0.0.0") {
+		log("error", "Your base URL is set to 0.0.0.0, this will not work")
+		log("error", "Please use the -base option and set it to the (local) IP address telly is running on")
+	}
+
 	log("info", "advertising telly service on network")
 	_, err2 := advertiseSSDP(*friendlyName, deviceUuid)
 	if err2 != nil {
