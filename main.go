@@ -141,6 +141,10 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 			fullTrackUri = fmt.Sprintf("http://%s", *baseURL) + "/stream/" + trackUri
 		}
 
+		if strings.Contains(track.URI, ".m3u8") {
+			log("warning", "your .m3u contains .m3u8's. Plex has stopped supporting these - please use .ts! telly will automatically convert these in a future version")
+		}
+
 		lu := LineupItem{
 			GuideNumber: strconv.Itoa(gn),
 			GuideName:   finalName,
@@ -227,8 +231,6 @@ func main() {
 	playlist, err := m3u.Parse(*m3uPath)
 	if err != nil {
 		log("error", "unable to read m3u file, error below")
-		log("error", "m3u files need to have specific formats, see the github page for more information")
-		log("error", "future versions of telly will attempt to parse this better")
 		panic(err)
 	}
 
