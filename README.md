@@ -27,7 +27,38 @@ IPTV proxy for Plex Live written in Golang
 
 # Docker
 
-telly is automatically built at the [Docker Hub](https://hub.docker.com/r/tombowditch/telly/)
+## `docker run`
+```
+docker run -d \
+  --name='telly' \
+  --net='bridge' \
+  -e TZ="Europe/Amsterdam" \
+  -e 'PLAYLIST'='/home/github/myiptv.m3u' \
+  -e STREAMS=1 \
+  -e USEREGEX='.*UK.*' \
+  -p '6077:6077/tcp' \
+  -v '/tmp/telly':'/tmp':'rw' \
+  tombowditch/telly -base=localhost:6077
+```
+
+## docker-compose
+```
+telly:
+  image: tombowditch/telly
+  ports:
+    - "6077:6077"
+  environment:
+    - TZ=Europe/Amsterdam
+    - PLAYLIST=/home/github/myiptv.m3u
+    - USEREGEX='.*UK.*'
+    - LISTEN=telly:6077
+    - STREAMS=1
+    - FRIENDLYNAME=Tuner1
+    - DEVICEID=12345678
+  command: -base=telly:6077
+  restart: unless-stopped
+```
+
 
 # Troubleshooting
 
@@ -36,3 +67,4 @@ Please free to open an issue if you run into any issues at all, I'll be more tha
 # Social
 
 We have [a Discord server you can join!](https://discord.gg/bnNC8qX)
+
