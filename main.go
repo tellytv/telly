@@ -3,11 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/koron/go-ssdp"
-	"github.com/namsral/flag"
-	"github.com/tombowditch/telly-m3u-parser"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,6 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	ssdp "github.com/koron/go-ssdp"
+	"github.com/namsral/flag"
+	log "github.com/sirupsen/logrus"
+	m3u "github.com/tombowditch/telly-m3u-parser"
 )
 
 var deviceXml string
@@ -81,18 +82,14 @@ func init() {
 	flag.Parse()
 }
 
-func log(level string, msg string) {
-	fmt.Println("[telly] [" + level + "] " + msg)
-}
-
 func logRequestHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if *logRequests {
-			log("request", r.RemoteAddr+" -> "+r.Method+" "+r.RequestURI)
+			log.Debugf("%s -> %s %s", r.RemoteAddr, r.Method, r.RequestURI)
 
 			if r.Method == "POST" {
 				r.ParseForm()
-				log("request", "POST body: "+r.Form.Encode())
+				log.Debugln("POST body:", r.Form.Encode())
 			}
 		}
 
@@ -105,19 +102,19 @@ func downloadFile(url string, dest string) error {
 	out, err := os.Create(dest)
 	defer out.Close()
 	if err != nil {
-		return errors.New("Could not create file: " + dest + " ; " + err.Error())
+		return fmt.Errorf("could not create file: %s %s", dest, err.Error())
 	}
 
-	log("info", "Downloading file "+url+" to "+dest)
+	log.Debugf("Downloading file %s to %s", url, dest)
 	resp, err := http.Get(url)
 	if err != nil {
-		return errors.New("Could not download: " + err.Error())
+		return fmt.Errorf("could not download: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return errors.New("Could not download to output file: " + err.Error())
+		return fmt.Errorf("could not download to output file: %s", err.Error())
 	}
 
 	return nil
@@ -144,7 +141,7 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 		}
 
 		if strings.Contains(track.URI, ".m3u8") {
-			log("warning", "your .m3u contains .m3u8's. Plex has either stopped supporting m3u8 or it is a bug in a recent version - please use .ts! telly will automatically convert these in a future version. See telly github issue #108")
+			log.Warnln("your .m3u contains .m3u8's. Plex has either stopped supporting m3u8 or it is a bug in a recent version - please use .ts! telly will automatically convert these in a future version. See telly github issue #108")
 		}
 
 		lu := LineupItem{
@@ -168,7 +165,7 @@ func sendAlive(advertiser *ssdp.Advertiser) {
 		select {
 		case <-aliveTick:
 			if err := advertiser.Alive(); err != nil {
-				log("error", err.Error())
+				log.Errorln(err.Error())
 				os.Exit(1)
 			}
 		}
@@ -176,7 +173,7 @@ func sendAlive(advertiser *ssdp.Advertiser) {
 }
 
 func advertiseSSDP(deviceName string, deviceUUID string) (*ssdp.Advertiser, error) {
-	log("debug", "Advertising telly as "+deviceName+" ("+deviceUUID+")")
+	log.Debugf("Advertising telly as %s (%s)", deviceName, deviceUUID)
 
 	adv, err := ssdp.Advertise(
 		"upnp:rootdevice",
@@ -198,29 +195,29 @@ func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamUrl
 	decodedStreamURI, err := base64.StdEncoding.DecodeString(base64StreamUrl)
 
 	if err != nil {
-		log("error", "Invalid base64: "+base64StreamUrl+": "+err.Error())
+		log.Errorf("Invalid base64: %s: %s", base64StreamUrl, err.Error())
 		w.WriteHeader(400)
 		return
 	}
 
-	log("debug", "Redirecting to: "+string(decodedStreamURI))
+	log.Debugln("Redirecting to:", string(decodedStreamURI))
 	http.Redirect(w, r, string(decodedStreamURI), 301)
 }
 
 func main() {
 	tellyVersion := "v0.6.2"
-	log("info", "booting telly "+tellyVersion)
+	log.Debugln("booting telly", tellyVersion)
 	usedTracks := make([]m3u.Track, 0)
 
 	if *m3uPath == "iptv.m3u" {
-		log("warning", "using default m3u option, 'iptv.m3u'. launch telly with the -playlist=yourfile.m3u option to change this!")
+		log.Warnln("using default m3u option, 'iptv.m3u'. launch telly with the -playlist=yourfile.m3u option to change this!")
 	} else {
 		if strings.HasPrefix(strings.ToLower(*m3uPath), "http") {
 			tempFilename := *tempPath
 
 			err := downloadFile(*m3uPath, tempFilename)
 			if err != nil {
-				log("error", err.Error())
+				log.Errorln(err.Error())
 				os.Exit(1)
 			}
 
@@ -229,10 +226,10 @@ func main() {
 		}
 	}
 
-	log("info", "Reading m3u file "+*m3uPath+"...")
+	log.Debugf("Reading m3u file %s...", *m3uPath)
 	playlist, err := m3u.Parse(*m3uPath)
 	if err != nil {
-		log("error", "unable to read m3u file, error below")
+		log.Errorln("unable to read m3u file, error below")
 		panic(err)
 	}
 
@@ -275,28 +272,24 @@ func main() {
 	}
 
 	if !*filterRegex {
-		log("warning", "telly is not attempting to strip out unneeded channels, please use the flag -filterregex if telly returns too many channels")
+		log.Warnln("telly is not attempting to strip out unneeded channels, please use the flag -filterregex if telly returns too many channels")
 	}
 
 	if !*filterUkTv {
-		log("info", "telly is currently not filtering for only uk television. if you would like it to, please use the flag -uktv")
+		log.Warnln("telly is currently not filtering for only uk television. if you would like it to, please use the flag -uktv")
 	}
 
 	channelCount := len(usedTracks)
 
-	log("info", "found "+strconv.Itoa(channelCount)+" channels")
+	log.Infof("found %d channels", channelCount)
 
 	if channelCount > 420 {
-		fmt.Println("")
-		fmt.Println("* * * * * * * * * * *")
-		log("warning", "telly has loaded more than 420 channels. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You have been warned!")
-		fmt.Println("* * * * * * * * * * *")
-		fmt.Println("")
+		log.Warnln("telly has loaded more than 420 channels. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You have been warned!")
 	}
 
 	*friendlyName = "HDHomerun (" + *friendlyName + ")"
 
-	log("info", "creating discovery data")
+	log.Debugln("creating discovery data")
 	discoveryData := DiscoveryData{
 		FriendlyName:    *friendlyName,
 		Manufacturer:    "Silicondust",
@@ -310,7 +303,7 @@ func main() {
 		LineupURL:       fmt.Sprintf("http://%s/lineup.json", *baseURL),
 	}
 
-	log("info", "creating lineup status")
+	log.Debugln("creating lineup status")
 	lineupStatus := LineupStatus{
 		ScanInProgress: 0,
 		ScanPossible:   1,
@@ -318,7 +311,7 @@ func main() {
 		SourceList:     []string{"Cable"},
 	}
 
-	log("info", "creating device xml")
+	log.Debugln("creating device xml")
 	deviceXml = `<root xmlns="urn:schemas-upnp-org:device-1-0">
     <specVersion>
         <major>1</major>
@@ -342,7 +335,7 @@ func main() {
 	deviceXml = strings.Replace(deviceXml, "$ModelNumber", discoveryData.ModelNumber, -1)
 	deviceXml = strings.Replace(deviceXml, "$DeviceID", discoveryData.DeviceID, -1)
 
-	log("info", "creating webserver routes")
+	log.Debugln("creating webserver routes")
 
 	h := http.NewServeMux()
 
@@ -368,7 +361,7 @@ func main() {
 		w.Write([]byte(deviceXml))
 	})
 
-	log("info", "Building lineup")
+	log.Debugln("Building lineup")
 	lineupItems := buildChannels(usedTracks)
 
 	h.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
@@ -378,30 +371,30 @@ func main() {
 	h.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
 		u, _ := url.Parse(r.RequestURI)
 		uriPart := strings.Replace(u.Path, "/stream/", "", 1)
-		log("debug", "Parsing URI "+r.RequestURI+" to "+uriPart)
+		log.Debugf("Parsing URI %s to %s", r.RequestURI, uriPart)
 		base64StreamHandler(w, r, uriPart)
 	})
 
 	if strings.Contains(*baseURL, "0.0.0.0") {
-		log("error", "Your base URL is set to 0.0.0.0, this will not work")
-		log("error", "Please use the -base option and set it to the (local) IP address telly is running on")
+		log.Errorln("Your base URL is set to 0.0.0.0, this will not work")
+		log.Errorln("Please use the -base option and set it to the (local) IP address telly is running on")
 	}
 
 	if strings.Contains(*listenAddress, "0.0.0.0") && strings.Contains(*baseURL, "localhost") {
-		log("warning", "You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
+		log.Warnln("You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
 	}
 
 	if !*noSsdp {
-		log("info", "advertising telly service on network")
+		log.Debugln("advertising telly service on network")
 		_, err2 := advertiseSSDP(*friendlyName, deviceUuid)
 		if err2 != nil {
-			log("warning", "telly cannot advertise over ssdp: "+err2.Error())
+			log.WithError(err2).Warnln("telly cannot advertise over ssdp")
 		}
 	}
 
-	log("info", "listening on "+*listenAddress)
+	log.Infof("listening on %s", *listenAddress)
 	if err := http.ListenAndServe(*listenAddress, logRequestHandler(h)); err != nil {
-		log("error", err.Error())
+		log.Errorln(err.Error())
 		os.Exit(1)
 	}
 }
