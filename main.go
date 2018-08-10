@@ -65,7 +65,7 @@ type LineupItem struct {
 
 func init() {
 	flag.StringVar(&deviceId, "deviceid", "12345678", "8 characters, must be numbers. Only change this if you know what you're doing")
-	deviceUuid = deviceId + "-AE2A-4E54-BBC9-33AF7D5D6A92"
+	deviceUuid = fmt.Sprintf("%s-AE2A-4E54-BBC9-33AF7D5D6A92", deviceId)
 	filterRegex = flag.Bool("filterregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
 	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
 	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
@@ -76,7 +76,7 @@ func init() {
 	useRegex = flag.String("useregex", ".*", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this -uktv and -filterregex will NOT work")
 	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
 	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
-	tempPath = flag.String("temp", os.TempDir()+"/telly.m3u", "Where telly will temporarily store the downloaded playlist file.")
+	tempPath = flag.String("temp", fmt.Sprintf("%s/telly.m3u", os.TempDir()), "Where telly will temporarily store the downloaded playlist file.")
 	directMode = flag.Bool("direct", false, "Does not encode the stream URL and redirect to the correct one.")
 	noSsdp = flag.Bool("nossdp", false, "Turn off SSDP")
 	flag.Parse()
@@ -137,7 +137,7 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 		fullTrackUri := track.URI
 		if !*directMode {
 			trackUri := base64.StdEncoding.EncodeToString([]byte(track.URI))
-			fullTrackUri = fmt.Sprintf("http://%s", *baseURL) + "/stream/" + trackUri
+			fullTrackUri = fmt.Sprintf("http://%s/stream/%s", *baseURL, trackUri)
 		}
 
 		if strings.Contains(track.URI, ".m3u8") {
@@ -177,8 +177,8 @@ func advertiseSSDP(deviceName string, deviceUUID string) (*ssdp.Advertiser, erro
 
 	adv, err := ssdp.Advertise(
 		"upnp:rootdevice",
-		"uuid:"+deviceUUID+"::upnp:rootdevice",
-		"http://"+*listenAddress+"/device.xml",
+		fmt.Sprintf("uuid:%s::upnp:rootdevice", deviceUUID),
+		fmt.Sprintf("http://%s/device.xml", *listenAddress),
 		deviceName,
 		1800)
 
@@ -287,7 +287,7 @@ func main() {
 		log.Warnln("telly has loaded more than 420 channels. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You have been warned!")
 	}
 
-	*friendlyName = "HDHomerun (" + *friendlyName + ")"
+	*friendlyName = fmt.Sprintf("HDHomerun (%s)", *friendlyName)
 
 	log.Debugln("creating discovery data")
 	discoveryData := DiscoveryData{
