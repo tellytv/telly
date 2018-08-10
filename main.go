@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,27 +15,34 @@ import (
 	"time"
 
 	ssdp "github.com/koron/go-ssdp"
-	"github.com/namsral/flag"
-	log "github.com/sirupsen/logrus"
+	"github.com/prometheus/common/version"
+	"github.com/sirupsen/logrus"
 	m3u "github.com/tombowditch/telly-m3u-parser"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
-var filterRegex *bool
-var filterUkTv *bool
-var directMode *bool
+var log = logrus.New()
 
-var m3uPath *string
-var listenAddress *string
-var baseURL *string
-var logRequests *bool
-var concurrentStreams *int
-var useRegex *string
-var deviceID string
-var deviceAuth *string
-var friendlyName *string
-var tempPath *string
-var deviceUUID string
-var noSsdp *bool
+type config struct {
+	DeviceID          int
+	DeviceUUID        string
+	FilterRegex       bool
+	FilterUKTV        bool
+	M3UPath           string
+	ConcurrentStreams int
+	UseRegex          string
+	DeviceAuth        string
+	FriendlyName      string
+	TempPath          string
+	DirectMode        bool
+	SSDP              bool
+
+	LogRequests bool
+	LogLevel    string
+
+	ListenAddress *net.TCPAddr
+	BaseAddress   *net.TCPAddr
+}
 
 // DiscoveryData contains data about telly to expose in the HDHomeRun format for Plex detection.
 type DiscoveryData struct {
@@ -65,28 +73,9 @@ type LineupItem struct {
 	URL         string
 }
 
-func init() {
-	flag.StringVar(&deviceID, "deviceid", "12345678", "8 characters, must be numbers. Only change this if you know what you're doing")
-	deviceUUID = fmt.Sprintf("%s-AE2A-4E54-BBC9-33AF7D5D6A92", deviceID)
-	filterRegex = flag.Bool("filterregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
-	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
-	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
-	baseURL = flag.String("base", "localhost:6077", "example.com:port (useful with reverse proxy)")
-	m3uPath = flag.String("playlist", "iptv.m3u", "Location of playlist m3u file")
-	logRequests = flag.Bool("logrequests", false, "Log any requests to telly")
-	concurrentStreams = flag.Int("streams", 1, "Amount of concurrent streams allowed")
-	useRegex = flag.String("useregex", ".*", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this -uktv and -filterregex will NOT work")
-	deviceAuth = flag.String("deviceauth", "telly123", "Only change this if you know what you're doing")
-	friendlyName = flag.String("friendlyname", "telly", "Useful if you are running two instances of telly and want to differentiate between them.")
-	tempPath = flag.String("temp", fmt.Sprintf("%s/telly.m3u", os.TempDir()), "Where telly will temporarily store the downloaded playlist file.")
-	directMode = flag.Bool("direct", false, "Does not encode the stream URL and redirect to the correct one.")
-	noSsdp = flag.Bool("nossdp", false, "Turn off SSDP")
-	flag.Parse()
-}
-
-func logRequestHandler(next http.Handler) http.Handler {
+func logRequestHandler(logRequests bool, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if *logRequests {
+		if logRequests {
 			log.Debugf("%s -> %s %s", r.RemoteAddr, r.Method, r.RequestURI)
 
 			if r.Method == "POST" {
@@ -122,7 +111,7 @@ func downloadFile(url string, dest string) error {
 	return nil
 }
 
-func buildChannels(usedTracks []m3u.Track) []LineupItem {
+func buildChannels(directMode bool, baseURL string, usedTracks []m3u.Track) []LineupItem {
 	lineup := make([]LineupItem, 0)
 	gn := 10000
 
@@ -137,9 +126,9 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 
 		// base64 url
 		fullTrackURI := track.URI
-		if !*directMode {
+		if !directMode {
 			trackURI := base64.StdEncoding.EncodeToString([]byte(track.URI))
-			fullTrackURI = fmt.Sprintf("http://%s/stream/%s", *baseURL, trackURI)
+			fullTrackURI = fmt.Sprintf("http://%s/stream/%s", baseURL, trackURI)
 		}
 
 		if strings.Contains(track.URI, ".m3u8") {
@@ -174,13 +163,13 @@ func sendAlive(advertiser *ssdp.Advertiser) {
 	}
 }
 
-func advertiseSSDP(deviceName string, deviceUUID string) (*ssdp.Advertiser, error) {
+func advertiseSSDP(listenAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
 	log.Debugf("Advertising telly as %s (%s)", deviceName, deviceUUID)
 
 	adv, err := ssdp.Advertise(
 		"upnp:rootdevice",
 		fmt.Sprintf("uuid:%s::upnp:rootdevice", deviceUUID),
-		fmt.Sprintf("http://%s/device.xml", *listenAddress),
+		fmt.Sprintf("http://%s/device.xml", listenAddress),
 		deviceName,
 		1800)
 
@@ -207,29 +196,72 @@ func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamURL
 }
 
 func main() {
-	tellyVersion := "v0.6.2"
-	log.Debugln("booting telly", tellyVersion)
+
+	var (
+		opts = config{}
+	)
+
+	// Discovery flags
+	kingpin.Flag("discovery.deviceid", "8 digits. Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICEID)").Envar("TELLY_DISCOVERY_DEVICEID").Default("12345678").IntVar(&opts.DeviceID)
+	kingpin.Flag("discovery.friendlyname", "Name exposed via discovery. Useful if you are running two instances of telly and want to differentiate between them $(TELLY_DISCOVERY_FRIENDLYNAME)").Envar("TELLY_DISCOVERY_FRIENDLYNAME").Default("telly").StringVar(&opts.FriendlyName)
+	kingpin.Flag("discovery.deviceauth", "Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICEAUTH)").Envar("TELLY_DISCOVERY_DEVICEAUTH").Default("telly123").StringVar(&opts.DeviceAuth)
+	kingpin.Flag("discovery.ssdp", "Turn on SSDP announcement of telly to the local network $(TELLY_DISCOVERY_SSDP)").Envar("TELLY_DISCOVERY_SSDP").Default("true").BoolVar(&opts.SSDP)
+
+	// Regex/filtering flags
+	kingpin.Flag("filter.filterregex", "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc) $(TELLY_FILTER_FILTERREGEX)").Envar("TELLY_FILTER_FILTERREGEX").Default("false").BoolVar(&opts.FilterRegex)
+	kingpin.Flag("filter.uktv-preset", "Only index channels with 'UK' in the name. $(TELLY_FILTER_UKTV_PRESET)").Envar("TELLY_FILTER_UKTV_PRESET").Default("false").BoolVar(&opts.FilterUKTV)
+	kingpin.Flag("filter.useregex", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this -filter.uktv-preset and -filter.filterregex will NOT work. $(TELLY_FILTER_USEREGEX)").Envar("TELLY_FILTER_USEREGEX").Default(".*").StringVar(&opts.UseRegex)
+
+	// Web flags
+	kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry $(TELLY_WEB_LISTEN_ADDRESS)").Envar("TELLY_WEB_LISTEN_ADDRESS").Default("localhost:6077").TCPVar(&opts.ListenAddress)
+	kingpin.Flag("web.base-address", "The address to expose via discovery. Useful with reverse proxy $(TELLY_WEB_BASE_ADDRESS)").Envar("TELLY_WEB_BASE_ADDRESS").Default("localhost:6077").TCPVar(&opts.BaseAddress)
+
+	// Log flags
+	kingpin.Flag("log.level", "Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal] $(TELLY_LOG_LEVEL)").Envar("TELLY_LOG_LEVEL").Default(logrus.InfoLevel.String()).StringVar(&opts.LogLevel)
+	kingpin.Flag("log.requests", "Log HTTP requests $(TELLY_LOG_REQUESTS)").Envar("TELLY_LOG_REQUESTS").Default("false").BoolVar(&opts.LogRequests)
+
+	// IPTV flags
+	kingpin.Flag("iptv.playlist", "Location of playlist m3u file. Can be on disk or a URL $(TELLY_IPTV_PLAYLIST)").Envar("TELLY_IPTV_PLAYLIST").Default("iptv.m3u").StringVar(&opts.M3UPath)
+	kingpin.Flag("iptv.streams", "Amount of concurrent streams allowed $(TELLY_IPTV_STREAMS)").Envar("TELLY_IPTV_STREAMS").Default("1").IntVar(&opts.ConcurrentStreams)
+	kingpin.Flag("iptv.direct", "Does not encode the stream URL and redirect to the correct one $(TELLY_IPTV_DIRECT)").Envar("TELLY_IPTV_DIRECT").Default("false").BoolVar(&opts.DirectMode)
+
+	kingpin.Version(version.Print("telly"))
+	kingpin.HelpFlag.Short('h')
+	kingpin.Parse()
+
+	log.Infoln("Starting telly", version.Info())
+	log.Infoln("Build context", version.BuildContext())
+
+	level, parseLevelErr := logrus.ParseLevel(opts.LogLevel)
+	if parseLevelErr != nil {
+		log.WithError(parseLevelErr).Panicln("Error setting log level!")
+	}
+	log.SetLevel(level)
+
+	opts.DeviceUUID = fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", opts.DeviceID)
+
 	usedTracks := make([]m3u.Track, 0)
 
-	if *m3uPath == "iptv.m3u" {
+	if opts.M3UPath == "iptv.m3u" {
 		log.Warnln("using default m3u option, 'iptv.m3u'. launch telly with the -playlist=yourfile.m3u option to change this!")
 	} else {
-		if strings.HasPrefix(strings.ToLower(*m3uPath), "http") {
-			tempFilename := *tempPath
+		if strings.HasPrefix(strings.ToLower(opts.M3UPath), "http") {
+			// FIXME: Don't need a tempPath, just load into memory.
+			tempFilename := "FIXME"
 
-			err := downloadFile(*m3uPath, tempFilename)
+			err := downloadFile(opts.M3UPath, tempFilename)
 			if err != nil {
 				log.Errorln(err.Error())
 				os.Exit(1)
 			}
 
-			*m3uPath = tempFilename
+			opts.M3UPath = tempFilename
 			defer os.Remove(tempFilename)
 		}
 	}
 
-	log.Debugf("Reading m3u file %s...", *m3uPath)
-	playlist, err := m3u.Parse(*m3uPath)
+	log.Debugf("Reading m3u file %s...", opts.M3UPath)
+	playlist, err := m3u.Parse(opts.M3UPath)
 	if err != nil {
 		log.Errorln("unable to read m3u file, error below")
 		panic(err)
@@ -239,11 +271,11 @@ func main() {
 	twentyFourSevenRegex, _ := regexp.Compile("24/7")
 	ukTv, _ := regexp.Compile("UK")
 
-	userRegex, _ := regexp.Compile(*useRegex)
+	userRegex, _ := regexp.Compile(opts.UseRegex)
 
 	for _, track := range playlist.Tracks {
-		if *useRegex == ".*" {
-			if *filterRegex && *filterUkTv {
+		if opts.UseRegex == ".*" {
+			if opts.FilterRegex && opts.FilterUKTV {
 				if !episodeRegex.MatchString(track.Name) {
 					if !twentyFourSevenRegex.MatchString(track.Name) {
 						if ukTv.MatchString(track.Name) {
@@ -251,14 +283,14 @@ func main() {
 						}
 					}
 				}
-			} else if *filterRegex && !*filterUkTv {
+			} else if opts.FilterRegex && !opts.FilterUKTV {
 				if !episodeRegex.MatchString(track.Name) {
 					if !twentyFourSevenRegex.MatchString(track.Name) {
 						usedTracks = append(usedTracks, track)
 					}
 				}
 
-			} else if !*filterRegex && *filterUkTv {
+			} else if !opts.FilterRegex && opts.FilterUKTV {
 				if ukTv.MatchString(track.Name) {
 					usedTracks = append(usedTracks, track)
 				}
@@ -273,11 +305,11 @@ func main() {
 		}
 	}
 
-	if !*filterRegex {
+	if !opts.FilterRegex {
 		log.Warnln("telly is not attempting to strip out unneeded channels, please use the flag -filterregex if telly returns too many channels")
 	}
 
-	if !*filterUkTv {
+	if !opts.FilterUKTV {
 		log.Warnln("telly is currently not filtering for only uk television. if you would like it to, please use the flag -uktv")
 	}
 
@@ -289,20 +321,20 @@ func main() {
 		log.Warnln("telly has loaded more than 420 channels. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You have been warned!")
 	}
 
-	*friendlyName = fmt.Sprintf("HDHomerun (%s)", *friendlyName)
+	opts.FriendlyName = fmt.Sprintf("HDHomerun (%s)", opts.FriendlyName)
 
 	log.Debugln("creating discovery data")
 	discoveryData := DiscoveryData{
-		FriendlyName:    *friendlyName,
+		FriendlyName:    opts.FriendlyName,
 		Manufacturer:    "Silicondust",
 		ModelNumber:     "HDTC-2US",
 		FirmwareName:    "hdhomeruntc_atsc",
-		TunerCount:      *concurrentStreams,
+		TunerCount:      opts.ConcurrentStreams,
 		FirmwareVersion: "20150826",
-		DeviceID:        deviceID,
-		DeviceAuth:      *deviceAuth,
-		BaseURL:         fmt.Sprintf("http://%s", *baseURL),
-		LineupURL:       fmt.Sprintf("http://%s/lineup.json", *baseURL),
+		DeviceID:        strconv.Itoa(opts.DeviceID),
+		DeviceAuth:      opts.DeviceAuth,
+		BaseURL:         fmt.Sprintf("http://%s", opts.BaseAddress),
+		LineupURL:       fmt.Sprintf("http://%s/lineup.json", opts.BaseAddress),
 	}
 
 	log.Debugln("creating lineup status")
@@ -358,7 +390,7 @@ func main() {
 	})
 
 	log.Debugln("Building lineup")
-	lineupItems := buildChannels(usedTracks)
+	lineupItems := buildChannels(opts.DirectMode, opts.BaseAddress.String(), usedTracks)
 
 	h.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(lineupItems)
@@ -371,25 +403,25 @@ func main() {
 		base64StreamHandler(w, r, uriPart)
 	})
 
-	if strings.Contains(*baseURL, "0.0.0.0") {
+	if opts.BaseAddress.IP.IsUnspecified() {
 		log.Errorln("Your base URL is set to 0.0.0.0, this will not work")
 		log.Errorln("Please use the -base option and set it to the (local) IP address telly is running on")
 	}
 
-	if strings.Contains(*listenAddress, "0.0.0.0") && strings.Contains(*baseURL, "localhost") {
+	if opts.ListenAddress.IP.IsUnspecified() {
 		log.Warnln("You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
 	}
 
-	if !*noSsdp {
+	if opts.SSDP {
 		log.Debugln("advertising telly service on network")
-		_, err2 := advertiseSSDP(*friendlyName, deviceUUID)
-		if err2 != nil {
-			log.WithError(err2).Warnln("telly cannot advertise over ssdp")
+		_, ssdpErr := advertiseSSDP(opts.ListenAddress.String(), opts.FriendlyName, opts.DeviceUUID)
+		if ssdpErr != nil {
+			log.WithError(ssdpErr).Warnln("telly cannot advertise over ssdp")
 		}
 	}
 
-	log.Infof("listening on %s", *listenAddress)
-	if err := http.ListenAndServe(*listenAddress, logRequestHandler(h)); err != nil {
+	log.Infof("listening on %s", opts.ListenAddress)
+	if err := http.ListenAndServe(opts.ListenAddress.String(), logRequestHandler(opts.LogRequests, h)); err != nil {
 		log.Errorln(err.Error())
 		os.Exit(1)
 	}
