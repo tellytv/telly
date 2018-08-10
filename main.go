@@ -29,13 +29,14 @@ var baseURL *string
 var logRequests *bool
 var concurrentStreams *int
 var useRegex *string
-var deviceId string
+var deviceID string
 var deviceAuth *string
 var friendlyName *string
 var tempPath *string
-var deviceUuid string
+var deviceUUID string
 var noSsdp *bool
 
+// DiscoveryData contains data about telly to expose in the HDHomeRun format for Plex detection.
 type DiscoveryData struct {
 	FriendlyName    string
 	Manufacturer    string
@@ -49,6 +50,7 @@ type DiscoveryData struct {
 	LineupURL       string
 }
 
+// LineupStatus exposes the status of the channel lineup.
 type LineupStatus struct {
 	ScanInProgress int
 	ScanPossible   int
@@ -56,6 +58,7 @@ type LineupStatus struct {
 	SourceList     []string
 }
 
+// LineupItem is a single channel found in the playlist.
 type LineupItem struct {
 	GuideNumber string
 	GuideName   string
@@ -63,8 +66,8 @@ type LineupItem struct {
 }
 
 func init() {
-	flag.StringVar(&deviceId, "deviceid", "12345678", "8 characters, must be numbers. Only change this if you know what you're doing")
-	deviceUuid = fmt.Sprintf("%s-AE2A-4E54-BBC9-33AF7D5D6A92", deviceId)
+	flag.StringVar(&deviceID, "deviceid", "12345678", "8 characters, must be numbers. Only change this if you know what you're doing")
+	deviceUUID = fmt.Sprintf("%s-AE2A-4E54-BBC9-33AF7D5D6A92", deviceID)
 	filterRegex = flag.Bool("filterregex", false, "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc")
 	filterUkTv = flag.Bool("uktv", false, "Only index channels with 'UK' in the name")
 	listenAddress = flag.String("listen", "localhost:6077", "IP:Port to listen on")
@@ -133,10 +136,10 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 		}
 
 		// base64 url
-		fullTrackUri := track.URI
+		fullTrackURI := track.URI
 		if !*directMode {
-			trackUri := base64.StdEncoding.EncodeToString([]byte(track.URI))
-			fullTrackUri = fmt.Sprintf("http://%s/stream/%s", *baseURL, trackUri)
+			trackURI := base64.StdEncoding.EncodeToString([]byte(track.URI))
+			fullTrackURI = fmt.Sprintf("http://%s/stream/%s", *baseURL, trackURI)
 		}
 
 		if strings.Contains(track.URI, ".m3u8") {
@@ -146,7 +149,7 @@ func buildChannels(usedTracks []m3u.Track) []LineupItem {
 		lu := LineupItem{
 			GuideNumber: strconv.Itoa(gn),
 			GuideName:   finalName,
-			URL:         fullTrackUri,
+			URL:         fullTrackURI,
 		}
 
 		lineup = append(lineup, lu)
@@ -190,11 +193,11 @@ func advertiseSSDP(deviceName string, deviceUUID string) (*ssdp.Advertiser, erro
 	return adv, nil
 }
 
-func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamUrl string) {
-	decodedStreamURI, err := base64.StdEncoding.DecodeString(base64StreamUrl)
+func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamURL string) {
+	decodedStreamURI, err := base64.StdEncoding.DecodeString(base64StreamURL)
 
 	if err != nil {
-		log.Errorf("Invalid base64: %s: %s", base64StreamUrl, err.Error())
+		log.Errorf("Invalid base64: %s: %s", base64StreamURL, err.Error())
 		w.WriteHeader(400)
 		return
 	}
@@ -296,7 +299,7 @@ func main() {
 		FirmwareName:    "hdhomeruntc_atsc",
 		TunerCount:      *concurrentStreams,
 		FirmwareVersion: "20150826",
-		DeviceID:        deviceId,
+		DeviceID:        deviceID,
 		DeviceAuth:      *deviceAuth,
 		BaseURL:         fmt.Sprintf("http://%s", *baseURL),
 		LineupURL:       fmt.Sprintf("http://%s/lineup.json", *baseURL),
@@ -379,7 +382,7 @@ func main() {
 
 	if !*noSsdp {
 		log.Debugln("advertising telly service on network")
-		_, err2 := advertiseSSDP(*friendlyName, deviceUuid)
+		_, err2 := advertiseSSDP(*friendlyName, deviceUUID)
 		if err2 != nil {
 			log.WithError(err2).Warnln("telly cannot advertise over ssdp")
 		}
