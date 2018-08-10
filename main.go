@@ -19,7 +19,6 @@ import (
 	m3u "github.com/tombowditch/telly-m3u-parser"
 )
 
-var deviceXml string
 var filterRegex *bool
 var filterUkTv *bool
 var directMode *bool
@@ -312,28 +311,22 @@ func main() {
 	}
 
 	log.Debugln("creating device xml")
-	deviceXml = `<root xmlns="urn:schemas-upnp-org:device-1-0">
+	deviceXML := fmt.Sprintf(`<root xmlns="urn:schemas-upnp-org:device-1-0">
     <specVersion>
         <major>1</major>
         <minor>0</minor>
     </specVersion>
-    <URLBase>$BaseURL</URLBase>
+    <URLBase>%s</URLBase>
     <device>
         <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
-        <friendlyName>$FriendlyName</friendlyName>
-        <manufacturer>$Manufacturer</manufacturer>
-        <modelName>$ModelNumber</modelName>
-        <modelNumber>$ModelNumber</modelNumber>
+        <friendlyName>%s</friendlyName>
+        <manufacturer>%s</manufacturer>
+        <modelName>%s</modelName>
+        <modelNumber>%s</modelNumber>
         <serialNumber></serialNumber>
-        <UDN>uuid:$DeviceID</UDN>
+        <UDN>uuid:%s</UDN>
     </device>
-</root>`
-
-	deviceXml = strings.Replace(deviceXml, "$BaseURL", discoveryData.BaseURL, -1)
-	deviceXml = strings.Replace(deviceXml, "$FriendlyName", discoveryData.FriendlyName, -1)
-	deviceXml = strings.Replace(deviceXml, "$Manufacturer", discoveryData.Manufacturer, -1)
-	deviceXml = strings.Replace(deviceXml, "$ModelNumber", discoveryData.ModelNumber, -1)
-	deviceXml = strings.Replace(deviceXml, "$DeviceID", discoveryData.DeviceID, -1)
+</root>`, discoveryData.BaseURL, discoveryData.FriendlyName, discoveryData.Manufacturer, discoveryData.ModelNumber, discoveryData.ModelNumber, discoveryData.DeviceID)
 
 	log.Debugln("creating webserver routes")
 
@@ -353,12 +346,12 @@ func main() {
 
 	h.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		w.Write([]byte(deviceXml))
+		w.Write([]byte(deviceXML))
 	})
 
 	h.HandleFunc("/device.xml", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		w.Write([]byte(deviceXml))
+		w.Write([]byte(deviceXML))
 	})
 
 	log.Debugln("Building lineup")
