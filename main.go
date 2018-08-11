@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/base64"
-	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net"
@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	ssdp "github.com/koron/go-ssdp"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
@@ -58,6 +59,24 @@ type DiscoveryData struct {
 	LineupURL       string
 }
 
+// UPNPXML returns the UPNP representation of the DiscoveryData.
+func (d *DiscoveryData) UPNP() UPNP {
+	return UPNP{
+		SpecVersion: UPNPVersion{
+			Major: 1, Minor: 0,
+		},
+		URLBase: d.BaseURL,
+		Device: UPNPDevice{
+			DeviceType:   "urn:schemas-upnp-org:device:MediaServer:1",
+			FriendlyName: d.FriendlyName,
+			Manufacturer: d.Manufacturer,
+			ModelNumber:  d.ModelNumber,
+			SerialNumber: d.DeviceID,
+			UDN:          fmt.Sprintf("uuid:%s", d.DeviceID),
+		},
+	}
+}
+
 // LineupStatus exposes the status of the channel lineup.
 type LineupStatus struct {
 	ScanInProgress int
@@ -82,22 +101,6 @@ type Track struct {
 	TvgID         string `m3u:"tvg-id"`
 	TvgLogo       string `m3u:"tvg-logo"`
 	TvgName       string `m3u:"tvg-name"`
-}
-
-func logRequestHandler(logRequests bool, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if logRequests {
-			log.Debugf("%s -> %s %s", r.RemoteAddr, r.Method, r.RequestURI)
-
-			if r.Method == "POST" {
-				r.ParseForm()
-				log.Debugln("POST body:", r.Form.Encode())
-			}
-		}
-
-		next.ServeHTTP(w, r)
-
-	})
 }
 
 func buildChannels(directMode bool, baseURL string, usedTracks []Track) []LineupItem {
@@ -152,13 +155,13 @@ func sendAlive(advertiser *ssdp.Advertiser) {
 	}
 }
 
-func advertiseSSDP(listenAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
+func advertiseSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
 	log.Debugf("Advertising telly as %s (%s)", deviceName, deviceUUID)
 
 	adv, err := ssdp.Advertise(
 		"upnp:rootdevice",
 		fmt.Sprintf("uuid:%s::upnp:rootdevice", deviceUUID),
-		fmt.Sprintf("http://%s/device.xml", listenAddress),
+		fmt.Sprintf("http://%s/device.xml", baseAddress),
 		deviceName,
 		1800)
 
@@ -171,17 +174,27 @@ func advertiseSSDP(listenAddress, deviceName, deviceUUID string) (*ssdp.Advertis
 	return adv, nil
 }
 
-func base64StreamHandler(w http.ResponseWriter, r *http.Request, base64StreamURL string) {
-	decodedStreamURI, err := base64.StdEncoding.DecodeString(base64StreamURL)
+type UPNPVersion struct {
+	Major int32 `xml:"major"`
+	Minor int32 `xml:"minor"`
+}
 
-	if err != nil {
-		log.Errorf("Invalid base64: %s: %s", base64StreamURL, err.Error())
-		w.WriteHeader(400)
-		return
-	}
+type UPNPDevice struct {
+	DeviceType       string `xml:"deviceType"`
+	FriendlyName     string `xml:"friendlyName"`
+	Manufacturer     string `xml:"manufacturer"`
+	ModelDescription string `xml:"modelDescription"`
+	ModelName        string `xml:"modelName"`
+	ModelNumber      string `xml:"modelNumber"`
+	SerialNumber     string `xml:"serialNumber"`
+	UDN              string `xml:"UDN"`
+}
 
-	log.Debugln("Redirecting to:", string(decodedStreamURI))
-	http.Redirect(w, r, string(decodedStreamURI), 301)
+type UPNP struct {
+	XMLName     xml.Name    `xml:"root"`
+	SpecVersion UPNPVersion `xml:"specVersion"`
+	URLBase     string      `xml:"URLBase"`
+	Device      UPNPDevice  `xml:"device"`
 }
 
 func main() {
@@ -228,6 +241,14 @@ func main() {
 	log.SetLevel(level)
 
 	opts.DeviceUUID = fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", opts.DeviceID)
+
+	if opts.BaseAddress.IP.IsUnspecified() {
+		log.Panicln("Your base URL is set to 0.0.0.0, this will not work. Please use the -base option and set it to the (local) IP address telly is running on")
+	}
+
+	if opts.ListenAddress.IP.IsUnspecified() && opts.BaseAddress.IP.IsLoopback() {
+		log.Warnln("You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
+	}
 
 	usedTracks := make([]Track, 0)
 
@@ -304,6 +325,9 @@ func main() {
 		}
 	}
 
+	log.Debugln("Building lineup")
+	lineupItems := buildChannels(opts.DirectMode, opts.BaseAddress.String(), usedTracks)
+
 	if !opts.FilterRegex {
 		log.Warnln("telly is not attempting to strip out unneeded channels, please use the flag -filterregex if telly returns too many channels")
 	}
@@ -345,83 +369,101 @@ func main() {
 	}
 
 	log.Debugln("creating device xml")
-	deviceXML := fmt.Sprintf(`<root xmlns="urn:schemas-upnp-org:device-1-0">
-    <specVersion>
-        <major>1</major>
-        <minor>0</minor>
-    </specVersion>
-    <URLBase>%s</URLBase>
-    <device>
-        <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
-        <friendlyName>%s</friendlyName>
-        <manufacturer>%s</manufacturer>
-        <modelName>%s</modelName>
-        <modelNumber>%s</modelNumber>
-        <serialNumber></serialNumber>
-        <UDN>uuid:%s</UDN>
-    </device>
-</root>`, discoveryData.BaseURL, discoveryData.FriendlyName, discoveryData.Manufacturer, discoveryData.ModelNumber, discoveryData.ModelNumber, discoveryData.DeviceID)
+	deviceXML := discoveryData.UPNP()
 
 	log.Debugln("creating webserver routes")
 
-	h := http.NewServeMux()
+	gin.SetMode(gin.ReleaseMode)
 
-	h.HandleFunc("/discover.json", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(discoveryData)
+	router := gin.New()
+	router.Use(gin.Recovery())
+
+	if opts.LogRequests {
+		router.Use(ginrus())
+	}
+
+	router.GET("/", func(c *gin.Context) {
+		c.XML(http.StatusOK, deviceXML)
 	})
 
-	h.HandleFunc("/lineup_status.json", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(lineupStatus)
+	router.GET("/discover.json", func(c *gin.Context) {
+		c.JSON(http.StatusOK, discoveryData)
 	})
 
-	h.HandleFunc("/lineup.post", func(w http.ResponseWriter, r *http.Request) {
+	router.GET("/lineup_status.json", func(c *gin.Context) {
+		c.JSON(http.StatusOK, lineupStatus)
+	})
+
+	router.GET("/lineup.post", func(c *gin.Context) {
 		// empty
 	})
 
-	h.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
-		w.Write([]byte(deviceXML))
+	router.GET("/device.xml", func(c *gin.Context) {
+		c.XML(http.StatusOK, deviceXML)
 	})
 
-	h.HandleFunc("/device.xml", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
-		w.Write([]byte(deviceXML))
+	router.GET("/lineup.json", func(c *gin.Context) {
+		c.JSON(http.StatusOK, lineupItems)
 	})
 
-	log.Debugln("Building lineup")
-	lineupItems := buildChannels(opts.DirectMode, opts.BaseAddress.String(), usedTracks)
-
-	h.HandleFunc("/lineup.json", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(lineupItems)
-	})
-
-	h.HandleFunc("/stream/", func(w http.ResponseWriter, r *http.Request) {
-		u, _ := url.Parse(r.RequestURI)
+	router.GET("/stream/", func(c *gin.Context) {
+		u, _ := url.Parse(c.Request.RequestURI)
 		uriPart := strings.Replace(u.Path, "/stream/", "", 1)
-		log.Debugf("Parsing URI %s to %s", r.RequestURI, uriPart)
-		base64StreamHandler(w, r, uriPart)
+		log.Debugf("Parsing URI %s to %s", c.Request.RequestURI, uriPart)
+
+		decodedStreamURI, decodeErr := base64.StdEncoding.DecodeString(uriPart)
+		if decodeErr != nil {
+			log.Errorf("Invalid base64: %s: %s", uriPart, err.Error())
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+
+		log.Debugln("Redirecting to:", string(decodedStreamURI))
+		c.Redirect(http.StatusMovedPermanently, string(decodedStreamURI))
 	})
-
-	if opts.BaseAddress.IP.IsUnspecified() {
-		log.Errorln("Your base URL is set to 0.0.0.0, this will not work")
-		log.Errorln("Please use the -base option and set it to the (local) IP address telly is running on")
-	}
-
-	if opts.ListenAddress.IP.IsUnspecified() {
-		log.Warnln("You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
-	}
 
 	if opts.SSDP {
 		log.Debugln("advertising telly service on network")
-		_, ssdpErr := advertiseSSDP(opts.ListenAddress.String(), opts.FriendlyName, opts.DeviceUUID)
+		_, ssdpErr := advertiseSSDP(opts.BaseAddress.String(), opts.FriendlyName, opts.DeviceUUID)
 		if ssdpErr != nil {
 			log.WithError(ssdpErr).Warnln("telly cannot advertise over ssdp")
 		}
 	}
 
-	log.Infof("listening on %s", opts.ListenAddress)
-	if err := http.ListenAndServe(opts.ListenAddress.String(), logRequestHandler(opts.LogRequests, h)); err != nil {
-		log.Errorln(err.Error())
-		os.Exit(1)
+	log.Infof("Listening and serving HTTP on %s", opts.ListenAddress)
+	if err := router.Run(opts.ListenAddress.String()); err != nil {
+		log.WithError(err).Panicln("Error starting up web server")
+	}
+}
+
+func ginrus() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		// some evil middlewares modify this values
+		path := c.Request.URL.Path
+		c.Next()
+
+		end := time.Now()
+		latency := end.Sub(start)
+		end = end.UTC()
+
+		logFields := logrus.Fields{
+			"status":    c.Writer.Status(),
+			"method":    c.Request.Method,
+			"path":      path,
+			"ipAddress": c.ClientIP(),
+			"latency":   latency,
+			"userAgent": c.Request.UserAgent(),
+			"time":      end.Format(time.RFC3339),
+		}
+
+		entry := log.WithFields(logFields)
+
+		if len(c.Errors) > 0 {
+			// Append error field if this is an erroneous request.
+			entry.Error(c.Errors.String())
+		} else {
+			entry.Info()
+		}
 	}
 }
