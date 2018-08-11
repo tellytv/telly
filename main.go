@@ -2,10 +2,8 @@ package main
 
 import (
 	"encoding/base64"
-	"encoding/xml"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,85 +22,7 @@ import (
 
 var log = logrus.New()
 
-type config struct {
-	DeviceID          int
-	DeviceUUID        string
-	FilterRegex       bool
-	FilterUKTV        bool
-	M3UPath           string
-	ConcurrentStreams int
-	UseRegex          string
-	DeviceAuth        string
-	FriendlyName      string
-	DirectMode        bool
-	SSDP              bool
-
-	LogRequests bool
-	LogLevel    string
-
-	ListenAddress *net.TCPAddr
-	BaseAddress   *net.TCPAddr
-}
-
-// DiscoveryData contains data about telly to expose in the HDHomeRun format for Plex detection.
-type DiscoveryData struct {
-	FriendlyName    string
-	Manufacturer    string
-	ModelNumber     string
-	FirmwareName    string
-	TunerCount      int
-	FirmwareVersion string
-	DeviceID        string
-	DeviceAuth      string
-	BaseURL         string
-	LineupURL       string
-}
-
-// UPNPXML returns the UPNP representation of the DiscoveryData.
-func (d *DiscoveryData) UPNP() UPNP {
-	return UPNP{
-		SpecVersion: UPNPVersion{
-			Major: 1, Minor: 0,
-		},
-		URLBase: d.BaseURL,
-		Device: UPNPDevice{
-			DeviceType:   "urn:schemas-upnp-org:device:MediaServer:1",
-			FriendlyName: d.FriendlyName,
-			Manufacturer: d.Manufacturer,
-			ModelNumber:  d.ModelNumber,
-			SerialNumber: d.DeviceID,
-			UDN:          fmt.Sprintf("uuid:%s", d.DeviceID),
-		},
-	}
-}
-
-// LineupStatus exposes the status of the channel lineup.
-type LineupStatus struct {
-	ScanInProgress int
-	ScanPossible   int
-	Source         string
-	SourceList     []string
-}
-
-// LineupItem is a single channel found in the playlist.
-type LineupItem struct {
-	GuideNumber string
-	GuideName   string
-	URL         string
-}
-
-type Track struct {
-	*m3u.Track
-	Catchup       string `m3u:"catchup"`
-	CatchupDays   string `m3u:"catchup-days"`
-	CatchupSource string `m3u:"catchup-source"`
-	GroupTitle    string `m3u:"group-title"`
-	TvgID         string `m3u:"tvg-id"`
-	TvgLogo       string `m3u:"tvg-logo"`
-	TvgName       string `m3u:"tvg-name"`
-}
-
-func buildChannels(directMode bool, baseURL string, usedTracks []Track) []LineupItem {
+func buildLineup(directMode bool, baseURL string, usedTracks []Track) []LineupItem {
 	lineup := make([]LineupItem, 0)
 	gn := 10000
 
@@ -147,8 +67,7 @@ func sendAlive(advertiser *ssdp.Advertiser) {
 		select {
 		case <-aliveTick:
 			if err := advertiser.Alive(); err != nil {
-				log.Errorln(err.Error())
-				os.Exit(1)
+				log.WithError(err).Panicln("Error when sending SSDP heartbeat")
 			}
 		}
 	}
@@ -173,34 +92,9 @@ func advertiseSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser
 	return adv, nil
 }
 
-type UPNPVersion struct {
-	Major int32 `xml:"major"`
-	Minor int32 `xml:"minor"`
-}
-
-type UPNPDevice struct {
-	DeviceType       string `xml:"deviceType"`
-	FriendlyName     string `xml:"friendlyName"`
-	Manufacturer     string `xml:"manufacturer"`
-	ModelDescription string `xml:"modelDescription"`
-	ModelName        string `xml:"modelName"`
-	ModelNumber      string `xml:"modelNumber"`
-	SerialNumber     string `xml:"serialNumber"`
-	UDN              string `xml:"UDN"`
-}
-
-type UPNP struct {
-	XMLName     xml.Name    `xml:"root"`
-	SpecVersion UPNPVersion `xml:"specVersion"`
-	URLBase     string      `xml:"URLBase"`
-	Device      UPNPDevice  `xml:"device"`
-}
-
 func main() {
 
-	var (
-		opts = config{}
-	)
+	var opts = config{}
 
 	// Discovery flags
 	kingpin.Flag("discovery.deviceid", "8 digits. Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICEID)").Envar("TELLY_DISCOVERY_DEVICEID").Default("12345678").IntVar(&opts.DeviceID)
@@ -211,7 +105,7 @@ func main() {
 	// Regex/filtering flags
 	kingpin.Flag("filter.filterregex", "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc) $(TELLY_FILTER_FILTERREGEX)").Envar("TELLY_FILTER_FILTERREGEX").Default("false").BoolVar(&opts.FilterRegex)
 	kingpin.Flag("filter.uktv-preset", "Only index channels with 'UK' in the name. $(TELLY_FILTER_UKTV_PRESET)").Envar("TELLY_FILTER_UKTV_PRESET").Default("false").BoolVar(&opts.FilterUKTV)
-	kingpin.Flag("filter.useregex", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this -filter.uktv-preset and -filter.filterregex will NOT work. $(TELLY_FILTER_USEREGEX)").Envar("TELLY_FILTER_USEREGEX").Default(".*").StringVar(&opts.UseRegex)
+	kingpin.Flag("filter.useregex", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this --filter.uktv-preset and --filter.filterregex will NOT work. $(TELLY_FILTER_USEREGEX)").Envar("TELLY_FILTER_USEREGEX").Default(".*").StringVar(&opts.UseRegex)
 
 	// Web flags
 	kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry $(TELLY_WEB_LISTEN_ADDRESS)").Envar("TELLY_WEB_LISTEN_ADDRESS").Default("localhost:6077").TCPVar(&opts.ListenAddress)
@@ -242,7 +136,7 @@ func main() {
 	opts.DeviceUUID = fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", opts.DeviceID)
 
 	if opts.BaseAddress.IP.IsUnspecified() {
-		log.Panicln("Your base URL is set to 0.0.0.0, this will not work. Please use the -base option and set it to the (local) IP address telly is running on")
+		log.Panicln("Your base URL is set to 0.0.0.0, this will not work. Please use the --web.base-address option and set it to the (local) IP address telly is running on")
 	}
 
 	if opts.ListenAddress.IP.IsUnspecified() && opts.BaseAddress.IP.IsLoopback() {
@@ -254,14 +148,14 @@ func main() {
 	var m3uReader io.Reader
 
 	if opts.M3UPath == "iptv.m3u" {
-		log.Warnln("using default m3u option, 'iptv.m3u'. launch telly with the -playlist=yourfile.m3u option to change this!")
+		log.Warnln("using default m3u option, 'iptv.m3u'. launch telly with the --iptv.playlist=yourfile.m3u option to change this!")
 	}
 
 	if strings.HasPrefix(strings.ToLower(opts.M3UPath), "http") {
 		log.Debugf("Downloading M3U from %s", opts.M3UPath)
 		resp, err := http.Get(opts.M3UPath)
 		if err != nil {
-			log.Panicf("could not download M3u: %s", err.Error())
+			log.WithError(err).Panicln("could not download M3U")
 		}
 		defer resp.Body.Close()
 
@@ -271,15 +165,14 @@ func main() {
 
 		m3uFile, m3uReadErr := os.Open(opts.M3UPath)
 		if m3uReadErr != nil {
-			panic(m3uReadErr)
+			log.WithError(m3uReadErr).Panicln("unable to open local M3U file")
 		}
 		m3uReader = m3uFile
 	}
 
 	playlist, err := m3u.Decode(m3uReader)
 	if err != nil {
-		log.Errorln("unable to read m3u file, error below")
-		panic(err)
+		log.WithError(err).Panicln("unable to parse m3u file")
 	}
 
 	episodeRegex, _ := regexp.Compile("S\\d{1,3}E\\d{1,3}")
@@ -290,8 +183,8 @@ func main() {
 
 	for _, oldTrack := range playlist.Tracks {
 		track := Track{Track: oldTrack}
-		if err := oldTrack.UnmarshalTags(&track); err != nil {
-			panic(err)
+		if unmarshalErr := oldTrack.UnmarshalTags(&track); unmarshalErr != nil {
+			log.WithError(unmarshalErr).Panicln("Error when unmarshalling tags to Track")
 		}
 		if opts.UseRegex == ".*" {
 			if opts.FilterRegex && opts.FilterUKTV {
@@ -325,14 +218,14 @@ func main() {
 	}
 
 	log.Debugln("Building lineup")
-	lineupItems := buildChannels(opts.DirectMode, opts.BaseAddress.String(), usedTracks)
+	lineupItems := buildLineup(opts.DirectMode, opts.BaseAddress.String(), usedTracks)
 
 	if !opts.FilterRegex {
-		log.Warnln("telly is not attempting to strip out unneeded channels, please use the flag -filterregex if telly returns too many channels")
+		log.Warnln("telly is not attempting to strip out unneeded channels, please use the flag --filter.filterregex if telly returns too many channels")
 	}
 
 	if !opts.FilterUKTV {
-		log.Warnln("telly is currently not filtering for only uk television. if you would like it to, please use the flag -uktv")
+		log.Warnln("telly is currently not filtering for only uk television. if you would like it to, please use the flag --filter.uktv-preset")
 	}
 
 	channelCount := len(usedTracks)
@@ -412,7 +305,7 @@ func main() {
 
 		decodedStreamURI, decodeErr := base64.StdEncoding.DecodeString(uriPart)
 		if decodeErr != nil {
-			log.Errorf("Invalid base64: %s: %s", uriPart, err.Error())
+			log.WithError(err).Errorf("Invalid base64: %s", uriPart)
 			c.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
