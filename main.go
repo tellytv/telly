@@ -8,9 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
-	ssdp "github.com/koron/go-ssdp"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
@@ -154,36 +152,6 @@ func buildLineup(opts config, channels []Track) []LineupItem {
 	}
 
 	return lineup
-}
-
-func setupSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
-	log.Debugf("Advertising telly as %s (%s)", deviceName, deviceUUID)
-
-	adv, err := ssdp.Advertise(
-		"upnp:rootdevice",
-		fmt.Sprintf("uuid:%s::upnp:rootdevice", deviceUUID),
-		fmt.Sprintf("http://%s/device.xml", baseAddress),
-		deviceName,
-		1800)
-
-	if err != nil {
-		return nil, err
-	}
-
-	go func(advertiser *ssdp.Advertiser) {
-		aliveTick := time.Tick(15 * time.Second)
-
-		for {
-			select {
-			case <-aliveTick:
-				if err := advertiser.Alive(); err != nil {
-					log.WithError(err).Panicln("error when sending ssdp heartbeat")
-				}
-			}
-		}
-	}(adv)
-
-	return adv, nil
 }
 
 func getM3U(opts config) (io.Reader, error) {

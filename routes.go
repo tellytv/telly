@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	ssdp "github.com/koron/go-ssdp"
 	"github.com/sirupsen/logrus"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
@@ -48,7 +50,7 @@ func serve(opts config) {
 	if opts.SSDP {
 		log.Debugln("advertising telly service on network via UPNP/SSDP")
 		if _, ssdpErr := setupSSDP(opts.BaseAddress.String(), opts.FriendlyName, opts.DeviceUUID); ssdpErr != nil {
-			log.WithError(ssdpErr).Warnln("telly cannot advertise over ssdp")
+			log.WithError(ssdpErr).Errorln("telly cannot advertise over ssdp")
 		}
 	}
 
@@ -129,4 +131,34 @@ func ginrus() gin.HandlerFunc {
 			entry.Info()
 		}
 	}
+}
+
+func setupSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
+	log.Debugf("Advertising telly as %s (%s)", deviceName, deviceUUID)
+
+	adv, err := ssdp.Advertise(
+		"upnp:rootdevice",
+		fmt.Sprintf("uuid:%s::upnp:rootdevice", deviceUUID),
+		fmt.Sprintf("http://%s/device.xml", baseAddress),
+		deviceName,
+		1800)
+
+	if err != nil {
+		return nil, err
+	}
+
+	go func(advertiser *ssdp.Advertiser) {
+		aliveTick := time.Tick(15 * time.Second)
+
+		for {
+			select {
+			case <-aliveTick:
+				if err := advertiser.Alive(); err != nil {
+					log.WithError(err).Panicln("error when sending ssdp heartbeat")
+				}
+			}
+		}
+	}(adv)
+
+	return adv, nil
 }
