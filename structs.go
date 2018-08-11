@@ -74,8 +74,8 @@ func (d *DiscoveryData) UPNP() UPNP {
 			DeviceType:   "urn:schemas-upnp-org:device:MediaServer:1",
 			FriendlyName: d.FriendlyName,
 			Manufacturer: d.Manufacturer,
+			ModelName:    d.ModelNumber,
 			ModelNumber:  d.ModelNumber,
-			SerialNumber: d.DeviceID,
 			UDN:          fmt.Sprintf("uuid:%s", d.DeviceID),
 		},
 	}
@@ -114,19 +114,18 @@ type upnpVersion struct {
 }
 
 type upnpDevice struct {
-	DeviceType       string `xml:"deviceType"`
-	FriendlyName     string `xml:"friendlyName"`
-	Manufacturer     string `xml:"manufacturer"`
-	ModelDescription string `xml:"modelDescription"`
-	ModelName        string `xml:"modelName"`
-	ModelNumber      string `xml:"modelNumber"`
-	SerialNumber     string `xml:"serialNumber"`
-	UDN              string `xml:"UDN"`
+	DeviceType   string `xml:"deviceType"`
+	FriendlyName string `xml:"friendlyName"`
+	Manufacturer string `xml:"manufacturer"`
+	ModelName    string `xml:"modelName"`
+	ModelNumber  string `xml:"modelNumber"`
+	SerialNumber string `xml:"serialNumber"`
+	UDN          string `xml:"UDN"`
 }
 
 // UPNP describes the UPNP/SSDP XML.
 type UPNP struct {
-	XMLName     xml.Name    `xml:"root"`
+	XMLName     xml.Name    `xml:"urn:schemas-upnp-org:device-1-0 root"`
 	SpecVersion upnpVersion `xml:"specVersion"`
 	URLBase     string      `xml:"URLBase"`
 	Device      upnpDevice  `xml:"device"`
