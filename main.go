@@ -19,8 +19,9 @@ import (
 )
 
 var (
-	log  = logrus.New()
-	opts = config{}
+	namespace = "telly"
+	log       = logrus.New()
+	opts      = config{}
 
 	exposedChannels = prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -54,6 +55,7 @@ func main() {
 	kingpin.Flag("iptv.playlist", "Location of playlist M3U file. Can be on disk or a URL. $(TELLY_IPTV_PLAYLIST)").Envar("TELLY_IPTV_PLAYLIST").Default("iptv.m3u").StringVar(&opts.M3UPath)
 	kingpin.Flag("iptv.streams", "Number of concurrent streams allowed $(TELLY_IPTV_STREAMS)").Envar("TELLY_IPTV_STREAMS").Default("1").IntVar(&opts.ConcurrentStreams)
 	kingpin.Flag("iptv.direct", "If true, stream URLs will not be obfuscated to hide them from Plex. $(TELLY_IPTV_DIRECT)").Envar("TELLY_IPTV_DIRECT").Default("false").BoolVar(&opts.DirectMode)
+	kingpin.Flag("iptv.starting-channel", "The channel number to start exposing from. $(TELLY_IPTV_STARTING_CHANNEL)").Envar("TELLY_IPTV_STARTING_CHANNEL").Default("10000").IntVar(&opts.StartingChannel)
 
 	kingpin.Version(version.Print("telly"))
 	kingpin.HelpFlag.Short('h')
@@ -118,7 +120,7 @@ func main() {
 
 func buildLineup(opts config, channels []Track) []LineupItem {
 	lineup := make([]LineupItem, 0)
-	gn := 10000
+	gn := opts.StartingChannel
 
 	for _, track := range channels {
 

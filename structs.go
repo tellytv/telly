@@ -17,6 +17,7 @@ type config struct {
 	DirectMode        bool
 	M3UPath           string
 	ConcurrentStreams int
+	StartingChannel   int
 
 	DeviceAuth   string
 	DeviceID     int
