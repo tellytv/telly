@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -20,92 +19,22 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
-var log = logrus.New()
-
-func buildLineup(directMode bool, baseURL string, usedTracks []Track) []LineupItem {
-	lineup := make([]LineupItem, 0)
-	gn := 10000
-
-	for _, track := range usedTracks {
-
-		var finalName string
-		if track.TvgName == "" {
-			finalName = track.Name
-		} else {
-			finalName = track.TvgName
-		}
-
-		// base64 url
-		fullTrackURI := track.URI
-		if !directMode {
-			trackURI := base64.StdEncoding.EncodeToString([]byte(track.URI))
-			fullTrackURI = fmt.Sprintf("http://%s/stream/%s", baseURL, trackURI)
-		}
-
-		if strings.Contains(track.URI, ".m3u8") {
-			log.Warnln("your .m3u contains .m3u8's. Plex has either stopped supporting m3u8 or it is a bug in a recent version - please use .ts! telly will automatically convert these in a future version. See telly github issue #108")
-		}
-
-		lu := LineupItem{
-			GuideNumber: strconv.Itoa(gn),
-			GuideName:   finalName,
-			URL:         fullTrackURI,
-		}
-
-		lineup = append(lineup, lu)
-
-		gn = gn + 1
-	}
-
-	return lineup
-}
-
-func sendAlive(advertiser *ssdp.Advertiser) {
-	aliveTick := time.Tick(15 * time.Second)
-
-	for {
-		select {
-		case <-aliveTick:
-			if err := advertiser.Alive(); err != nil {
-				log.WithError(err).Panicln("Error when sending SSDP heartbeat")
-			}
-		}
-	}
-}
-
-func advertiseSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
-	log.Debugf("Advertising telly as %s (%s)", deviceName, deviceUUID)
-
-	adv, err := ssdp.Advertise(
-		"upnp:rootdevice",
-		fmt.Sprintf("uuid:%s::upnp:rootdevice", deviceUUID),
-		fmt.Sprintf("http://%s/device.xml", baseAddress),
-		deviceName,
-		1800)
-
-	if err != nil {
-		return nil, err
-	}
-
-	go sendAlive(adv)
-
-	return adv, nil
-}
+var (
+	log  = logrus.New()
+	opts = config{}
+)
 
 func main() {
 
-	var opts = config{}
-
 	// Discovery flags
-	kingpin.Flag("discovery.deviceid", "8 digits. Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICEID)").Envar("TELLY_DISCOVERY_DEVICEID").Default("12345678").IntVar(&opts.DeviceID)
+	kingpin.Flag("discovery.deviceid", "8 digits used to uniquely identify the device. $(TELLY_DISCOVERY_DEVICEID)").Envar("TELLY_DISCOVERY_DEVICEID").Default("12345678").IntVar(&opts.DeviceID)
 	kingpin.Flag("discovery.friendlyname", "Name exposed via discovery. Useful if you are running two instances of telly and want to differentiate between them $(TELLY_DISCOVERY_FRIENDLYNAME)").Envar("TELLY_DISCOVERY_FRIENDLYNAME").Default("telly").StringVar(&opts.FriendlyName)
-	kingpin.Flag("discovery.deviceauth", "Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICEAUTH)").Envar("TELLY_DISCOVERY_DEVICEAUTH").Default("telly123").StringVar(&opts.DeviceAuth)
+	kingpin.Flag("discovery.deviceauth", "Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICEAUTH)").Envar("TELLY_DISCOVERY_DEVICEAUTH").Default("telly123").Hidden().StringVar(&opts.DeviceAuth)
 	kingpin.Flag("discovery.ssdp", "Turn on SSDP announcement of telly to the local network $(TELLY_DISCOVERY_SSDP)").Envar("TELLY_DISCOVERY_SSDP").Default("true").BoolVar(&opts.SSDP)
 
 	// Regex/filtering flags
-	kingpin.Flag("filter.filterregex", "Use regex to attempt to strip out bogus channels (SxxExx, 24/7 channels, etc) $(TELLY_FILTER_FILTERREGEX)").Envar("TELLY_FILTER_FILTERREGEX").Default("false").BoolVar(&opts.FilterRegex)
-	kingpin.Flag("filter.uktv-preset", "Only index channels with 'UK' in the name. $(TELLY_FILTER_UKTV_PRESET)").Envar("TELLY_FILTER_UKTV_PRESET").Default("false").BoolVar(&opts.FilterUKTV)
-	kingpin.Flag("filter.useregex", "Use regex to filter for channels that you want. Basic example would be .*UK.*. When using this --filter.uktv-preset and --filter.filterregex will NOT work. $(TELLY_FILTER_USEREGEX)").Envar("TELLY_FILTER_USEREGEX").Default(".*").StringVar(&opts.UseRegex)
+	kingpin.Flag("filter.regex-inclusive", "Whether the provided regex is inclusive (whitelisting) or exclusive (blacklisting). If true (--filter.regex-inclusive), only channels matching the provided regex pattern will be exposed. If false (--no-filter.regex-inclusive), only channels NOT matching the provided pattern will be exposed. $(TELLY_FILTER_REGEX_MODE)").Envar("TELLY_FILTER_REGEX_MODE").Default("false").BoolVar(&opts.RegexInclusive)
+	kingpin.Flag("filter.regex", "Use regex to filter for channels that you want. A basic example would be .*UK.*. $(TELLY_FILTER_REGEX)").Envar("TELLY_FILTER_REGEX").Default(".*").RegexpVar(&opts.Regex)
 
 	// Web flags
 	kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry $(TELLY_WEB_LISTEN_ADDRESS)").Envar("TELLY_WEB_LISTEN_ADDRESS").Default("localhost:6077").TCPVar(&opts.ListenAddress)
@@ -175,58 +104,19 @@ func main() {
 		log.WithError(err).Panicln("unable to parse m3u file")
 	}
 
-	episodeRegex, _ := regexp.Compile("S\\d{1,3}E\\d{1,3}")
-	twentyFourSevenRegex, _ := regexp.Compile("24/7")
-	ukTv, _ := regexp.Compile("UK")
-
-	userRegex, _ := regexp.Compile(opts.UseRegex)
-
 	for _, oldTrack := range playlist.Tracks {
 		track := Track{Track: oldTrack}
 		if unmarshalErr := oldTrack.UnmarshalTags(&track); unmarshalErr != nil {
 			log.WithError(unmarshalErr).Panicln("Error when unmarshalling tags to Track")
 		}
-		if opts.UseRegex == ".*" {
-			if opts.FilterRegex && opts.FilterUKTV {
-				if !episodeRegex.MatchString(track.Name) {
-					if !twentyFourSevenRegex.MatchString(track.Name) {
-						if ukTv.MatchString(track.Name) {
-							usedTracks = append(usedTracks, track)
-						}
-					}
-				}
-			} else if opts.FilterRegex && !opts.FilterUKTV {
-				if !episodeRegex.MatchString(track.Name) {
-					if !twentyFourSevenRegex.MatchString(track.Name) {
-						usedTracks = append(usedTracks, track)
-					}
-				}
 
-			} else if !opts.FilterRegex && opts.FilterUKTV {
-				if ukTv.MatchString(track.Name) {
-					usedTracks = append(usedTracks, track)
-				}
-			} else {
-				usedTracks = append(usedTracks, track)
-			}
-		} else {
-			// Use regex
-			if userRegex.MatchString(track.Name) {
-				usedTracks = append(usedTracks, track)
-			}
+		if opts.Regex.MatchString(track.Name) == opts.RegexInclusive {
+			usedTracks = append(usedTracks, track)
 		}
 	}
 
 	log.Debugln("Building lineup")
 	lineupItems := buildLineup(opts.DirectMode, opts.BaseAddress.String(), usedTracks)
-
-	if !opts.FilterRegex {
-		log.Warnln("telly is not attempting to strip out unneeded channels, please use the flag --filter.filterregex if telly returns too many channels")
-	}
-
-	if !opts.FilterUKTV {
-		log.Warnln("telly is currently not filtering for only uk television. if you would like it to, please use the flag --filter.uktv-preset")
-	}
 
 	channelCount := len(usedTracks)
 
@@ -326,6 +216,76 @@ func main() {
 	if err := router.Run(opts.ListenAddress.String()); err != nil {
 		log.WithError(err).Panicln("Error starting up web server")
 	}
+}
+
+func buildLineup(directMode bool, baseURL string, usedTracks []Track) []LineupItem {
+	lineup := make([]LineupItem, 0)
+	gn := 10000
+
+	for _, track := range usedTracks {
+
+		var finalName string
+		if track.TvgName == "" {
+			finalName = track.Name
+		} else {
+			finalName = track.TvgName
+		}
+
+		// base64 url
+		fullTrackURI := track.URI
+		if !directMode {
+			trackURI := base64.StdEncoding.EncodeToString([]byte(track.URI))
+			fullTrackURI = fmt.Sprintf("http://%s/stream/%s", baseURL, trackURI)
+		}
+
+		if strings.Contains(track.URI, ".m3u8") {
+			log.Warnln("your .m3u contains .m3u8's. Plex has either stopped supporting m3u8 or it is a bug in a recent version - please use .ts! telly will automatically convert these in a future version. See telly github issue #108")
+		}
+
+		lu := LineupItem{
+			GuideNumber: strconv.Itoa(gn),
+			GuideName:   finalName,
+			URL:         fullTrackURI,
+		}
+
+		lineup = append(lineup, lu)
+
+		gn = gn + 1
+	}
+
+	return lineup
+}
+
+func sendAlive(advertiser *ssdp.Advertiser) {
+	aliveTick := time.Tick(15 * time.Second)
+
+	for {
+		select {
+		case <-aliveTick:
+			if err := advertiser.Alive(); err != nil {
+				log.WithError(err).Panicln("Error when sending SSDP heartbeat")
+			}
+		}
+	}
+}
+
+func advertiseSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
+	log.Debugf("Advertising telly as %s (%s)", deviceName, deviceUUID)
+
+	adv, err := ssdp.Advertise(
+		"upnp:rootdevice",
+		fmt.Sprintf("uuid:%s::upnp:rootdevice", deviceUUID),
+		fmt.Sprintf("http://%s/device.xml", baseAddress),
+		deviceName,
+		1800)
+
+	if err != nil {
+		return nil, err
+	}
+
+	go sendAlive(adv)
+
+	return adv, nil
 }
 
 func ginrus() gin.HandlerFunc {

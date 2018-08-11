@@ -4,22 +4,24 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net"
+	"regexp"
 
 	"github.com/tombowditch/telly/m3u"
 )
 
 type config struct {
-	DeviceID          int
-	DeviceUUID        string
-	FilterRegex       bool
-	FilterUKTV        bool
+	RegexInclusive bool
+	Regex          *regexp.Regexp
+
+	DirectMode        bool
 	M3UPath           string
 	ConcurrentStreams int
-	UseRegex          string
-	DeviceAuth        string
-	FriendlyName      string
-	DirectMode        bool
-	SSDP              bool
+
+	DeviceAuth   string
+	DeviceID     int
+	DeviceUUID   string
+	FriendlyName string
+	SSDP         bool
 
 	LogRequests bool
 	LogLevel    string
