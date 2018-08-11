@@ -193,7 +193,7 @@ func getM3U(opts config) (io.Reader, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
+		//defer resp.Body.Close()
 
 		return resp.Body, nil
 	}
