@@ -6,3 +6,7 @@ telly
 /bin
 *.xml
 vendor/
+/.build
+/.release
+/.tarballs
+*.tar.gz
