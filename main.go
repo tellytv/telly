@@ -34,7 +34,6 @@ type config struct {
 	UseRegex          string
 	DeviceAuth        string
 	FriendlyName      string
-	TempPath          string
 	DirectMode        bool
 	SSDP              bool
 
