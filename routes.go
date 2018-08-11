@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/base64"
 	"net/http"
-	"net/url"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -45,7 +43,7 @@ func serve(opts config) {
 	})
 	router.GET("/device.xml", deviceXML(upnp))
 	router.GET("/lineup.json", lineup(opts.lineup))
-	router.GET("/stream/", stream)
+	router.GET("/stream/:channelID", stream)
 
 	if opts.SSDP {
 		log.Debugln("advertising telly service on network via UPNP/SSDP")
@@ -85,13 +83,14 @@ func lineup(lineup []LineupItem) gin.HandlerFunc {
 }
 
 func stream(c *gin.Context) {
-	u, _ := url.Parse(c.Request.RequestURI)
-	uriPart := strings.Replace(u.Path, "/stream/", "", 1)
-	log.Debugf("Parsing URI %s to %s", c.Request.RequestURI, uriPart)
 
-	decodedStreamURI, decodeErr := base64.StdEncoding.DecodeString(uriPart)
+	channelID := c.Param("channelID")
+
+	log.Debugf("Parsing URI %s to %s", c.Request.RequestURI, channelID)
+
+	decodedStreamURI, decodeErr := base64.StdEncoding.DecodeString(channelID)
 	if decodeErr != nil {
-		log.WithError(decodeErr).Errorf("Invalid base64: %s", uriPart)
+		log.WithError(decodeErr).Errorf("Invalid base64: %s", channelID)
 		c.AbortWithError(http.StatusBadRequest, decodeErr)
 		return
 	}
