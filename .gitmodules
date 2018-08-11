@@ -1,3 +1,0 @@
-[submodule "vendor/github.com/koron/go-ssdp"]
-	path = vendor/github.com/koron/go-ssdp
-	url = https://github.com/koron/go-ssdp
