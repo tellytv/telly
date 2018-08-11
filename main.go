@@ -100,28 +100,6 @@ func logRequestHandler(logRequests bool, next http.Handler) http.Handler {
 	})
 }
 
-func downloadFile(url string, dest string) error {
-	out, err := os.Create(dest)
-	defer out.Close()
-	if err != nil {
-		return fmt.Errorf("could not create file: %s %s", dest, err.Error())
-	}
-
-	log.Debugf("Downloading file %s to %s", url, dest)
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("could not download: %s", err.Error())
-	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return fmt.Errorf("could not download to output file: %s", err.Error())
-	}
-
-	return nil
-}
-
 func buildChannels(directMode bool, baseURL string, usedTracks []Track) []LineupItem {
 	lineup := make([]LineupItem, 0)
 	gn := 10000
@@ -253,32 +231,32 @@ func main() {
 
 	usedTracks := make([]Track, 0)
 
+	var m3uReader io.Reader
+
 	if opts.M3UPath == "iptv.m3u" {
 		log.Warnln("using default m3u option, 'iptv.m3u'. launch telly with the -playlist=yourfile.m3u option to change this!")
-	} else {
-		if strings.HasPrefix(strings.ToLower(opts.M3UPath), "http") {
-			// FIXME: Don't need a tempPath, just load into memory.
-			tempFilename := "FIXME"
+	}
 
-			err := downloadFile(opts.M3UPath, tempFilename)
-			if err != nil {
-				log.Errorln(err.Error())
-				os.Exit(1)
-			}
-
-			opts.M3UPath = tempFilename
-			defer os.Remove(tempFilename)
+	if strings.HasPrefix(strings.ToLower(opts.M3UPath), "http") {
+		log.Debugf("Downloading M3U from %s", opts.M3UPath)
+		resp, err := http.Get(opts.M3UPath)
+		if err != nil {
+			log.Panicf("could not download M3u: %s", err.Error())
 		}
+		defer resp.Body.Close()
+
+		m3uReader = resp.Body
+	} else {
+		log.Debugf("Reading M3U file %s...", opts.M3UPath)
+
+		m3uFile, m3uReadErr := os.Open(opts.M3UPath)
+		if m3uReadErr != nil {
+			panic(m3uReadErr)
+		}
+		m3uReader = m3uFile
 	}
 
-	log.Debugf("Reading m3u file %s...", opts.M3UPath)
-
-	m3uFile, m3uReadErr := os.Open(opts.M3UPath)
-	if m3uReadErr != nil {
-		panic(m3uReadErr)
-	}
-
-	playlist, err := m3u.Decode(m3uFile)
+	playlist, err := m3u.Decode(m3uReader)
 	if err != nil {
 		log.Errorln("unable to read m3u file, error below")
 		panic(err)
