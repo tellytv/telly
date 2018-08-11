@@ -10,4 +10,4 @@ FROM scratch
 COPY --from=builder /go/bin/app /app
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
 EXPOSE 6077
-ENTRYPOINT ["/app", "-temp=/telly.m3u"]
+ENTRYPOINT ["/app", "--iptv.playlist=/telly.m3u"]
