@@ -5,19 +5,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	ssdp "github.com/koron/go-ssdp"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
 	"github.com/tombowditch/telly/m3u"
-	ginprometheus "github.com/zsais/go-gin-prometheus"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -69,45 +66,27 @@ func main() {
 
 	level, parseLevelErr := logrus.ParseLevel(opts.LogLevel)
 	if parseLevelErr != nil {
-		log.WithError(parseLevelErr).Panicln("Error setting log level!")
+		log.WithError(parseLevelErr).Panicln("error setting log level!")
 	}
 	log.SetLevel(level)
 
 	opts.DeviceUUID = fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", opts.DeviceID)
 
 	if opts.BaseAddress.IP.IsUnspecified() {
-		log.Panicln("Your base URL is set to 0.0.0.0, this will not work. Please use the --web.base-address option and set it to the (local) IP address telly is running on")
+		log.Panicln("base URL is set to 0.0.0.0, this will not work. please use the --web.base-address option and set it to the (local) ip address telly is running on.")
 	}
 
 	if opts.ListenAddress.IP.IsUnspecified() && opts.BaseAddress.IP.IsLoopback() {
 		log.Warnln("You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
 	}
 
-	usedTracks := make([]Track, 0)
-
-	var m3uReader io.Reader
-
 	if opts.M3UPath == "iptv.m3u" {
 		log.Warnln("using default m3u option, 'iptv.m3u'. launch telly with the --iptv.playlist=yourfile.m3u option to change this!")
 	}
 
-	if strings.HasPrefix(strings.ToLower(opts.M3UPath), "http") {
-		log.Debugf("Downloading M3U from %s", opts.M3UPath)
-		resp, err := http.Get(opts.M3UPath)
-		if err != nil {
-			log.WithError(err).Panicln("could not download M3U")
-		}
-		defer resp.Body.Close()
-
-		m3uReader = resp.Body
-	} else {
-		log.Debugf("Reading M3U file %s...", opts.M3UPath)
-
-		m3uFile, m3uReadErr := os.Open(opts.M3UPath)
-		if m3uReadErr != nil {
-			log.WithError(m3uReadErr).Panicln("unable to open local M3U file")
-		}
-		m3uReader = m3uFile
+	m3uReader, readErr := getM3U(opts)
+	if readErr != nil {
+		log.WithError(readErr).Panicln("error getting m3u")
 	}
 
 	playlist, err := m3u.Decode(m3uReader)
@@ -115,24 +94,17 @@ func main() {
 		log.WithError(err).Panicln("unable to parse m3u file")
 	}
 
-	for _, oldTrack := range playlist.Tracks {
-		track := Track{Track: oldTrack}
-		if unmarshalErr := oldTrack.UnmarshalTags(&track); unmarshalErr != nil {
-			log.WithError(unmarshalErr).Panicln("Error when unmarshalling tags to Track")
-		}
-
-		if opts.Regex.MatchString(track.Name) == opts.RegexInclusive {
-			usedTracks = append(usedTracks, track)
-		}
+	channels, filterErr := filterTracks(playlist.Tracks)
+	if filterErr != nil {
+		log.WithError(filterErr).Panicln("error during filtering of channels, check your regex and try again")
 	}
 
 	log.Debugln("Building lineup")
-	lineupItems := buildLineup(opts.DirectMode, opts.BaseAddress.String(), usedTracks)
 
-	channelCount := len(usedTracks)
+	opts.lineup = buildLineup(opts, channels)
 
+	channelCount := len(channels)
 	exposedChannels.Set(float64(channelCount))
-
 	log.Infof("found %d channels", channelCount)
 
 	if channelCount > 420 {
@@ -141,104 +113,14 @@ func main() {
 
 	opts.FriendlyName = fmt.Sprintf("HDHomerun (%s)", opts.FriendlyName)
 
-	log.Debugln("creating discovery data")
-	discoveryData := DiscoveryData{
-		FriendlyName:    opts.FriendlyName,
-		Manufacturer:    "Silicondust",
-		ModelNumber:     "HDTC-2US",
-		FirmwareName:    "hdhomeruntc_atsc",
-		TunerCount:      opts.ConcurrentStreams,
-		FirmwareVersion: "20150826",
-		DeviceID:        strconv.Itoa(opts.DeviceID),
-		DeviceAuth:      opts.DeviceAuth,
-		BaseURL:         fmt.Sprintf("http://%s", opts.BaseAddress),
-		LineupURL:       fmt.Sprintf("http://%s/lineup.json", opts.BaseAddress),
-	}
-
-	log.Debugln("creating lineup status")
-	lineupStatus := LineupStatus{
-		ScanInProgress: 0,
-		ScanPossible:   1,
-		Source:         "Cable",
-		SourceList:     []string{"Cable"},
-	}
-
-	log.Debugln("creating device xml")
-	deviceXML := discoveryData.UPNP()
-
-	log.Debugln("creating webserver routes")
-
-	gin.SetMode(gin.ReleaseMode)
-
-	router := gin.New()
-	router.Use(gin.Recovery())
-
-	if opts.LogRequests {
-		router.Use(ginrus())
-	}
-
-	p := ginprometheus.NewPrometheus("http")
-	p.Use(router)
-
-	router.GET("/", func(c *gin.Context) {
-		c.XML(http.StatusOK, deviceXML)
-	})
-
-	router.GET("/discover.json", func(c *gin.Context) {
-		c.JSON(http.StatusOK, discoveryData)
-	})
-
-	router.GET("/lineup_status.json", func(c *gin.Context) {
-		c.JSON(http.StatusOK, lineupStatus)
-	})
-
-	router.GET("/lineup.post", func(c *gin.Context) {
-		// empty
-	})
-
-	router.GET("/device.xml", func(c *gin.Context) {
-		c.XML(http.StatusOK, deviceXML)
-	})
-
-	router.GET("/lineup.json", func(c *gin.Context) {
-		c.JSON(http.StatusOK, lineupItems)
-	})
-
-	router.GET("/stream/", func(c *gin.Context) {
-		u, _ := url.Parse(c.Request.RequestURI)
-		uriPart := strings.Replace(u.Path, "/stream/", "", 1)
-		log.Debugf("Parsing URI %s to %s", c.Request.RequestURI, uriPart)
-
-		decodedStreamURI, decodeErr := base64.StdEncoding.DecodeString(uriPart)
-		if decodeErr != nil {
-			log.WithError(err).Errorf("Invalid base64: %s", uriPart)
-			c.AbortWithError(http.StatusBadRequest, err)
-			return
-		}
-
-		log.Debugln("Redirecting to:", string(decodedStreamURI))
-		c.Redirect(http.StatusMovedPermanently, string(decodedStreamURI))
-	})
-
-	if opts.SSDP {
-		log.Debugln("advertising telly service on network")
-		_, ssdpErr := advertiseSSDP(opts.BaseAddress.String(), opts.FriendlyName, opts.DeviceUUID)
-		if ssdpErr != nil {
-			log.WithError(ssdpErr).Warnln("telly cannot advertise over ssdp")
-		}
-	}
-
-	log.Infof("Listening and serving HTTP on %s", opts.ListenAddress)
-	if err := router.Run(opts.ListenAddress.String()); err != nil {
-		log.WithError(err).Panicln("Error starting up web server")
-	}
+	serve(opts)
 }
 
-func buildLineup(directMode bool, baseURL string, usedTracks []Track) []LineupItem {
+func buildLineup(opts config, channels []Track) []LineupItem {
 	lineup := make([]LineupItem, 0)
 	gn := 10000
 
-	for _, track := range usedTracks {
+	for _, track := range channels {
 
 		var finalName string
 		if track.TvgName == "" {
@@ -249,9 +131,9 @@ func buildLineup(directMode bool, baseURL string, usedTracks []Track) []LineupIt
 
 		// base64 url
 		fullTrackURI := track.URI
-		if !directMode {
+		if !opts.DirectMode {
 			trackURI := base64.StdEncoding.EncodeToString([]byte(track.URI))
-			fullTrackURI = fmt.Sprintf("http://%s/stream/%s", baseURL, trackURI)
+			fullTrackURI = fmt.Sprintf("http://%s/stream/%s", opts.BaseAddress.String(), trackURI)
 		}
 
 		if strings.Contains(track.URI, ".m3u8") {
@@ -272,20 +154,7 @@ func buildLineup(directMode bool, baseURL string, usedTracks []Track) []LineupIt
 	return lineup
 }
 
-func sendAlive(advertiser *ssdp.Advertiser) {
-	aliveTick := time.Tick(15 * time.Second)
-
-	for {
-		select {
-		case <-aliveTick:
-			if err := advertiser.Alive(); err != nil {
-				log.WithError(err).Panicln("Error when sending SSDP heartbeat")
-			}
-		}
-	}
-}
-
-func advertiseSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
+func setupSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
 	log.Debugf("Advertising telly as %s (%s)", deviceName, deviceUUID)
 
 	adv, err := ssdp.Advertise(
@@ -299,39 +168,52 @@ func advertiseSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser
 		return nil, err
 	}
 
-	go sendAlive(adv)
+	go func(advertiser *ssdp.Advertiser) {
+		aliveTick := time.Tick(15 * time.Second)
+
+		for {
+			select {
+			case <-aliveTick:
+				if err := advertiser.Alive(); err != nil {
+					log.WithError(err).Panicln("error when sending ssdp heartbeat")
+				}
+			}
+		}
+	}(adv)
 
 	return adv, nil
 }
 
-func ginrus() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		start := time.Now()
-		// some evil middlewares modify this values
-		path := c.Request.URL.Path
-		c.Next()
+func getM3U(opts config) (io.Reader, error) {
+	if strings.HasPrefix(strings.ToLower(opts.M3UPath), "http") {
+		log.Debugf("Downloading M3U from %s", opts.M3UPath)
+		resp, err := http.Get(opts.M3UPath)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
 
-		end := time.Now()
-		latency := end.Sub(start)
-		end = end.UTC()
+		return resp.Body, nil
+	}
 
-		logFields := logrus.Fields{
-			"status":    c.Writer.Status(),
-			"method":    c.Request.Method,
-			"path":      path,
-			"ipAddress": c.ClientIP(),
-			"latency":   latency,
-			"userAgent": c.Request.UserAgent(),
-			"time":      end.Format(time.RFC3339),
+	log.Debugf("Reading M3U file %s...", opts.M3UPath)
+
+	return os.Open(opts.M3UPath)
+}
+
+func filterTracks(tracks []*m3u.Track) ([]Track, error) {
+	allowedTracks := make([]Track, 0)
+
+	for _, oldTrack := range tracks {
+		track := Track{Track: oldTrack}
+		if unmarshalErr := oldTrack.UnmarshalTags(&track); unmarshalErr != nil {
+			return nil, unmarshalErr
 		}
 
-		entry := log.WithFields(logFields)
-
-		if len(c.Errors) > 0 {
-			// Append error field if this is an erroneous request.
-			entry.Error(c.Errors.String())
-		} else {
-			entry.Info()
+		if opts.Regex.MatchString(track.Name) == opts.RegexInclusive {
+			allowedTracks = append(allowedTracks, track)
 		}
 	}
+
+	return allowedTracks, nil
 }

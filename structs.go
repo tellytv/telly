@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strconv"
 
 	"github.com/tombowditch/telly/m3u"
 )
@@ -28,6 +29,23 @@ type config struct {
 
 	ListenAddress *net.TCPAddr
 	BaseAddress   *net.TCPAddr
+
+	lineup []LineupItem
+}
+
+func (c *config) DiscoveryData() DiscoveryData {
+	return DiscoveryData{
+		FriendlyName:    c.FriendlyName,
+		Manufacturer:    "Silicondust",
+		ModelNumber:     "HDTC-2US",
+		FirmwareName:    "hdhomeruntc_atsc",
+		TunerCount:      c.ConcurrentStreams,
+		FirmwareVersion: "20150826",
+		DeviceID:        strconv.Itoa(c.DeviceID),
+		DeviceAuth:      c.DeviceAuth,
+		BaseURL:         fmt.Sprintf("http://%s", c.BaseAddress),
+		LineupURL:       fmt.Sprintf("http://%s/lineup.json", c.BaseAddress),
+	}
 }
 
 // DiscoveryData contains data about telly to expose in the HDHomeRun format for Plex detection.
