@@ -9,12 +9,11 @@ IPTV proxy for Plex Live written in Golang
 3) Rename the file to "telly" if desired; note that from here this readme will refer to "telly"; the file you downloaded is probably called "telly-linux-amd64.dms" or something like that.
 **If you do not rename the file, then substitute references here to "telly" with the name of the file you've downloaded.**
 **Under Windows, don't forget the `.exe`; i.e. `telly.exe`.**
-4) Have the .m3u file on hand from your IPTV provider of choice  
-**Any command arguments can also be supplied as environment variables, for example -playlist can also be provided as the PLAYLIST environment variable**
-5) Run `telly` with the `-playlist` commandline argument pointing to your .m3u file. (This can be a local file or a URL) For example: `./telly -playlist=/home/github/myiptv.m3u`
-**Under Windows, if -playlist is pointing to a URL, you must specify the `-temp` flag, and that flag msut contain a path to a FILE, not a directory.  For example, `telly.exe -playlist="http://foo.com/bar.m3u" -temp="c:\path\to\file.m3u"`**
-6) If you would like multiple streams/tuners use the `-streams` commandline option. Default is 1. When setting or changing this option, `plexmediaserver` will need to be completely **restarted**. 
-7) If you would like `telly` to attempt to the filter the m3u a bit, add the `-filterregex` commandline option. If you would like UK only tv, run `telly` with the `-uktv` commandline option. If you would like to use your own regex, run `telly` with `-useregex <regex>`, for example `-useregex .*UK.*`
+4) Have the .m3u file on hand from your IPTV provider of choice
+**Any command arguments can also be supplied as environment variables, for example --iptv.playlist can also be provided as the TELLY_IPTV_PLAYLIST environment variable**
+5) Run `telly` with the `--iptv.playlist` commandline argument pointing to your .m3u file. (This can be a local file or a URL) For example: `./telly --iptv.playlist=/home/github/myiptv.m3u`
+6) If you would like multiple streams/tuners use the `--iptv.streams` commandline option. Default is 1. When setting or changing this option, `plexmediaserver` will need to be completely **restarted**.
+7) If you would like `telly` to attempt to the filter the m3u a bit, add the `--filter.regex` commandline option. If you would like to use your own regex, run `telly` with `--filter.regex="<regex>"`, for example `--filter.regex=".*UK.*"`
 8) If `telly` tells you `[telly] [info] listening on ...` - great! Your .m3u file was successfully parsed and `telly` is running. Check below for how to add it into Plex.
 9) If `telly` fails to run, check the error. If it's self explanatory, great. If you don't understand, feel free to open an issue and we'll help you out. As of telly v0.4 `sed` commands are no longer needed. Woop!
 10) For your IPTV provider m3u, try using option `type=m3u_plus` and `output=ts`.
@@ -38,12 +37,12 @@ docker run -d \
   --name='telly' \
   --net='bridge' \
   -e TZ="Europe/Amsterdam" \
-  -e 'PLAYLIST'='/home/github/myiptv.m3u' \
-  -e STREAMS=1 \
-  -e USEREGEX='.*UK.*' \
+  -e 'TELLY_IPTV_PLAYLIST'='/home/github/myiptv.m3u' \
+  -e TELLY_IPTV_STREAMS=1 \
+  -e TELLY_FILTER_REGEX='.*UK.*' \
   -p '6077:6077/tcp' \
   -v '/tmp/telly':'/tmp':'rw' \
-  tombowditch/telly -base=localhost:6077
+  tombowditch/telly --listen.base-address=localhost:6077
 ```
 
 ## docker-compose
@@ -54,12 +53,12 @@ telly:
     - "6077:6077"
   environment:
     - TZ=Europe/Amsterdam
-    - PLAYLIST=/home/github/myiptv.m3u
-    - USEREGEX='.*UK.*'
-    - LISTEN=telly:6077
-    - STREAMS=1
-    - FRIENDLYNAME=Tuner1
-    - DEVICEID=12345678
+    - TELLY_IPTV_PLAYLIST=/home/github/myiptv.m3u
+    - TELLY_FILTER_REGEX='.*UK.*'
+    - TELLY_WEB_LISTEN_ADDRESS=telly:6077
+    - TELLY_IPTV_STREAMS=1
+    - TELLY_DISCOVERY_FRIENDLYNAME=Tuner1
+    - TELLY_DISCOVERY_DEVICEID=12345678
   command: -base=telly:6077
   restart: unless-stopped
 ```
