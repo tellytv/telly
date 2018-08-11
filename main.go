@@ -32,9 +32,13 @@ var (
 func main() {
 
 	// Discovery flags
-	kingpin.Flag("discovery.deviceid", "8 digits used to uniquely identify the device. $(TELLY_DISCOVERY_DEVICEID)").Envar("TELLY_DISCOVERY_DEVICEID").Default("12345678").IntVar(&opts.DeviceID)
-	kingpin.Flag("discovery.friendlyname", "Name exposed via discovery. Useful if you are running two instances of telly and want to differentiate between them $(TELLY_DISCOVERY_FRIENDLYNAME)").Envar("TELLY_DISCOVERY_FRIENDLYNAME").Default("telly").StringVar(&opts.FriendlyName)
-	kingpin.Flag("discovery.deviceauth", "Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICEAUTH)").Envar("TELLY_DISCOVERY_DEVICEAUTH").Default("telly123").Hidden().StringVar(&opts.DeviceAuth)
+	kingpin.Flag("discovery.device-id", "8 digits used to uniquely identify the device. $(TELLY_DISCOVERY_DEVICE_ID)").Envar("TELLY_DISCOVERY_DEVICE_ID").Default("12345678").IntVar(&opts.DeviceID)
+	kingpin.Flag("discovery.device-friendly-name", "Name exposed via discovery. Useful if you are running two instances of telly and want to differentiate between them $(TELLY_DISCOVERY_DEVICE_FRIENDLY_NAME)").Envar("TELLY_DISCOVERY_DEVICE_FRIENDLY_NAME").Default("telly").StringVar(&opts.FriendlyName)
+	kingpin.Flag("discovery.device-auth", "Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICE_AUTH)").Envar("TELLY_DISCOVERY_DEVICE_AUTH").Default("telly123").Hidden().StringVar(&opts.DeviceAuth)
+	kingpin.Flag("discovery.device-manufacturer", "Manufacturer exposed via discovery. $(TELLY_DISCOVERY_DEVICE_MANUFACTURER)").Envar("TELLY_DISCOVERY_DEVICE_MANUFACTURER").Default("Silicondust").StringVar(&opts.Manufacturer)
+	kingpin.Flag("discovery.device-model-number", "Model number exposed via discovery. $(TELLY_DISCOVERY_DEVICE_MODEL_NUMBER)").Envar("TELLY_DISCOVERY_DEVICE_MODEL_NUMBER").Default("HDTC-2US").StringVar(&opts.ModelNumber)
+	kingpin.Flag("discovery.device-firmware-name", "Firmware name exposed via discovery. $(TELLY_DISCOVERY_DEVICE_FIRMWARE_NAME)").Envar("TELLY_DISCOVERY_DEVICE_FIRMWARE_NAME").Default("hdhomeruntc_atsc").StringVar(&opts.FirmwareName)
+	kingpin.Flag("discovery.device-firmware-version", "Firmware version exposed via discovery. $(TELLY_DISCOVERY_DEVICE_FIRMWARE_VERSION)").Envar("TELLY_DISCOVERY_DEVICE_FIRMWARE_VERSION").Default("20150826").StringVar(&opts.FirmwareVersion)
 	kingpin.Flag("discovery.ssdp", "Turn on SSDP announcement of telly to the local network $(TELLY_DISCOVERY_SSDP)").Envar("TELLY_DISCOVERY_SSDP").Default("true").BoolVar(&opts.SSDP)
 
 	// Regex/filtering flags

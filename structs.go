@@ -19,11 +19,15 @@ type config struct {
 	ConcurrentStreams int
 	StartingChannel   int
 
-	DeviceAuth   string
-	DeviceID     int
-	DeviceUUID   string
-	FriendlyName string
-	SSDP         bool
+	DeviceAuth      string
+	DeviceID        int
+	DeviceUUID      string
+	FriendlyName    string
+	Manufacturer    string
+	ModelNumber     string
+	FirmwareName    string
+	FirmwareVersion string
+	SSDP            bool
 
 	LogRequests bool
 	LogLevel    string
@@ -37,11 +41,11 @@ type config struct {
 func (c *config) DiscoveryData() DiscoveryData {
 	return DiscoveryData{
 		FriendlyName:    c.FriendlyName,
-		Manufacturer:    "Silicondust",
-		ModelNumber:     "HDTC-2US",
-		FirmwareName:    "hdhomeruntc_atsc",
+		Manufacturer:    c.Manufacturer,
+		ModelNumber:     c.ModelNumber,
+		FirmwareName:    c.FirmwareName,
 		TunerCount:      c.ConcurrentStreams,
-		FirmwareVersion: "20150826",
+		FirmwareVersion: c.FirmwareVersion,
 		DeviceID:        strconv.Itoa(c.DeviceID),
 		DeviceAuth:      c.DeviceAuth,
 		BaseURL:         fmt.Sprintf("http://%s", c.BaseAddress),
