@@ -17,7 +17,7 @@ import (
 	ssdp "github.com/koron/go-ssdp"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
-	m3u "github.com/tombowditch/telly-m3u-parser"
+	"github.com/tombowditch/telly/m3u"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -73,6 +73,17 @@ type LineupItem struct {
 	URL         string
 }
 
+type Track struct {
+	*m3u.Track
+	Catchup       string `m3u:"catchup"`
+	CatchupDays   string `m3u:"catchup-days"`
+	CatchupSource string `m3u:"catchup-source"`
+	GroupTitle    string `m3u:"group-title"`
+	TvgID         string `m3u:"tvg-id"`
+	TvgLogo       string `m3u:"tvg-logo"`
+	TvgName       string `m3u:"tvg-name"`
+}
+
 func logRequestHandler(logRequests bool, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if logRequests {
@@ -111,7 +122,7 @@ func downloadFile(url string, dest string) error {
 	return nil
 }
 
-func buildChannels(directMode bool, baseURL string, usedTracks []m3u.Track) []LineupItem {
+func buildChannels(directMode bool, baseURL string, usedTracks []Track) []LineupItem {
 	lineup := make([]LineupItem, 0)
 	gn := 10000
 
@@ -240,7 +251,7 @@ func main() {
 
 	opts.DeviceUUID = fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", opts.DeviceID)
 
-	usedTracks := make([]m3u.Track, 0)
+	usedTracks := make([]Track, 0)
 
 	if opts.M3UPath == "iptv.m3u" {
 		log.Warnln("using default m3u option, 'iptv.m3u'. launch telly with the -playlist=yourfile.m3u option to change this!")
@@ -261,7 +272,13 @@ func main() {
 	}
 
 	log.Debugf("Reading m3u file %s...", opts.M3UPath)
-	playlist, err := m3u.Parse(opts.M3UPath)
+
+	m3uFile, m3uReadErr := os.Open(opts.M3UPath)
+	if m3uReadErr != nil {
+		panic(m3uReadErr)
+	}
+
+	playlist, err := m3u.Decode(m3uFile)
 	if err != nil {
 		log.Errorln("unable to read m3u file, error below")
 		panic(err)
@@ -273,7 +290,11 @@ func main() {
 
 	userRegex, _ := regexp.Compile(opts.UseRegex)
 
-	for _, track := range playlist.Tracks {
+	for _, oldTrack := range playlist.Tracks {
+		track := Track{Track: oldTrack}
+		if err := oldTrack.UnmarshalTags(&track); err != nil {
+			panic(err)
+		}
 		if opts.UseRegex == ".*" {
 			if opts.FilterRegex && opts.FilterUKTV {
 				if !episodeRegex.MatchString(track.Name) {
