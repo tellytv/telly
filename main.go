@@ -13,15 +13,24 @@ import (
 
 	"github.com/gin-gonic/gin"
 	ssdp "github.com/koron/go-ssdp"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
 	"github.com/tombowditch/telly/m3u"
+	ginprometheus "github.com/zsais/go-gin-prometheus"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
 	log  = logrus.New()
 	opts = config{}
+
+	exposedChannels = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "exposed_channels_total",
+			Help: "Number of exposed channels.",
+		},
+	)
 )
 
 func main() {
@@ -45,8 +54,8 @@ func main() {
 	kingpin.Flag("log.requests", "Log HTTP requests $(TELLY_LOG_REQUESTS)").Envar("TELLY_LOG_REQUESTS").Default("false").BoolVar(&opts.LogRequests)
 
 	// IPTV flags
-	kingpin.Flag("iptv.playlist", "Location of playlist m3u file. Can be on disk or a URL $(TELLY_IPTV_PLAYLIST)").Envar("TELLY_IPTV_PLAYLIST").Default("iptv.m3u").StringVar(&opts.M3UPath)
-	kingpin.Flag("iptv.streams", "Amount of concurrent streams allowed $(TELLY_IPTV_STREAMS)").Envar("TELLY_IPTV_STREAMS").Default("1").IntVar(&opts.ConcurrentStreams)
+	kingpin.Flag("iptv.playlist", "Location of playlist M3U file. Can be on disk or a URL. $(TELLY_IPTV_PLAYLIST)").Envar("TELLY_IPTV_PLAYLIST").Default("iptv.m3u").StringVar(&opts.M3UPath)
+	kingpin.Flag("iptv.streams", "Number of concurrent streams allowed $(TELLY_IPTV_STREAMS)").Envar("TELLY_IPTV_STREAMS").Default("1").IntVar(&opts.ConcurrentStreams)
 	kingpin.Flag("iptv.direct", "Does not encode the stream URL and redirect to the correct one $(TELLY_IPTV_DIRECT)").Envar("TELLY_IPTV_DIRECT").Default("false").BoolVar(&opts.DirectMode)
 
 	kingpin.Version(version.Print("telly"))
@@ -55,6 +64,8 @@ func main() {
 
 	log.Infoln("Starting telly", version.Info())
 	log.Infoln("Build context", version.BuildContext())
+
+	prometheus.MustRegister(version.NewCollector("telly"), exposedChannels)
 
 	level, parseLevelErr := logrus.ParseLevel(opts.LogLevel)
 	if parseLevelErr != nil {
@@ -120,6 +131,8 @@ func main() {
 
 	channelCount := len(usedTracks)
 
+	exposedChannels.Set(float64(channelCount))
+
 	log.Infof("found %d channels", channelCount)
 
 	if channelCount > 420 {
@@ -163,6 +176,9 @@ func main() {
 	if opts.LogRequests {
 		router.Use(ginrus())
 	}
+
+	p := ginprometheus.NewPrometheus("http")
+	p.Use(router)
 
 	router.GET("/", func(c *gin.Context) {
 		c.XML(http.StatusOK, deviceXML)
