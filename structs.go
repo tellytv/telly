@@ -1,13 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"net"
 	"regexp"
 	"strconv"
-
-	"github.com/tombowditch/telly/m3u"
 )
 
 type config struct {
@@ -15,7 +14,7 @@ type config struct {
 	Regex          *regexp.Regexp
 
 	DirectMode        bool
-	M3UPath           string
+	Playlists         []string
 	ConcurrentStreams int
 	StartingChannel   int
 
@@ -35,7 +34,7 @@ type config struct {
 	ListenAddress *net.TCPAddr
 	BaseAddress   *net.TCPAddr
 
-	lineup []LineupItem
+	lineup *Lineup
 }
 
 func (c *config) DiscoveryData() DiscoveryData {
@@ -87,29 +86,10 @@ func (d *DiscoveryData) UPNP() UPNP {
 
 // LineupStatus exposes the status of the channel lineup.
 type LineupStatus struct {
-	ScanInProgress int
-	ScanPossible   int
+	ScanInProgress convertibleBoolean
+	ScanPossible   convertibleBoolean
 	Source         string
 	SourceList     []string
-}
-
-// LineupItem is a single channel found in the playlist.
-type LineupItem struct {
-	GuideNumber string
-	GuideName   string
-	URL         string
-}
-
-// Track describes a single M3U segment. This struct includes m3u.Track as well as specific IPTV fields we want to get.
-type Track struct {
-	*m3u.Track
-	Catchup       string `m3u:"catchup"`
-	CatchupDays   string `m3u:"catchup-days"`
-	CatchupSource string `m3u:"catchup-source"`
-	GroupTitle    string `m3u:"group-title"`
-	TvgID         string `m3u:"tvg-id"`
-	TvgLogo       string `m3u:"tvg-logo"`
-	TvgName       string `m3u:"tvg-name"`
 }
 
 type upnpVersion struct {
@@ -133,4 +113,27 @@ type UPNP struct {
 	SpecVersion upnpVersion `xml:"specVersion"`
 	URLBase     string      `xml:"URLBase"`
 	Device      upnpDevice  `xml:"device"`
+}
+
+type convertibleBoolean bool
+
+func (bit *convertibleBoolean) MarshalJSON() ([]byte, error) {
+	var bitSetVar int8
+	if *bit {
+		bitSetVar = 1
+	}
+
+	return json.Marshal(bitSetVar)
+}
+
+func (bit *convertibleBoolean) UnmarshalJSON(data []byte) error {
+	asString := string(data)
+	if asString == "1" || asString == "true" {
+		*bit = true
+	} else if asString == "0" || asString == "false" {
+		*bit = false
+	} else {
+		return fmt.Errorf("Boolean unmarshal error: invalid input %s", asString)
+	}
+	return nil
 }

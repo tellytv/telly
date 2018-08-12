@@ -35,17 +35,31 @@ func serve(opts config) {
 	router.GET("/", deviceXML(upnp))
 	router.GET("/discover.json", discovery(discoveryData))
 	router.GET("/lineup_status.json", lineupStatus(LineupStatus{
-		ScanInProgress: 0,
-		ScanPossible:   1,
+		ScanInProgress: convertibleBoolean(opts.lineup.Refreshing),
+		ScanPossible:   convertibleBoolean(true),
 		Source:         "Cable",
 		SourceList:     []string{"Cable"},
 	}))
-	router.GET("/lineup.post", func(c *gin.Context) {
-		c.AbortWithStatus(http.StatusNotImplemented)
+	router.POST("/lineup.post", func(c *gin.Context) {
+		scanAction := c.Query("scan")
+		if scanAction == "start" {
+			if refreshErr := opts.lineup.Refresh(); refreshErr != nil {
+				c.AbortWithError(http.StatusInternalServerError, refreshErr)
+			}
+			c.AbortWithStatus(http.StatusOK)
+			return
+		} else if scanAction == "abort" {
+			c.AbortWithStatus(http.StatusOK)
+			return
+		}
+		c.String(http.StatusBadRequest, "%s is not a valid scan command", scanAction)
 	})
 	router.GET("/device.xml", deviceXML(upnp))
 	router.GET("/lineup.json", lineup(opts.lineup))
 	router.GET("/stream/:channelID", stream)
+	router.GET("/debug.json", func(c *gin.Context) {
+		c.JSON(http.StatusOK, opts.lineup)
+	})
 
 	if opts.SSDP {
 		log.Debugln("advertising telly service on network via UPNP/SSDP")
@@ -78,7 +92,7 @@ func lineupStatus(status LineupStatus) gin.HandlerFunc {
 	}
 }
 
-func lineup(lineup []LineupItem) gin.HandlerFunc {
+func lineup(lineup *Lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusOK, lineup)
 	}
