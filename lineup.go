@@ -78,6 +78,7 @@ func (p *Playlist) Filter() error {
 			Track:   oldTrack,
 			SafeURI: safeStringsRegex.ReplaceAllStringFunc(oldTrack.URI, stringSafer),
 		}
+
 		if unmarshalErr := oldTrack.UnmarshalTags(&track); unmarshalErr != nil {
 			return unmarshalErr
 		}
@@ -158,6 +159,7 @@ func (l *Lineup) AddPlaylist(path string) error {
 	}
 
 	l.Playlists = append(l.Playlists, *playlist)
+	l.PlaylistsCount = len(l.Playlists)
 	l.TracksCount = l.TracksCount + playlist.TracksCount
 	l.FilteredTracksCount = l.FilteredTracksCount + playlist.FilteredTracksCount
 
