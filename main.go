@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	namespace = "telly"
-	log       = logrus.New()
-	opts      = config{}
+	namespace            = "telly"
+	namespaceWithVersion = fmt.Sprintf("%s %s", namespace, version.Version)
+	log                  = logrus.New()
+	opts                 = config{}
 
 	exposedChannels = prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -111,9 +112,9 @@ func main() {
 
 	log.Infof("Loaded %d channels into the lineup", opts.lineup.FilteredTracksCount)
 
-	if opts.lineup.FilteredTracksCount > 420 {
-		log.Warnln("telly has loaded more than 420 channels into the lineup. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You have been warned!")
-	}
+	// if opts.lineup.FilteredTracksCount > 420 {
+	// log.Panicln("telly has loaded more than 420 channels into the lineup. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You must use regular expressions to filter out channels. You can also start another Telly instance.")
+	// }
 
 	serve(opts)
 }

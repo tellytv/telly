@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -57,6 +58,7 @@ func serve(opts config) {
 	router.GET("/device.xml", deviceXML(upnp))
 	router.GET("/lineup.json", lineup(opts.lineup))
 	router.GET("/stream/:channelID", stream)
+	router.GET("/epg.xml", xmlTV(opts.lineup))
 	router.GET("/debug.json", func(c *gin.Context) {
 		c.JSON(http.StatusOK, opts.lineup)
 	})
@@ -94,7 +96,18 @@ func lineupStatus(status LineupStatus) gin.HandlerFunc {
 
 func lineup(lineup *Lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, lineup)
+		allChannels := make([]HDHomeRunChannel, 0)
+		for _, playlist := range lineup.Playlists {
+			allChannels = append(allChannels, playlist.Channels...)
+		}
+		sort.Slice(allChannels, func(i, j int) bool { return allChannels[i].GuideNumber < allChannels[j].GuideNumber })
+		c.JSON(http.StatusOK, allChannels)
+	}
+}
+
+func xmlTV(lineup *Lineup) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.XML(http.StatusOK, lineup.xmlTv)
 	}
 }
 
