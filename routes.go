@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/base64"
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"sort"
@@ -35,12 +35,24 @@ func serve(opts config) {
 
 	router.GET("/", deviceXML(upnp))
 	router.GET("/discover.json", discovery(discoveryData))
-	router.GET("/lineup_status.json", lineupStatus(LineupStatus{
-		ScanInProgress: convertibleBoolean(opts.lineup.Refreshing),
-		ScanPossible:   convertibleBoolean(true),
-		Source:         "Cable",
-		SourceList:     []string{"Cable"},
-	}))
+	router.GET("/lineup_status.json", func(c *gin.Context) {
+		payload := LineupStatus{
+			ScanInProgress: convertibleBoolean(false),
+			ScanPossible:   convertibleBoolean(true),
+			Source:         "Cable",
+			SourceList:     []string{"Cable"},
+		}
+		if opts.lineup.Refreshing {
+			payload = LineupStatus{
+				ScanInProgress: convertibleBoolean(true),
+				// Gotta fake out Plex.
+				Progress: 50,
+				Found:    50,
+			}
+		}
+
+		c.JSON(http.StatusOK, payload)
+	})
 	router.POST("/lineup.post", func(c *gin.Context) {
 		scanAction := c.Query("scan")
 		if scanAction == "start" {
@@ -57,7 +69,7 @@ func serve(opts config) {
 	})
 	router.GET("/device.xml", deviceXML(upnp))
 	router.GET("/lineup.json", lineup(opts.lineup))
-	router.GET("/stream/:channelID", stream)
+	router.GET("/auto/:channelID", stream(opts.lineup))
 	router.GET("/epg.xml", xmlTV(opts.lineup))
 	router.GET("/debug.json", func(c *gin.Context) {
 		c.JSON(http.StatusOK, opts.lineup)
@@ -107,25 +119,22 @@ func lineup(lineup *Lineup) gin.HandlerFunc {
 
 func xmlTV(lineup *Lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.XML(http.StatusOK, lineup.xmlTv)
+		buf, _ := xml.MarshalIndent(lineup.xmlTv, "", "\t")
+		c.Data(http.StatusOK, "application/xml", []byte(xml.Header+`<!DOCTYPE tv SYSTEM "xmltv.dtd">`+"\n"+string(buf)))
 	}
 }
 
-func stream(c *gin.Context) {
+func stream(lineup *Lineup) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		channelID := c.Param("channelID")[1:]
 
-	channelID := c.Param("channelID")
-
-	log.Debugf("Parsing URI %s to %s", c.Request.RequestURI, channelID)
-
-	decodedStreamURI, decodeErr := base64.StdEncoding.DecodeString(channelID)
-	if decodeErr != nil {
-		log.WithError(decodeErr).Errorf("Invalid base64: %s", channelID)
-		c.AbortWithError(http.StatusBadRequest, decodeErr)
-		return
+		if url, ok := lineup.chanNumToURLMap[channelID]; ok {
+			log.Infof("Serving channel number %s", channelID)
+			c.Redirect(http.StatusMovedPermanently, url)
+			return
+		}
+		c.AbortWithError(http.StatusNotFound, fmt.Errorf("unknown channel number %s", channelID))
 	}
-
-	log.Debugln("Redirecting to:", string(decodedStreamURI))
-	c.Redirect(http.StatusMovedPermanently, string(decodedStreamURI))
 }
 
 func ginrus() gin.HandlerFunc {

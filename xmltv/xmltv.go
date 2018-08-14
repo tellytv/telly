@@ -35,6 +35,7 @@ func (t *Time) UnmarshalXMLAttr(attr xml.Attr) error {
 
 // TV is the root element.
 type TV struct {
+	XMLName           xml.Name    `xml:"tv"                                 json:"-"`
 	Channels          []Channel   `xml:"channel"                            json:"channels"`
 	Programmes        []Programme `xml:"programme"                          json:"programmes"`
 	Date              string      `xml:"date,attr,omitempty"                json:"date,omitempty"`
@@ -88,7 +89,7 @@ type Programme struct {
 	PreviouslyShown *PreviouslyShown `xml:"previously-shown,omitempty" json:"previously_shown,omitempty"`
 	Premiere        *CommonElement   `xml:"premiere,omitempty"         json:"premiere,omitempty"`
 	LastChance      *CommonElement   `xml:"last-chance,omitempty"      json:"last_chance,omitempty"`
-	New             ElementPresent   `xml:"new"                        json:"new"`
+	New             ElementPresent   `xml:"new>placeholder,omitempty"  json:"new"`
 	Subtitles       []Subtitle       `xml:"subtitles,omitempty"        json:"subtitles,omitempty"`
 	Ratings         []Rating         `xml:"rating,omitempty"           json:"ratings,omitempty"`
 	StarRatings     []Rating         `xml:"star-rating,omitempty"      json:"star_ratings,omitempty"`
@@ -101,6 +102,10 @@ type Programme struct {
 	Videoplus       string           `xml:"videoplus,attr,omitempty"   json:"videoplus,omitempty"`
 	Channel         string           `xml:"channel,attr"               json:"channel"`
 	Clumpidx        string           `xml:"clumpidx,attr,omitempty"    json:"clumpidx,omitempty"`
+
+	// These fields are outside of the XMLTV spec.
+	// LCN is the local channel number. Plex will show it in place of the channel ID if it exists.
+	LCN int `xml:"lcn,attr"                   json:"lcn,omitempty"`
 }
 
 // CommonElement element structure that is common, i.e. <country lang="en">Italy</country>
@@ -111,6 +116,11 @@ type CommonElement struct {
 
 // ElementPresent used to determine if element is present or not
 type ElementPresent bool
+
+// MarshalXML used to determine if the element is present or not. see https://stackoverflow.com/a/46516243
+func (c *ElementPresent) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return e.EncodeElement(*c, start)
+}
 
 // UnmarshalXML used to determine if the element is present or not. see https://stackoverflow.com/a/46516243
 func (c *ElementPresent) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
@@ -124,9 +134,9 @@ func (c *ElementPresent) UnmarshalXML(d *xml.Decoder, start xml.StartElement) er
 
 // Icon associated with the element that contains it
 type Icon struct {
-	Source string `xml:"src,attr"         json:"source"`
-	Width  int    `xml:"width,attr"       json:"width"`
-	Height int    `xml:"height,attr"      json:"height"`
+	Source string `xml:"src,attr"              json:"source"`
+	Width  int    `xml:"width,attr,omitempty"  json:"width,omitempty"`
+	Height int    `xml:"height,attr,omitempty" json:"height,omitempty"`
 }
 
 // Credits for the programme

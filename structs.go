@@ -13,10 +13,10 @@ type config struct {
 	RegexInclusive bool
 	Regex          *regexp.Regexp
 
-	DirectMode        bool
-	Playlists         []string
-	ConcurrentStreams int
-	StartingChannel   int
+	Playlists           []string
+	ConcurrentStreams   int
+	StartingChannel     int
+	XMLTVChannelNumbers bool
 
 	DeviceAuth      string
 	DeviceID        int
@@ -87,9 +87,11 @@ func (d *DiscoveryData) UPNP() UPNP {
 // LineupStatus exposes the status of the channel lineup.
 type LineupStatus struct {
 	ScanInProgress convertibleBoolean
-	ScanPossible   convertibleBoolean
-	Source         string
-	SourceList     []string
+	ScanPossible   convertibleBoolean `json:",omitempty"`
+	Source         string             `json:",omitempty"`
+	SourceList     []string           `json:",omitempty"`
+	Progress       int                `json:",omitempty"` // Percent complete
+	Found          int                `json:",omitempty"` // Number of found channels
 }
 
 type upnpVersion struct {

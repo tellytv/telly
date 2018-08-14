@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -17,55 +16,38 @@ import (
 	"github.com/tombowditch/telly/xmltv"
 )
 
+var channelNumberRegex = regexp.MustCompile(`^[0-9]+[[:space:]]?$`).MatchString
+var callSignRegex = regexp.MustCompile(`^[A-Z0-9]+$`).MatchString
+var hdRegex = regexp.MustCompile(`hd|4k`)
+
 // Track describes a single M3U segment. This struct includes m3u.Track as well as specific IPTV fields we want to get.
 type Track struct {
 	*m3u.Track
-	SafeURI       string `json:"URI"`
-	Catchup       string `m3u:"catchup" json:",omitempty"`
-	CatchupDays   string `m3u:"catchup-days" json:",omitempty"`
-	CatchupSource string `m3u:"catchup-source" json:",omitempty"`
-	GroupTitle    string `m3u:"group-title" json:",omitempty"`
-	TvgID         string `m3u:"tvg-id" json:",omitempty"`
-	TvgLogo       string `m3u:"tvg-logo" json:",omitempty"`
-	TvgName       string `m3u:"tvg-name" json:",omitempty"`
+	SafeURI          string `json:"URI"`
+	Catchup          string `m3u:"catchup" json:",omitempty"`
+	CatchupDays      string `m3u:"catchup-days" json:",omitempty"`
+	CatchupSource    string `m3u:"catchup-source" json:",omitempty"`
+	GroupTitle       string `m3u:"group-title" json:",omitempty"`
+	TvgID            string `m3u:"tvg-id" json:",omitempty"`
+	TvgLogo          string `m3u:"tvg-logo" json:",omitempty"`
+	TvgName          string `m3u:"tvg-name" json:",omitempty"`
+	TvgChannelNumber string `m3u:"tvg-chno" json:",omitempty"`
+	ChannelID        string `m3u:"channel-id" json:",omitempty"`
 
-	XMLTVChannel    xmlTVChannel      `json:",omitempty"`
-	XMLTVProgrammes []xmltv.Programme `json:",omitempty"`
+	XMLTVChannel    *xmlTVChannel      `json:",omitempty"`
+	XMLTVProgrammes *[]xmltv.Programme `json:",omitempty"`
 }
 
-// Channel returns a Channel struct for the given Track.
-func (t *Track) Channel(number int, obfuscate bool) *HDHomeRunChannel {
-	var finalName string
-	if t.TvgName == "" {
-		finalName = t.Name
-	} else {
-		finalName = t.TvgName
+func (t *Track) PrettyName() string {
+	if t.XMLTVChannel != nil {
+		return t.XMLTVChannel.LongName
+	} else if t.TvgName != "" {
+		return t.TvgName
+	} else if t.Track.Name != "" {
+		return t.Track.Name
 	}
 
-	// base64 url
-	fullTrackURI := t.URI
-	if obfuscate {
-		trackURI := base64.StdEncoding.EncodeToString([]byte(t.URI))
-		fullTrackURI = fmt.Sprintf("http://%s/stream/%s", opts.BaseAddress.String(), trackURI)
-	}
-
-	// if strings.Contains(t.URI, ".m3u8") {
-	//   log.Warnln("your .m3u contains .m3u8's. Plex has either stopped supporting m3u8 or it is a bug in a recent version - please use .ts! telly will automatically convert these in a future version. See telly github issue #108")
-	// }
-
-	hd := false
-	if strings.Contains(strings.ToLower(t.Track.Raw), "hd") {
-		hd = true
-	}
-
-	return &HDHomeRunChannel{
-		GuideNumber: number,
-		GuideName:   finalName,
-		URL:         fullTrackURI,
-		HD:          convertibleBoolean(hd),
-
-		track: t,
-	}
+	return t.Name
 }
 
 // Playlist describes a single M3U playlist.
@@ -77,6 +59,7 @@ type Playlist struct {
 	Channels            []HDHomeRunChannel
 	TracksCount         int
 	FilteredTracksCount int
+	EPGProvided         bool
 }
 
 // Filter will filter the raw m3u.Playlist m3u.Track slice into the Track slice of the Playlist.
@@ -91,7 +74,7 @@ func (p *Playlist) Filter() error {
 			return unmarshalErr
 		}
 
-		if opts.Regex.MatchString(track.Name) == opts.RegexInclusive {
+		if opts.Regex.MatchString(track.Raw) == opts.RegexInclusive {
 			p.Tracks = append(p.Tracks, track)
 		}
 	}
@@ -129,7 +112,6 @@ type Lineup struct {
 
 	StartingChannelNumber int
 	channelNumber         int
-	ObfuscateURL          bool
 
 	Refreshing    bool
 	LastRefreshed time.Time `json:",omitempty"`
@@ -140,6 +122,9 @@ type Lineup struct {
 	xmlTvSourceInfoURL  []string
 	xmlTvSourceInfoName []string
 	xmlTvSourceDataURL  []string
+	xmlTVChannelNumbers bool
+
+	chanNumToURLMap map[string]string
 }
 
 // NewLineup returns a new Lineup for the given config struct.
@@ -150,12 +135,13 @@ func NewLineup(opts config) *Lineup {
 	}
 
 	lineup := &Lineup{
+		xmlTVChannelNumbers:   opts.XMLTVChannelNumbers,
+		chanNumToURLMap:       make(map[string]string),
 		xmlTv:                 tv,
 		xmlTvChannelMap:       make(map[string]xmlTVChannel),
 		StartingChannelNumber: opts.StartingChannel,
 		channelNumber:         opts.StartingChannel,
-		ObfuscateURL:          !opts.DirectMode,
-		Refreshing:            true,
+		Refreshing:            false,
 		LastRefreshed:         time.Now(),
 	}
 
@@ -196,12 +182,12 @@ func (l *Lineup) AddPlaylist(plist string) error {
 		}
 	}
 
-	playlist, playlistErr := l.NewPlaylist(rawPlaylist, info)
+	playlist, playlistErr := l.NewPlaylist(rawPlaylist, info, (len(splitStr) > 1))
 	if playlistErr != nil {
 		return playlistErr
 	}
 
-	l.Playlists = append(l.Playlists, *playlist)
+	l.Playlists = append(l.Playlists, playlist)
 	l.PlaylistsCount = len(l.Playlists)
 	l.TracksCount = l.TracksCount + playlist.TracksCount
 	l.FilteredTracksCount = l.FilteredTracksCount + playlist.FilteredTracksCount
@@ -210,39 +196,55 @@ func (l *Lineup) AddPlaylist(plist string) error {
 }
 
 // NewPlaylist will return a new and filtered Playlist for the given m3u.Playlist and M3UFile.
-func (l *Lineup) NewPlaylist(rawPlaylist *m3u.Playlist, info *M3UFile) (*Playlist, error) {
-	playlist := &Playlist{rawPlaylist, info, nil, nil, len(rawPlaylist.Tracks), 0}
+func (l *Lineup) NewPlaylist(rawPlaylist *m3u.Playlist, info *M3UFile, hasEPG bool) (Playlist, error) {
+	playlist := Playlist{rawPlaylist, info, nil, nil, len(rawPlaylist.Tracks), 0, hasEPG}
 
 	if filterErr := playlist.Filter(); filterErr != nil {
 		log.WithError(filterErr).Errorln("error during filtering of channels, check your regex and try again")
-		return nil, filterErr
+		return playlist, filterErr
 	}
 
 	for idx, track := range playlist.Tracks {
-
-		channelNumber := l.channelNumber
-
-		if xmlChan, ok := l.xmlTvChannelMap[track.TvgID]; ok && !contains(l.channelsInXMLTv, track.TvgID) {
-			log.Infoln("found an entry in xmlTvChannelMap for", track.TvgID)
-			channelNumber = xmlChan.Number
-			l.channelsInXMLTv = append(l.channelsInXMLTv, track.TvgID)
-			track.XMLTVChannel = xmlChan
-			l.xmlTv.Channels = append(l.xmlTv.Channels, xmlChan.Original)
-			if xmlChan.Programmes != nil {
-				track.XMLTVProgrammes = xmlChan.Programmes
-				l.xmlTv.Programmes = append(l.xmlTv.Programmes, xmlChan.Programmes...)
-			}
-			playlist.Tracks[idx] = track
+		tt, channelNumber, hd, ttErr := l.processTrack(hasEPG, track)
+		if ttErr != nil {
+			return playlist, ttErr
 		}
 
-		channel := track.Channel(channelNumber, l.ObfuscateURL)
+		if hasEPG && tt.XMLTVChannel == nil {
+			log.Warnf("%s (#%d) is not being exposed to Plex because there was no EPG data found.", tt.Name, channelNumber)
+			continue
+		}
 
-		playlist.Channels = append(playlist.Channels, *channel)
+		playlist.Tracks[idx] = *tt
+
+		guideName := tt.PrettyName()
+
+		log.Debugln("Assigning", channelNumber, l.channelNumber, "to", guideName)
+
+		hdhr := HDHomeRunChannel{
+			GuideNumber: channelNumber,
+			GuideName:   guideName,
+			URL:         fmt.Sprintf("http://%s/auto/v%d", opts.BaseAddress.String(), channelNumber),
+			HD:          convertibleBoolean(hd),
+			DRM:         convertibleBoolean(false),
+		}
+
+		if !channelExists(playlist.Channels, hdhr) {
+			playlist.Channels = append(playlist.Channels, hdhr)
+			l.chanNumToURLMap[strconv.Itoa(channelNumber)] = tt.Track.URI
+		}
 
 		if channelNumber == l.channelNumber { // Only increment lineup channel number if its for a channel that didnt have a XMLTV entry.
 			l.channelNumber = l.channelNumber + 1
 		}
+
 	}
+
+	sort.Slice(l.xmlTv.Channels, func(i, j int) bool {
+		first, _ := strconv.Atoi(l.xmlTv.Channels[i].ID)
+		second, _ := strconv.Atoi(l.xmlTv.Channels[j].ID)
+		return first < second
+	})
 
 	playlist.FilteredTracksCount = len(playlist.Tracks)
 	exposedChannels.Add(float64(playlist.FilteredTracksCount))
@@ -251,8 +253,48 @@ func (l *Lineup) NewPlaylist(rawPlaylist *m3u.Playlist, info *M3UFile) (*Playlis
 	return playlist, nil
 }
 
+func (l Lineup) processTrack(hasEPG bool, track Track) (*Track, int, bool, error) {
+	hd := hdRegex.MatchString(strings.ToLower(track.Track.Raw))
+	channelNumber := l.channelNumber
+	if xmlChan, ok := l.xmlTvChannelMap[track.TvgID]; ok {
+		log.Debugln("found an entry in xmlTvChannelMap for", track.Name)
+		if l.xmlTVChannelNumbers && xmlChan.Number != 0 {
+			channelNumber = xmlChan.Number
+		} else {
+			xmlChan.Number = channelNumber
+		}
+		l.channelsInXMLTv = append(l.channelsInXMLTv, track.TvgID)
+		track.XMLTVChannel = &xmlChan
+		l.xmlTv.Channels = append(l.xmlTv.Channels, xmlChan.RemappedChannel(track))
+		if xmlChan.Programmes != nil {
+			track.XMLTVProgrammes = &xmlChan.Programmes
+			for _, programme := range xmlChan.Programmes {
+				newProgramme := programme
+				for idx, title := range programme.Titles {
+					programme.Titles[idx].Value = strings.Replace(title.Value, " [New!]", "", -1) // Hardcoded fix for Vaders
+				}
+				newProgramme.Channel = strconv.Itoa(channelNumber)
+				if hd {
+					if newProgramme.Video == nil {
+						newProgramme.Video = &xmltv.Video{}
+					}
+					newProgramme.Video.Quality = "HDTV"
+				}
+				l.xmlTv.Programmes = append(l.xmlTv.Programmes, newProgramme)
+			}
+		}
+	}
+
+	return &track, channelNumber, hd, nil
+}
+
 // Refresh will rescan all playlists for any channel changes.
-func (l *Lineup) Refresh() error {
+func (l Lineup) Refresh() error {
+
+	if l.Refreshing {
+		log.Warnln("A refresh is already underway yet, another one was requested")
+		return nil
+	}
 
 	log.Warnln("Refreshing the lineup!")
 
@@ -271,6 +313,8 @@ func (l *Lineup) Refresh() error {
 			return addErr
 		}
 	}
+
+	log.Infoln("Done refreshing the lineup!")
 
 	l.LastRefreshed = time.Now()
 	l.Refreshing = false
@@ -334,9 +378,6 @@ func (l *Lineup) getFile(path string) (io.Reader, string, error) {
 	return file, transport, nil
 }
 
-var channelNumberRegex = regexp.MustCompile(`^[0-9]+[[:space:]]?$`).MatchString
-var callSignRegex = regexp.MustCompile(`^[A-Z0-9]+$`).MatchString
-
 type xmlTVChannel struct {
 	ID        string
 	Number    int
@@ -351,6 +392,18 @@ type xmlTVChannel struct {
 	Original xmltv.Channel
 }
 
+func (x *xmlTVChannel) RemappedChannel(t Track) xmltv.Channel {
+	newX := x.Original
+	newX.ID = strconv.Itoa(x.Number)
+	if t.TvgLogo != "" {
+		newX.Icons = append(newX.Icons, xmltv.Icon{Source: t.TvgLogo})
+	}
+	if t.Track.Name != "" {
+		newX.DisplayNames = append(newX.DisplayNames, xmltv.CommonElement{Value: t.Track.Name})
+	}
+	return newX
+}
+
 func (l *Lineup) processXMLTV(tv *xmltv.TV) (map[string]xmlTVChannel, error) {
 	programmeMap := make(map[string][]xmltv.Programme)
 	for _, programme := range tv.Programmes {
@@ -358,14 +411,16 @@ func (l *Lineup) processXMLTV(tv *xmltv.TV) (map[string]xmlTVChannel, error) {
 	}
 
 	channelMap := make(map[string]xmlTVChannel, 0)
-	startManualNumber := 10000
 	for _, tvChann := range tv.Channels {
-		xTVChan := xmlTVChannel{
+		xTVChan := &xmlTVChannel{
 			ID:       tvChann.ID,
 			Original: tvChann,
 		}
 		if programmes, ok := programmeMap[tvChann.ID]; ok {
 			xTVChan.Programmes = programmes
+		}
+		if channelNumberRegex(tvChann.ID) {
+			xTVChan.Number, _ = strconv.Atoi(tvChann.ID)
 		}
 		displayNames := []string{}
 		for _, displayName := range tvChann.DisplayNames {
@@ -373,15 +428,15 @@ func (l *Lineup) processXMLTV(tv *xmltv.TV) (map[string]xmlTVChannel, error) {
 		}
 		sort.StringSlice(displayNames).Sort()
 		for i := 0; i < 10; i++ {
-			iterateDisplayNames(displayNames, &xTVChan)
+			iterateDisplayNames(displayNames, xTVChan)
 		}
-		if xTVChan.Number == 0 {
-			xTVChan.Number = startManualNumber + 1
-			startManualNumber = xTVChan.Number
-			xTVChan.NumberAssigned = true
+		channelMap[xTVChan.ID] = *xTVChan
+		// Duplicate this to first display-name just in case the M3U and XMLTV differ significantly.
+		for _, dn := range tvChann.DisplayNames {
+			channelMap[dn.Value] = *xTVChan
 		}
-		channelMap[xTVChan.ID] = xTVChan
 	}
+
 	return channelMap, nil
 }
 
@@ -408,9 +463,9 @@ func iterateDisplayNames(displayNames []string, xTVChan *xmlTVChannel) {
 	}
 }
 
-func contains(s []string, e string) bool {
+func channelExists(s []HDHomeRunChannel, e HDHomeRunChannel) bool {
 	for _, a := range s {
-		if a == e {
+		if a.GuideName == e.GuideName {
 			return true
 		}
 	}

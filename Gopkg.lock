@@ -65,6 +65,22 @@
   revision = "4a0ed625a78b6858dc8d3a55fb7728968b712122"
 
 [[projects]]
+  digest = "1:ca955a9cd5b50b0f43d2cc3aeb35c951473eeca41b34eb67507f1dbcc0542394"
+  name = "github.com/kr/pretty"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "73f6ac0b30a98e433b289500d779f50c1a6f0712"
+  version = "v0.1.0"
+
+[[projects]]
+  digest = "1:15b5cc79aad436d47019f814fde81a10221c740dc8ddf769221a65097fb6c2e9"
+  name = "github.com/kr/text"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e2ffdb16a802fe2bb95e2e35ff34f0e53aeef34f"
+  version = "v0.1.0"
+
+[[projects]]
   digest = "1:fa610f9fe6a93f4a75e64c83673dfff9bf1a34bbb21e6102021b6bc7850834a3"
   name = "github.com/mattn/go-isatty"
   packages = ["."]
@@ -165,10 +181,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:937d8f64b118c494c48b0cc9c990f2163c7483e6c70b5828f20006d81c61412f"
+  digest = "1:2d073118530c09a068ae1c47b054b5bdf75f625621658ecb642bcad7e65eb66a"
   name = "golang.org/x/net"
   packages = [
     "bpf",
+    "html",
+    "html/atom",
+    "html/charset",
     "internal/iana",
     "internal/socket",
     "ipv4",
@@ -186,6 +205,32 @@
   ]
   pruneopts = "UT"
   revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
+
+[[projects]]
+  digest = "1:aa4d6967a3237f8367b6bf91503964a77183ecf696f1273e8ad3551bb4412b5f"
+  name = "golang.org/x/text"
+  packages = [
+    "encoding",
+    "encoding/charmap",
+    "encoding/htmlindex",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "encoding/japanese",
+    "encoding/korean",
+    "encoding/simplifiedchinese",
+    "encoding/traditionalchinese",
+    "encoding/unicode",
+    "internal/gen",
+    "internal/tag",
+    "internal/utf8internal",
+    "language",
+    "runes",
+    "transform",
+    "unicode/cldr",
+  ]
+  pruneopts = "UT"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [[projects]]
   digest = "1:c06d9e11d955af78ac3bbb26bd02e01d2f61f689e1a3bce2ef6fb683ef8a7f2d"
@@ -216,11 +261,13 @@
   input-imports = [
     "github.com/gin-gonic/gin",
     "github.com/koron/go-ssdp",
+    "github.com/kr/pretty",
     "github.com/mitchellh/mapstructure",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/common/version",
     "github.com/sirupsen/logrus",
     "github.com/zsais/go-gin-prometheus",
+    "golang.org/x/net/html/charset",
     "gopkg.in/alecthomas/kingpin.v2",
   ]
   solver-name = "gps-cdcl"

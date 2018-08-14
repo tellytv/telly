@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -14,8 +15,15 @@ import (
 var (
 	namespace            = "telly"
 	namespaceWithVersion = fmt.Sprintf("%s %s", namespace, version.Version)
-	log                  = logrus.New()
-	opts                 = config{}
+	log                  = &logrus.Logger{
+		Out: os.Stderr,
+		Formatter: &logrus.TextFormatter{
+			FullTimestamp: true,
+		},
+		Hooks: make(logrus.LevelHooks),
+		Level: logrus.DebugLevel,
+	}
+	opts = config{}
 
 	exposedChannels = prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -55,7 +63,7 @@ func main() {
 	kingpin.Flag("discovery.ssdp", "Turn on SSDP announcement of telly to the local network $(TELLY_DISCOVERY_SSDP)").Envar("TELLY_DISCOVERY_SSDP").Default("true").BoolVar(&opts.SSDP)
 
 	// Regex/filtering flags
-	kingpin.Flag("filter.regex-inclusive", "Whether the provided regex is inclusive (whitelisting) or exclusive (blacklisting). If true (--filter.regex-inclusive), only channels matching the provided regex pattern will be exposed. If false (--no-filter.regex-inclusive), only channels NOT matching the provided pattern will be exposed. $(TELLY_FILTER_REGEX_MODE)").Envar("TELLY_FILTER_REGEX_MODE").Default("false").BoolVar(&opts.RegexInclusive)
+	kingpin.Flag("filter.regex-inclusive", "Whether the provided regex is inclusive (whitelisting) or exclusive (blacklisting). If true (--filter.regex-inclusive), only channels matching the provided regex pattern will be exposed. If false (--no-filter.regex-inclusive), only channels NOT matching the provided pattern will be exposed. $(TELLY_FILTER_REGEX_INCLUSIVE)").Envar("TELLY_FILTER_REGEX_INCLUSIVE").Default("false").BoolVar(&opts.RegexInclusive)
 	kingpin.Flag("filter.regex", "Use regex to filter for channels that you want. A basic example would be .*UK.*. $(TELLY_FILTER_REGEX)").Envar("TELLY_FILTER_REGEX").Default(".*").RegexpVar(&opts.Regex)
 
 	// Web flags
@@ -67,10 +75,10 @@ func main() {
 	kingpin.Flag("log.requests", "Log HTTP requests $(TELLY_LOG_REQUESTS)").Envar("TELLY_LOG_REQUESTS").Default("false").BoolVar(&opts.LogRequests)
 
 	// IPTV flags
-	kingpin.Flag("iptv.playlist", "Location of playlist M3U file. Can be on disk or a URL. $(TELLY_IPTV_PLAYLIST)").Envar("TELLY_IPTV_PLAYLIST").Default("iptv.m3u").StringsVar(&opts.Playlists)
+	kingpin.Flag("iptv.playlist", "Path to an M3U file and optionally, a XMLTV file. Combine both strings with a semi-colon (;) for this functionality. Paths can be on disk or a URL. This flag can be used multiple times. $(TELLY_IPTV_PLAYLIST)").Envar("TELLY_IPTV_PLAYLIST").Default("iptv.m3u").StringsVar(&opts.Playlists)
 	kingpin.Flag("iptv.streams", "Number of concurrent streams allowed $(TELLY_IPTV_STREAMS)").Envar("TELLY_IPTV_STREAMS").Default("1").IntVar(&opts.ConcurrentStreams)
-	kingpin.Flag("iptv.direct", "If true, stream URLs will not be obfuscated to hide them from Plex. $(TELLY_IPTV_DIRECT)").Envar("TELLY_IPTV_DIRECT").Default("false").BoolVar(&opts.DirectMode)
 	kingpin.Flag("iptv.starting-channel", "The channel number to start exposing from. $(TELLY_IPTV_STARTING_CHANNEL)").Envar("TELLY_IPTV_STARTING_CHANNEL").Default("10000").IntVar(&opts.StartingChannel)
+	kingpin.Flag("iptv.xmltv-channels", "Use channel numbers discovered via XMLTV file, if provided. $(TELLY_IPTV_XMLTV_CHANNELS)").Envar("TELLY_IPTV_XMLTV_CHANNELS").Default("true").BoolVar(&opts.XMLTVChannelNumbers)
 
 	kingpin.Version(version.Print("telly"))
 	kingpin.HelpFlag.Short('h')
