@@ -18,10 +18,12 @@ type Playlist struct {
 
 // Track represents an m3u track
 type Track struct {
-	Name   string
-	Length float64
-	URI    string
-	Tags   map[string]string
+	Name       string
+	Length     float64
+	URI        string
+	Tags       map[string]string
+	Raw        string
+	LineNumber int
 }
 
 // UnmarshalTags will decode the Tags map into a struct containing fields with `m3u` tags matching map keys.
@@ -72,19 +74,22 @@ func decode(playlist *Playlist, buf *bytes.Buffer) error {
 			return fmt.Errorf("malformed M3U provided")
 		}
 
-		if err = decodeLine(playlist, line); err != nil {
+		if err = decodeLine(playlist, line, lineNum); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func decodeLine(playlist *Playlist, line string) error {
+func decodeLine(playlist *Playlist, line string, lineNumber int) error {
 	line = strings.TrimSpace(line)
 
 	switch {
 	case strings.HasPrefix(line, "#EXTINF:"):
-		track := new(Track)
+		track := &Track{
+			Raw:        line,
+			LineNumber: lineNumber,
+		}
 
 		track.Length, track.Name, track.Tags = decodeInfoLine(line)
 

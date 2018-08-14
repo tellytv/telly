@@ -1,18 +1,13 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"strconv"
+	"regexp"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
-	"github.com/tombowditch/telly/m3u"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -27,6 +22,23 @@ var (
 			Help: "Number of exposed channels.",
 		},
 	)
+
+	safeStringsRegex = regexp.MustCompile(`(?m)(username|password|token)=[\w=]+(&?)`)
+
+	stringSafer = func(input string) string {
+		ret := input
+		if strings.HasPrefix(input, "username=") {
+			ret = "username=hunter1"
+		} else if strings.HasPrefix(input, "password=") {
+			ret = "password=hunter2"
+		} else if strings.HasPrefix(input, "token=") {
+			ret = "token=bm90Zm9yeW91" // "notforyou"
+		}
+		if strings.HasSuffix(input, "&") {
+			return fmt.Sprintf("%s&", ret)
+		}
+		return ret
+	}
 )
 
 func main() {
@@ -54,7 +66,7 @@ func main() {
 	kingpin.Flag("log.requests", "Log HTTP requests $(TELLY_LOG_REQUESTS)").Envar("TELLY_LOG_REQUESTS").Default("false").BoolVar(&opts.LogRequests)
 
 	// IPTV flags
-	kingpin.Flag("iptv.playlist", "Location of playlist M3U file. Can be on disk or a URL. $(TELLY_IPTV_PLAYLIST)").Envar("TELLY_IPTV_PLAYLIST").Default("iptv.m3u").StringVar(&opts.M3UPath)
+	kingpin.Flag("iptv.playlist", "Location of playlist M3U file. Can be on disk or a URL. $(TELLY_IPTV_PLAYLIST)").Envar("TELLY_IPTV_PLAYLIST").Default("iptv.m3u").StringsVar(&opts.Playlists)
 	kingpin.Flag("iptv.streams", "Number of concurrent streams allowed $(TELLY_IPTV_STREAMS)").Envar("TELLY_IPTV_STREAMS").Default("1").IntVar(&opts.ConcurrentStreams)
 	kingpin.Flag("iptv.direct", "If true, stream URLs will not be obfuscated to hide them from Plex. $(TELLY_IPTV_DIRECT)").Envar("TELLY_IPTV_DIRECT").Default("false").BoolVar(&opts.DirectMode)
 	kingpin.Flag("iptv.starting-channel", "The channel number to start exposing from. $(TELLY_IPTV_STARTING_CHANNEL)").Envar("TELLY_IPTV_STARTING_CHANNEL").Default("10000").IntVar(&opts.StartingChannel)
@@ -74,6 +86,7 @@ func main() {
 	}
 	log.SetLevel(level)
 
+	opts.FriendlyName = fmt.Sprintf("HDHomerun (%s)", opts.FriendlyName)
 	opts.DeviceUUID = fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", opts.DeviceID)
 
 	if opts.BaseAddress.IP.IsUnspecified() {
@@ -84,110 +97,23 @@ func main() {
 		log.Warnln("You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
 	}
 
-	if opts.M3UPath == "iptv.m3u" {
+	if len(opts.Playlists) == 1 && opts.Playlists[0] == "iptv.m3u" {
 		log.Warnln("using default m3u option, 'iptv.m3u'. launch telly with the --iptv.playlist=yourfile.m3u option to change this!")
 	}
 
-	m3uReader, readErr := getM3U(opts)
-	if readErr != nil {
-		log.WithError(readErr).Panicln("error getting m3u")
+	opts.lineup = NewLineup(opts)
+
+	for _, playlistPath := range opts.Playlists {
+		if addErr := opts.lineup.AddPlaylist(playlistPath); addErr != nil {
+			log.WithError(addErr).Panicln("error adding new playlist to lineup")
+		}
 	}
 
-	playlist, err := m3u.Decode(m3uReader)
-	if err != nil {
-		log.WithError(err).Panicln("unable to parse m3u file")
+	log.Infof("Loaded %d channels into the lineup", opts.lineup.FilteredTracksCount)
+
+	if opts.lineup.FilteredTracksCount > 420 {
+		log.Warnln("telly has loaded more than 420 channels into the lineup. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You have been warned!")
 	}
-
-	channels, filterErr := filterTracks(playlist.Tracks)
-	if filterErr != nil {
-		log.WithError(filterErr).Panicln("error during filtering of channels, check your regex and try again")
-	}
-
-	log.Debugln("Building lineup")
-
-	opts.lineup = buildLineup(opts, channels)
-
-	channelCount := len(channels)
-	exposedChannels.Set(float64(channelCount))
-	log.Infof("found %d channels", channelCount)
-
-	if channelCount > 420 {
-		log.Warnln("telly has loaded more than 420 channels. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You have been warned!")
-	}
-
-	opts.FriendlyName = fmt.Sprintf("HDHomerun (%s)", opts.FriendlyName)
 
 	serve(opts)
-}
-
-func buildLineup(opts config, channels []Track) []LineupItem {
-	lineup := make([]LineupItem, 0)
-	gn := opts.StartingChannel
-
-	for _, track := range channels {
-
-		var finalName string
-		if track.TvgName == "" {
-			finalName = track.Name
-		} else {
-			finalName = track.TvgName
-		}
-
-		// base64 url
-		fullTrackURI := track.URI
-		if !opts.DirectMode {
-			trackURI := base64.StdEncoding.EncodeToString([]byte(track.URI))
-			fullTrackURI = fmt.Sprintf("http://%s/stream/%s", opts.BaseAddress.String(), trackURI)
-		}
-
-		if strings.Contains(track.URI, ".m3u8") {
-			log.Warnln("your .m3u contains .m3u8's. Plex has either stopped supporting m3u8 or it is a bug in a recent version - please use .ts! telly will automatically convert these in a future version. See telly github issue #108")
-		}
-
-		lu := LineupItem{
-			GuideNumber: strconv.Itoa(gn),
-			GuideName:   finalName,
-			URL:         fullTrackURI,
-		}
-
-		lineup = append(lineup, lu)
-
-		gn = gn + 1
-	}
-
-	return lineup
-}
-
-func getM3U(opts config) (io.Reader, error) {
-	if strings.HasPrefix(strings.ToLower(opts.M3UPath), "http") {
-		log.Debugf("Downloading M3U from %s", opts.M3UPath)
-		resp, err := http.Get(opts.M3UPath)
-		if err != nil {
-			return nil, err
-		}
-		//defer resp.Body.Close()
-
-		return resp.Body, nil
-	}
-
-	log.Debugf("Reading M3U file %s...", opts.M3UPath)
-
-	return os.Open(opts.M3UPath)
-}
-
-func filterTracks(tracks []*m3u.Track) ([]Track, error) {
-	allowedTracks := make([]Track, 0)
-
-	for _, oldTrack := range tracks {
-		track := Track{Track: oldTrack}
-		if unmarshalErr := oldTrack.UnmarshalTags(&track); unmarshalErr != nil {
-			return nil, unmarshalErr
-		}
-
-		if opts.Regex.MatchString(track.Name) == opts.RegexInclusive {
-			allowedTracks = append(allowedTracks, track)
-		}
-	}
-
-	return allowedTracks, nil
 }
