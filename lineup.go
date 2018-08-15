@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/viper"
 	"github.com/tombowditch/telly/m3u"
+	"github.com/tombowditch/telly/providers"
 	"github.com/tombowditch/telly/xmltv"
 )
 
@@ -74,7 +76,7 @@ func (p *Playlist) Filter() error {
 			return unmarshalErr
 		}
 
-		if opts.Regex.MatchString(track.Raw) == opts.RegexInclusive {
+		if GetStringAsRegex("filter.regexstr").MatchString(track.Raw) == viper.GetBool("filter.regexinclusive") {
 			p.Tracks = append(p.Tracks, track)
 		}
 	}
@@ -105,6 +107,8 @@ type HDHomeRunChannel struct {
 
 // Lineup is a collection of tracks
 type Lineup struct {
+	Providers []providers.Provider
+
 	Playlists           []Playlist
 	PlaylistsCount      int
 	TracksCount         int
@@ -128,32 +132,46 @@ type Lineup struct {
 }
 
 // NewLineup returns a new Lineup for the given config struct.
-func NewLineup(opts config) *Lineup {
+func NewLineup() *Lineup {
 	tv := xmltv.TV{
 		GeneratorInfoName: namespaceWithVersion,
 		GeneratorInfoURL:  "https://github.com/tombowditch/telly",
 	}
 
 	lineup := &Lineup{
-		xmlTVChannelNumbers:   opts.XMLTVChannelNumbers,
+		xmlTVChannelNumbers:   viper.GetBool("iptv.xmltv-channels"),
 		chanNumToURLMap:       make(map[string]string),
 		xmlTv:                 tv,
 		xmlTvChannelMap:       make(map[string]xmlTVChannel),
-		StartingChannelNumber: opts.StartingChannel,
-		channelNumber:         opts.StartingChannel,
+		StartingChannelNumber: viper.GetInt("iptv.starting-channel"),
+		channelNumber:         viper.GetInt("iptv.starting-channel"),
 		Refreshing:            false,
 		LastRefreshed:         time.Now(),
+	}
+
+	var cfgs []providers.Configuration
+
+	if unmarshalErr := viper.UnmarshalKey("source", &cfgs); unmarshalErr != nil {
+		log.WithError(unmarshalErr).Panicln("Unable to unmarshal source configuration to slice of providers.Configuration, check your configuration!")
+	}
+
+	for _, cfg := range cfgs {
+		log.Infoln("Adding provider", cfg.Name)
+		provider, providerErr := cfg.GetProvider()
+		if providerErr != nil {
+			panic(providerErr)
+		}
+		if addErr := lineup.AddProvider(provider); addErr != nil {
+			log.WithError(addErr).Panicln("error adding new provider to lineup")
+		}
 	}
 
 	return lineup
 }
 
-// AddPlaylist adds a new playlist to the Lineup.
-func (l *Lineup) AddPlaylist(plist string) error {
-	// Attempt to split the string by semi colon for complex config passing with m3uPath,xmlPath,name
-	splitStr := strings.Split(plist, ";")
-	path := splitStr[0]
-	reader, info, readErr := l.getM3U(path)
+// AddProvider adds a new Provider to the Lineup.
+func (l *Lineup) AddProvider(provider providers.Provider) error {
+	reader, info, readErr := l.getM3U(provider.PlaylistURL())
 	if readErr != nil {
 		log.WithError(readErr).Errorln("error getting m3u")
 		return readErr
@@ -165,8 +183,8 @@ func (l *Lineup) AddPlaylist(plist string) error {
 		return err
 	}
 
-	if len(splitStr) > 1 {
-		epg, epgReadErr := l.getXMLTV(splitStr[1])
+	if provider.EPGURL() != "" {
+		epg, epgReadErr := l.getXMLTV(provider.EPGURL())
 		if epgReadErr != nil {
 			log.WithError(epgReadErr).Errorln("error getting XMLTV")
 			return epgReadErr
@@ -182,7 +200,7 @@ func (l *Lineup) AddPlaylist(plist string) error {
 		}
 	}
 
-	playlist, playlistErr := l.NewPlaylist(rawPlaylist, info, (len(splitStr) > 1))
+	playlist, playlistErr := l.NewPlaylist(provider, rawPlaylist, info)
 	if playlistErr != nil {
 		return playlistErr
 	}
@@ -196,7 +214,8 @@ func (l *Lineup) AddPlaylist(plist string) error {
 }
 
 // NewPlaylist will return a new and filtered Playlist for the given m3u.Playlist and M3UFile.
-func (l *Lineup) NewPlaylist(rawPlaylist *m3u.Playlist, info *M3UFile, hasEPG bool) (Playlist, error) {
+func (l *Lineup) NewPlaylist(provider providers.Provider, rawPlaylist *m3u.Playlist, info *M3UFile) (Playlist, error) {
+	hasEPG := provider.EPGURL() != ""
 	playlist := Playlist{rawPlaylist, info, nil, nil, len(rawPlaylist.Tracks), 0, hasEPG}
 
 	if filterErr := playlist.Filter(); filterErr != nil {
@@ -205,7 +224,7 @@ func (l *Lineup) NewPlaylist(rawPlaylist *m3u.Playlist, info *M3UFile, hasEPG bo
 	}
 
 	for idx, track := range playlist.Tracks {
-		tt, channelNumber, hd, ttErr := l.processTrack(hasEPG, track)
+		tt, channelNumber, hd, ttErr := l.processTrack(provider, track)
 		if ttErr != nil {
 			return playlist, ttErr
 		}
@@ -224,7 +243,7 @@ func (l *Lineup) NewPlaylist(rawPlaylist *m3u.Playlist, info *M3UFile, hasEPG bo
 		hdhr := HDHomeRunChannel{
 			GuideNumber: channelNumber,
 			GuideName:   guideName,
-			URL:         fmt.Sprintf("http://%s/auto/v%d", opts.BaseAddress.String(), channelNumber),
+			URL:         fmt.Sprintf("http://%s/auto/v%d", viper.GetString("web.base-address"), channelNumber),
 			HD:          convertibleBoolean(hd),
 			DRM:         convertibleBoolean(false),
 		}
@@ -253,9 +272,11 @@ func (l *Lineup) NewPlaylist(rawPlaylist *m3u.Playlist, info *M3UFile, hasEPG bo
 	return playlist, nil
 }
 
-func (l Lineup) processTrack(hasEPG bool, track Track) (*Track, int, bool, error) {
+func (l Lineup) processTrack(provider providers.Provider, track Track) (*Track, int, bool, error) {
+
 	hd := hdRegex.MatchString(strings.ToLower(track.Track.Raw))
 	channelNumber := l.channelNumber
+
 	if xmlChan, ok := l.xmlTvChannelMap[track.TvgID]; ok {
 		log.Debugln("found an entry in xmlTvChannelMap for", track.Name)
 		if l.xmlTVChannelNumbers && xmlChan.Number != 0 {
@@ -308,11 +329,12 @@ func (l Lineup) Refresh() error {
 	l.FilteredTracksCount = 0
 	l.StartingChannelNumber = 0
 
-	for _, playlist := range existingPlaylists {
-		if addErr := l.AddPlaylist(playlist.M3UFile.Path); addErr != nil {
-			return addErr
-		}
-	}
+	// FIXME: Re-implement AddProvider to use a provider.
+	// for _, playlist := range existingPlaylists {
+	// 	if addErr := l.AddProvider(playlist.M3UFile.Path); addErr != nil {
+	// 		return addErr
+	// 	}
+	// }
 
 	log.Infoln("Done refreshing the lineup!")
 
@@ -428,7 +450,7 @@ func (l *Lineup) processXMLTV(tv *xmltv.TV) (map[string]xmlTVChannel, error) {
 		}
 		sort.StringSlice(displayNames).Sort()
 		for i := 0; i < 10; i++ {
-			iterateDisplayNames(displayNames, xTVChan)
+			extractDisplayNames(displayNames, xTVChan)
 		}
 		channelMap[xTVChan.ID] = *xTVChan
 		// Duplicate this to first display-name just in case the M3U and XMLTV differ significantly.
@@ -440,7 +462,7 @@ func (l *Lineup) processXMLTV(tv *xmltv.TV) (map[string]xmlTVChannel, error) {
 	return channelMap, nil
 }
 
-func iterateDisplayNames(displayNames []string, xTVChan *xmlTVChannel) {
+func extractDisplayNames(displayNames []string, xTVChan *xmlTVChannel) {
 	for _, displayName := range displayNames {
 		if channelNumberRegex(displayName) {
 			if chanNum, chanNumErr := strconv.Atoi(displayName); chanNumErr == nil {

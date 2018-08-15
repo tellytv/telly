@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	fflag "flag"
 	"fmt"
+	"net"
 	"os"
 	"regexp"
 	"strings"
@@ -9,7 +12,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	flag "github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -53,76 +57,103 @@ var (
 func main() {
 
 	// Discovery flags
-	kingpin.Flag("discovery.device-id", "8 digits used to uniquely identify the device. $(TELLY_DISCOVERY_DEVICE_ID)").Envar("TELLY_DISCOVERY_DEVICE_ID").Default("12345678").IntVar(&opts.DeviceID)
-	kingpin.Flag("discovery.device-friendly-name", "Name exposed via discovery. Useful if you are running two instances of telly and want to differentiate between them $(TELLY_DISCOVERY_DEVICE_FRIENDLY_NAME)").Envar("TELLY_DISCOVERY_DEVICE_FRIENDLY_NAME").Default("telly").StringVar(&opts.FriendlyName)
-	kingpin.Flag("discovery.device-auth", "Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICE_AUTH)").Envar("TELLY_DISCOVERY_DEVICE_AUTH").Default("telly123").Hidden().StringVar(&opts.DeviceAuth)
-	kingpin.Flag("discovery.device-manufacturer", "Manufacturer exposed via discovery. $(TELLY_DISCOVERY_DEVICE_MANUFACTURER)").Envar("TELLY_DISCOVERY_DEVICE_MANUFACTURER").Default("Silicondust").StringVar(&opts.Manufacturer)
-	kingpin.Flag("discovery.device-model-number", "Model number exposed via discovery. $(TELLY_DISCOVERY_DEVICE_MODEL_NUMBER)").Envar("TELLY_DISCOVERY_DEVICE_MODEL_NUMBER").Default("HDTC-2US").StringVar(&opts.ModelNumber)
-	kingpin.Flag("discovery.device-firmware-name", "Firmware name exposed via discovery. $(TELLY_DISCOVERY_DEVICE_FIRMWARE_NAME)").Envar("TELLY_DISCOVERY_DEVICE_FIRMWARE_NAME").Default("hdhomeruntc_atsc").StringVar(&opts.FirmwareName)
-	kingpin.Flag("discovery.device-firmware-version", "Firmware version exposed via discovery. $(TELLY_DISCOVERY_DEVICE_FIRMWARE_VERSION)").Envar("TELLY_DISCOVERY_DEVICE_FIRMWARE_VERSION").Default("20150826").StringVar(&opts.FirmwareVersion)
-	kingpin.Flag("discovery.ssdp", "Turn on SSDP announcement of telly to the local network $(TELLY_DISCOVERY_SSDP)").Envar("TELLY_DISCOVERY_SSDP").Default("true").BoolVar(&opts.SSDP)
+	flag.Int("discovery.device-id", 12345678, "8 digits used to uniquely identify the device. $(TELLY_DISCOVERY_DEVICE_ID)")
+	flag.String("discovery.device-friendly-name", "telly", "Name exposed via discovery. Useful if you are running two instances of telly and want to differentiate between them $(TELLY_DISCOVERY_DEVICE_FRIENDLY_NAME)")
+	flag.String("discovery.device-auth", "telly123", "Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICE_AUTH)")
+	flag.String("discovery.device-manufacturer", "Silicondust", "Manufacturer exposed via discovery. $(TELLY_DISCOVERY_DEVICE_MANUFACTURER)")
+	flag.String("discovery.device-model-number", "HDTC-2US", "Model number exposed via discovery. $(TELLY_DISCOVERY_DEVICE_MODEL_NUMBER)")
+	flag.String("discovery.device-firmware-name", "hdhomeruntc_atsc", "Firmware name exposed via discovery. $(TELLY_DISCOVERY_DEVICE_FIRMWARE_NAME)")
+	flag.String("discovery.device-firmware-version", "20150826", "Firmware version exposed via discovery. $(TELLY_DISCOVERY_DEVICE_FIRMWARE_VERSION)")
+	flag.Bool("discovery.ssdp", true, "Turn on SSDP announcement of telly to the local network $(TELLY_DISCOVERY_SSDP)")
 
 	// Regex/filtering flags
-	kingpin.Flag("filter.regex-inclusive", "Whether the provided regex is inclusive (whitelisting) or exclusive (blacklisting). If true (--filter.regex-inclusive), only channels matching the provided regex pattern will be exposed. If false (--no-filter.regex-inclusive), only channels NOT matching the provided pattern will be exposed. $(TELLY_FILTER_REGEX_INCLUSIVE)").Envar("TELLY_FILTER_REGEX_INCLUSIVE").Default("false").BoolVar(&opts.RegexInclusive)
-	kingpin.Flag("filter.regex", "Use regex to filter for channels that you want. A basic example would be .*UK.*. $(TELLY_FILTER_REGEX)").Envar("TELLY_FILTER_REGEX").Default(".*").RegexpVar(&opts.Regex)
+	flag.Bool("filter.regex-inclusive", false, "Whether the provided regex is inclusive (whitelisting) or exclusive (blacklisting). If true (--filter.regex-inclusive), only channels matching the provided regex pattern will be exposed. If false (--no-filter.regex-inclusive), only channels NOT matching the provided pattern will be exposed. $(TELLY_FILTER_REGEX_INCLUSIVE)")
+	flag.String("filter.regex", ".*", "Use regex to filter for channels that you want. A basic example would be .*UK.*. $(TELLY_FILTER_REGEX)")
 
 	// Web flags
-	kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry $(TELLY_WEB_LISTEN_ADDRESS)").Envar("TELLY_WEB_LISTEN_ADDRESS").Default("localhost:6077").TCPVar(&opts.ListenAddress)
-	kingpin.Flag("web.base-address", "The address to expose via discovery. Useful with reverse proxy $(TELLY_WEB_BASE_ADDRESS)").Envar("TELLY_WEB_BASE_ADDRESS").Default("localhost:6077").TCPVar(&opts.BaseAddress)
+	flag.String("web.listen-address", "localhost:6077", "Address to listen on for web interface and telemetry $(TELLY_WEB_LISTEN_ADDRESS)")
+	flag.String("web.base-address", "localhost:6077", "The address to expose via discovery. Useful with reverse proxy $(TELLY_WEB_BASE_ADDRESS)")
 
 	// Log flags
-	kingpin.Flag("log.level", "Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal] $(TELLY_LOG_LEVEL)").Envar("TELLY_LOG_LEVEL").Default(logrus.InfoLevel.String()).StringVar(&opts.LogLevel)
-	kingpin.Flag("log.requests", "Log HTTP requests $(TELLY_LOG_REQUESTS)").Envar("TELLY_LOG_REQUESTS").Default("false").BoolVar(&opts.LogRequests)
+	flag.String("log.level", logrus.InfoLevel.String(), "Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal] $(TELLY_LOG_LEVEL)")
+	flag.Bool("log.requests", false, "Log HTTP requests $(TELLY_LOG_REQUESTS)")
 
 	// IPTV flags
-	kingpin.Flag("iptv.playlist", "Path to an M3U file and optionally, a XMLTV file. Combine both strings with a semi-colon (;) for this functionality. Paths can be on disk or a URL. This flag can be used multiple times. $(TELLY_IPTV_PLAYLIST)").Envar("TELLY_IPTV_PLAYLIST").Default("iptv.m3u").StringsVar(&opts.Playlists)
-	kingpin.Flag("iptv.streams", "Number of concurrent streams allowed $(TELLY_IPTV_STREAMS)").Envar("TELLY_IPTV_STREAMS").Default("1").IntVar(&opts.ConcurrentStreams)
-	kingpin.Flag("iptv.starting-channel", "The channel number to start exposing from. $(TELLY_IPTV_STARTING_CHANNEL)").Envar("TELLY_IPTV_STARTING_CHANNEL").Default("10000").IntVar(&opts.StartingChannel)
-	kingpin.Flag("iptv.xmltv-channels", "Use channel numbers discovered via XMLTV file, if provided. $(TELLY_IPTV_XMLTV_CHANNELS)").Envar("TELLY_IPTV_XMLTV_CHANNELS").Default("true").BoolVar(&opts.XMLTVChannelNumbers)
+	flag.String("iptv.playlist", "", "Path to an M3U file on disk or at a URL. $(TELLY_IPTV_PLAYLIST)")
+	flag.Int("iptv.streams", 1, "Number of concurrent streams allowed $(TELLY_IPTV_STREAMS)")
+	flag.Int("iptv.starting-channel", 10000, "The channel number to start exposing from. $(TELLY_IPTV_STARTING_CHANNEL)")
+	flag.Bool("iptv.xmltv-channels", true, "Use channel numbers discovered via XMLTV file, if provided. $(TELLY_IPTV_XMLTV_CHANNELS)")
 
-	kingpin.Version(version.Print("telly"))
-	kingpin.HelpFlag.Short('h')
-	kingpin.Parse()
+	flag.CommandLine.AddGoFlagSet(fflag.CommandLine)
+	flag.Parse()
+	viper.BindPFlags(flag.CommandLine)
+	viper.SetConfigName("telly.config") // name of config file (without extension)
+	viper.AddConfigPath("/etc/telly/")  // path to look for the config file in
+	viper.AddConfigPath("$HOME/.telly") // call multiple times to add many search paths
+	viper.AddConfigPath(".")            // optionally look for config in the working directory
+	viper.SetEnvPrefix(namespace)
+	viper.AutomaticEnv()
+	err := viper.ReadInConfig() // Find and read the config file
+	if err != nil {             // Handle errors reading the config file
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			log.WithError(err).Panicln("fatal error while reading config file:")
+		}
+	}
 
 	log.Infoln("Starting telly", version.Info())
 	log.Infoln("Build context", version.BuildContext())
 
 	prometheus.MustRegister(version.NewCollector("telly"), exposedChannels)
 
-	level, parseLevelErr := logrus.ParseLevel(opts.LogLevel)
+	level, parseLevelErr := logrus.ParseLevel(viper.GetString("log.level"))
 	if parseLevelErr != nil {
 		log.WithError(parseLevelErr).Panicln("error setting log level!")
 	}
 	log.SetLevel(level)
 
-	opts.FriendlyName = fmt.Sprintf("HDHomerun (%s)", opts.FriendlyName)
-	opts.DeviceUUID = fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", opts.DeviceID)
-
-	if opts.BaseAddress.IP.IsUnspecified() {
-		log.Panicln("base URL is set to 0.0.0.0, this will not work. please use the --web.base-address option and set it to the (local) ip address telly is running on.")
+	if log.Level == logrus.DebugLevel {
+		js, _ := json.MarshalIndent(viper.AllSettings(), "", "    ")
+		log.Debugf("Loaded configuration %s", js)
 	}
 
-	if opts.ListenAddress.IP.IsUnspecified() && opts.BaseAddress.IP.IsLoopback() {
-		log.Warnln("You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
-	}
-
-	if len(opts.Playlists) == 1 && opts.Playlists[0] == "iptv.m3u" {
-		log.Warnln("using default m3u option, 'iptv.m3u'. launch telly with the --iptv.playlist=yourfile.m3u option to change this!")
-	}
-
-	opts.lineup = NewLineup(opts)
-
-	for _, playlistPath := range opts.Playlists {
-		if addErr := opts.lineup.AddPlaylist(playlistPath); addErr != nil {
-			log.WithError(addErr).Panicln("error adding new playlist to lineup")
+	if viper.IsSet("filter.regexstr") {
+		if _, regexErr := regexp.Compile(viper.GetString("filter.regex")); regexErr != nil {
+			log.WithError(regexErr).Panicln("Error when compiling regex, is it valid?")
 		}
 	}
 
-	log.Infof("Loaded %d channels into the lineup", opts.lineup.FilteredTracksCount)
+	var addrErr error
+	if _, addrErr = net.ResolveTCPAddr("tcp", viper.GetString("web.listenaddress")); addrErr != nil {
+		log.WithError(addrErr).Panic("Error when parsing Listen address, please check the address and try again.")
+		return
+	}
+	if _, addrErr = net.ResolveTCPAddr("tcp", viper.GetString("web.base-address")); addrErr != nil {
+		log.WithError(addrErr).Panic("Error when parsing Base addresses, please check the address and try again.")
+		return
+	}
 
-	// if opts.lineup.FilteredTracksCount > 420 {
-	// log.Panicln("telly has loaded more than 420 channels into the lineup. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You must use regular expressions to filter out channels. You can also start another Telly instance.")
-	// }
+	if GetTCPAddr("web.base-address").IP.IsUnspecified() {
+		log.Panicln("base URL is set to 0.0.0.0, this will not work. please use the --web.baseaddress option and set it to the (local) ip address telly is running on.")
+	}
 
-	serve(opts)
+	if GetTCPAddr("web.listenaddress").IP.IsUnspecified() && GetTCPAddr("web.base-address").IP.IsLoopback() {
+		log.Warnln("You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
+	}
+
+	viper.Set("discovery.device-friendly-name", fmt.Sprintf("HDHomerun (%s)", viper.GetString("discovery.device-friendly-name")))
+	viper.Set("discovery.device-uuid", fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", viper.GetInt("discovery.device-id")))
+
+	if flag.Lookup("iptv.playlist").Changed {
+		viper.Set("playlists.default.m3u", flag.Lookup("iptv.playlist").Value.String())
+	}
+
+	lineup := NewLineup()
+
+	log.Infof("Loaded %d channels into the lineup", lineup.FilteredTracksCount)
+
+	if lineup.FilteredTracksCount > 420 {
+		log.Panicf("telly has loaded more than 420 channels (%d) into the lineup. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You must use regular expressions to filter out channels. You can also start another Telly instance.", lineup.FilteredTracksCount)
+	}
+
+	serve(lineup)
 }

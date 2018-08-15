@@ -6,50 +6,47 @@ import (
 	"fmt"
 	"net"
 	"regexp"
-	"strconv"
 )
 
 type config struct {
-	RegexInclusive bool
-	Regex          *regexp.Regexp
+	Filter struct {
+		RegexInclusive bool           `toml:"Filter.RegexInclusive"`
+		Regex          *regexp.Regexp `toml:"-"`
+		RegexStr       string         `toml:"Filter.Regex"`
+	}
 
-	Playlists           []string
-	ConcurrentStreams   int
-	StartingChannel     int
-	XMLTVChannelNumbers bool
+	IPTV struct {
+		Playlists           []string `toml:"IPTV.Playlists"`
+		ConcurrentStreams   int      `toml:"IPTV.ConcurrentStreams"`
+		StartingChannel     int      `toml:"IPTV.StartingChannel"`
+		XMLTVChannelNumbers bool     `toml:"IPTV.XMLTVChannelNumbers"`
+	}
 
-	DeviceAuth      string
-	DeviceID        int
-	DeviceUUID      string
-	FriendlyName    string
-	Manufacturer    string
-	ModelNumber     string
-	FirmwareName    string
-	FirmwareVersion string
-	SSDP            bool
+	Discovery struct {
+		DeviceAuth      string `toml:"Discovery.DeviceAuth"`
+		DeviceID        int    `toml:"Discovery.DeviceID"`
+		DeviceUUID      string `toml:"Discovery.DeviceUUID"`
+		FriendlyName    string `toml:"Discovery.FriendlyName"`
+		Manufacturer    string `toml:"Discovery.Manufacturer"`
+		ModelNumber     string `toml:"Discovery.ModelNumber"`
+		FirmwareName    string `toml:"Discovery.FirmwareName"`
+		FirmwareVersion string `toml:"Discovery.FirmwareVersion"`
+		SSDP            bool   `toml:"Discovery.SSDP"`
+	}
 
-	LogRequests bool
-	LogLevel    string
+	Log struct {
+		LogRequests bool   `toml:"Log.Requests"`
+		Level       string `toml:"Log.Level"`
+	}
 
-	ListenAddress *net.TCPAddr
-	BaseAddress   *net.TCPAddr
+	Web struct {
+		ListenAddress    *net.TCPAddr `toml:"-"`
+		BaseAddress      *net.TCPAddr `toml:"-"`
+		ListenAddressStr string       `toml:"Web.ListenAddress"`
+		BaseAddressStr   string       `toml:"Web.BaseAddress"`
+	}
 
 	lineup *Lineup
-}
-
-func (c *config) DiscoveryData() DiscoveryData {
-	return DiscoveryData{
-		FriendlyName:    c.FriendlyName,
-		Manufacturer:    c.Manufacturer,
-		ModelNumber:     c.ModelNumber,
-		FirmwareName:    c.FirmwareName,
-		TunerCount:      c.ConcurrentStreams,
-		FirmwareVersion: c.FirmwareVersion,
-		DeviceID:        strconv.Itoa(c.DeviceID),
-		DeviceAuth:      c.DeviceAuth,
-		BaseURL:         fmt.Sprintf("http://%s", c.BaseAddress),
-		LineupURL:       fmt.Sprintf("http://%s/lineup.json", c.BaseAddress),
-	}
 }
 
 // DiscoveryData contains data about telly to expose in the HDHomeRun format for Plex detection.

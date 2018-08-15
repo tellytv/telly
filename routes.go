@@ -10,11 +10,12 @@ import (
 	"github.com/gin-gonic/gin"
 	ssdp "github.com/koron/go-ssdp"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
-func serve(opts config) {
-	discoveryData := opts.DiscoveryData()
+func serve(lineup *Lineup) {
+	discoveryData := GetDiscoveryData()
 
 	log.Debugln("creating device xml")
 	upnp := discoveryData.UPNP()
@@ -26,7 +27,7 @@ func serve(opts config) {
 	router := gin.New()
 	router.Use(gin.Recovery())
 
-	if opts.LogRequests {
+	if viper.GetBool("log.logrequests") {
 		router.Use(ginrus())
 	}
 
@@ -42,7 +43,7 @@ func serve(opts config) {
 			Source:         "Cable",
 			SourceList:     []string{"Cable"},
 		}
-		if opts.lineup.Refreshing {
+		if lineup.Refreshing {
 			payload = LineupStatus{
 				ScanInProgress: convertibleBoolean(true),
 				// Gotta fake out Plex.
@@ -56,7 +57,7 @@ func serve(opts config) {
 	router.POST("/lineup.post", func(c *gin.Context) {
 		scanAction := c.Query("scan")
 		if scanAction == "start" {
-			if refreshErr := opts.lineup.Refresh(); refreshErr != nil {
+			if refreshErr := lineup.Refresh(); refreshErr != nil {
 				c.AbortWithError(http.StatusInternalServerError, refreshErr)
 			}
 			c.AbortWithStatus(http.StatusOK)
@@ -68,22 +69,21 @@ func serve(opts config) {
 		c.String(http.StatusBadRequest, "%s is not a valid scan command", scanAction)
 	})
 	router.GET("/device.xml", deviceXML(upnp))
-	router.GET("/lineup.json", lineup(opts.lineup))
-	router.GET("/auto/:channelID", stream(opts.lineup))
-	router.GET("/epg.xml", xmlTV(opts.lineup))
+	router.GET("/lineup.json", serveLineup(lineup))
+	router.GET("/auto/:channelID", stream(lineup))
+	router.GET("/epg.xml", xmlTV(lineup))
 	router.GET("/debug.json", func(c *gin.Context) {
-		c.JSON(http.StatusOK, opts.lineup)
+		c.JSON(http.StatusOK, lineup)
 	})
 
-	if opts.SSDP {
-		log.Debugln("advertising telly service on network via UPNP/SSDP")
-		if _, ssdpErr := setupSSDP(opts.BaseAddress.String(), opts.FriendlyName, opts.DeviceUUID); ssdpErr != nil {
+	if viper.GetBool("discovery.ssdp") {
+		if _, ssdpErr := setupSSDP(viper.GetString("web.base-address"), viper.GetString("discovery.device-friendly-name"), viper.GetString("discovery.device-uuid")); ssdpErr != nil {
 			log.WithError(ssdpErr).Errorln("telly cannot advertise over ssdp")
 		}
 	}
 
-	log.Infof("Listening and serving HTTP on %s", opts.ListenAddress)
-	if err := router.Run(opts.ListenAddress.String()); err != nil {
+	log.Infof("Listening and serving HTTP on %s", viper.GetString("web.listen-address"))
+	if err := router.Run(viper.GetString("web.listen-address")); err != nil {
 		log.WithError(err).Panicln("Error starting up web server")
 	}
 }
@@ -106,7 +106,7 @@ func lineupStatus(status LineupStatus) gin.HandlerFunc {
 	}
 }
 
-func lineup(lineup *Lineup) gin.HandlerFunc {
+func serveLineup(lineup *Lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		allChannels := make([]HDHomeRunChannel, 0)
 		for _, playlist := range lineup.Playlists {

@@ -1,0 +1,34 @@
+package main
+
+import (
+	"fmt"
+	"net"
+	"regexp"
+	"strconv"
+
+	"github.com/spf13/viper"
+)
+
+func GetTCPAddr(key string) *net.TCPAddr {
+	addr, _ := net.ResolveTCPAddr("tcp", viper.GetString(key))
+	return addr
+}
+
+func GetStringAsRegex(key string) *regexp.Regexp {
+	return regexp.MustCompile(viper.GetString(key))
+}
+
+func GetDiscoveryData() DiscoveryData {
+	return DiscoveryData{
+		FriendlyName:    viper.GetString("discovery.device-friendly-name"),
+		Manufacturer:    viper.GetString("discovery.device-manufacturer"),
+		ModelNumber:     viper.GetString("discovery.device-model-number"),
+		FirmwareName:    viper.GetString("discovery.device-firmware-name"),
+		TunerCount:      viper.GetInt("iptv.concurrent-streams"),
+		FirmwareVersion: viper.GetString("discovery.device-firmware-version"),
+		DeviceID:        strconv.Itoa(viper.GetInt("discovery.device-id")),
+		DeviceAuth:      viper.GetString("discovery.device-auth"),
+		BaseURL:         fmt.Sprintf("http://%s", viper.GetString("web.base-address")),
+		LineupURL:       fmt.Sprintf("http://%s/lineup.json", viper.GetString("web.base-address")),
+	}
+}
