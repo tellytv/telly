@@ -29,6 +29,14 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  digest = "1:5f1d44e13c151d777a80b0d8ca850347530773e73ccce5995a520cdc6947c205"
+  name = "github.com/fatih/set"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2c768e3c5489976167bfc42b5c7c92ca783f4389"
+  version = "v0.2.1"
+
+[[projects]]
   branch = "master"
   digest = "1:36fe9527deed01d2a317617e59304eb2c4ce9f8a24115bcc5c2e37b3aee5bae4"
   name = "github.com/gin-contrib/sse"
@@ -214,6 +222,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/fatih/set",
     "github.com/gin-gonic/gin",
     "github.com/koron/go-ssdp",
     "github.com/mitchellh/mapstructure",
