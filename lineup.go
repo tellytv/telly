@@ -9,8 +9,10 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/nathanjjohnson/GoSchedulesDirect"
 	"github.com/spf13/viper"
 	m3u "github.com/tombowditch/telly/internal/m3uplus"
 	"github.com/tombowditch/telly/internal/providers"
@@ -20,6 +22,7 @@ import (
 // var channelNumberRegex = regexp.MustCompile(`^[0-9]+[[:space:]]?$`).MatchString
 // var callSignRegex = regexp.MustCompile(`^[A-Z0-9]+$`).MatchString
 // var hdRegex = regexp.MustCompile(`hd|4k`)
+var xmlNSRegex = regexp.MustCompile(`(\d).(\d).(?:(\d)/(\d))?`)
 
 // hdHomeRunLineupItem is a HDHomeRun specification compatible representation of a Track available in the lineup.
 type hdHomeRunLineupItem struct {
@@ -63,6 +66,8 @@ type lineup struct {
 	xmlTVChannelNumbers bool
 
 	channels map[int]hdHomeRunLineupItem
+
+	sd *GoSchedulesDirect.Client
 }
 
 // newLineup returns a new lineup for the given config struct.
@@ -93,6 +98,14 @@ func newLineup() *lineup {
 		xmlTVChannelNumbers:   viper.GetBool("iptv.xmltv-channels"),
 		channels:              make(map[int]hdHomeRunLineupItem),
 	}
+
+	lineup.sd = GoSchedulesDirect.NewClient(viper.GetString("schedulesdirect.username"), viper.GetString("schedulesdirect.password"))
+
+	status, statusErr := lineup.sd.GetStatus()
+	if statusErr != nil {
+		panic(statusErr)
+	}
+	log.Infof("SD status %+v", status)
 
 	for _, cfg := range cfgs {
 		provider, providerErr := cfg.GetProvider()
@@ -288,15 +301,60 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 			return epgChannelMap, epgProgrammeMap, epgErr
 		}
 
+		needsMoreInfo := make(map[string]xmltv.Programme) // TMSID:programme
+		haveAllInfo := make(map[string][]xmltv.Programme) // channel number:[]programme
+
 		for _, channel := range epg.Channels {
 			epgChannelMap[channel.ID] = channel
 
 			for _, programme := range epg.Programmes {
 				if programme.Channel == channel.ID {
 					epgProgrammeMap[channel.ID] = append(epgProgrammeMap[channel.ID], *provider.ProcessProgramme(programme))
+					if len(programme.EpisodeNums) == 1 && programme.EpisodeNums[0].System == "dd_progid" {
+						needsMoreInfo[programme.EpisodeNums[0].Value] = programme
+					} else {
+						haveAllInfo[channel.ID] = append(haveAllInfo[channel.ID], *provider.ProcessProgramme(programme))
+					}
 				}
 			}
 		}
+
+		tmsIDs := make([]string, 0)
+
+		// r := strings.NewReplacer("/", "", ".", "")
+
+		for tmsID := range needsMoreInfo {
+			splitID := strings.Split(tmsID, ".")
+			tmsIDs = append(tmsIDs, fmt.Sprintf("%s%s", splitID[0], splitID[1]))
+		}
+
+		log.Infof("GETTING %d programs from SD", len(tmsIDs))
+
+		//ids := []string{"EP00000204.0125.0/2", "EP00000204.0126.1/2", "EP03022620.0011.0/3", "EP03022786.0001", "EP03022786.0001", "EP03022786.0001", "EP03022786.0001", "EP03023628.0001", "EP03023750.0001", "EP03023787.0001", "EP03023787.0002", "EP03023971.0001", "EP03025363.0001", "EP03025363.0002", "EP03025363.0003", "EP03025363.0004", "EP03025363.0005", "EP03025363.0006", "EP03026541.0001", "EP03026541.0001", "EP03026541.0001", "EP03027284.0005", "EP03027284.0005", "EP03029229.0001", "MV00000031.0000", "SH00246313.0000", "SH02485979.0000.0/3", "SH02485979.0000.1/3"}
+
+		allResponses := make([]GoSchedulesDirect.ProgramInfo, len(tmsIDs))
+
+		for _, chunk := range chunkStringSlice(tmsIDs, 5000) {
+			moreInfo, moreInfoErr := l.sd.GetProgramInfo(chunk)
+			if moreInfoErr != nil {
+				log.WithError(moreInfoErr).Errorln("Error when getting more program details from Schedules Direct")
+				return epgChannelMap, epgProgrammeMap, moreInfoErr
+			}
+
+			allResponses = append(allResponses, moreInfo...)
+		}
+
+		log.Infoln("Got %d responses from SD", len(allResponses))
+
+		for _, program := range allResponses {
+			newProgram := MergeSchedulesDirectAndXMLTVProgramme(needsMoreInfo[program.ProgramID], program)
+			log.Infof("newProgram %+v")
+		}
+
+		//panic("bye")
+
+		// needsMoreInfo
+		//epgProgrammeMap[channel.ID] = append(epgProgrammeMap[channel.ID], *provider.ProcessProgramme(programme))
 
 	}
 
@@ -390,4 +448,189 @@ func containsIcon(s []xmltv.Icon, e string) bool {
 		}
 	}
 	return false
+}
+
+func chunkStringSlice(sl []string, chunkSize int) [][]string {
+	var divided [][]string
+
+	for i := 0; i < len(sl); i += chunkSize {
+		end := i + chunkSize
+
+		if end > len(sl) {
+			end = len(sl)
+		}
+
+		divided = append(divided, sl[i:end])
+	}
+	return divided
+}
+
+func MergeSchedulesDirectAndXMLTVProgramme(programme xmltv.Programme, sdProgram GoSchedulesDirect.ProgramInfo) xmltv.Programme {
+
+	allTitles := make([]string, 0)
+
+	for _, title := range programme.Titles {
+		allTitles = append(allTitles, title.Value)
+	}
+
+	for _, title := range sdProgram.Titles {
+		allTitles = append(allTitles, title.Title120)
+	}
+
+	for _, title := range UniqueStrings(allTitles) {
+		programme.Titles = append(programme.Titles, xmltv.CommonElement{Value: title})
+	}
+
+	allKeywords := make([]string, 0)
+
+	for _, keyword := range programme.Keywords {
+		allKeywords = append(allKeywords, keyword.Value)
+	}
+
+	for keywordType, keywords := range sdProgram.Keywords {
+		log.Infoln("Adding keywords category", keywordType)
+		for _, keyword := range keywords {
+			allKeywords = append(allKeywords, keyword)
+		}
+	}
+
+	// FIXME: We should really be making sure that we passthrough languages.
+	allDescriptions := make([]string, 0)
+
+	for _, description := range programme.Descriptions {
+		allDescriptions = append(allDescriptions, description.Value)
+	}
+
+	for _, descriptions := range sdProgram.Descriptions {
+		for _, description := range descriptions {
+			allDescriptions = append(allDescriptions, description.Description)
+		}
+	}
+
+	for _, description := range UniqueStrings(allDescriptions) {
+		programme.Descriptions = append(programme.Descriptions, xmltv.CommonElement{Value: description})
+	}
+
+	for _, keyword := range UniqueStrings(allKeywords) {
+		programme.Keywords = append(programme.Keywords, xmltv.CommonElement{Value: keyword})
+	}
+
+	allRatings := make(map[string]string, 0)
+
+	for _, rating := range programme.Ratings {
+		allRatings[rating.System] = rating.Value
+	}
+
+	for _, rating := range sdProgram.ContentRating {
+		allRatings[rating.Body] = rating.Code
+	}
+
+	for system, rating := range allRatings {
+		programme.Ratings = append(programme.Ratings, xmltv.Rating{Value: rating, System: system})
+	}
+
+	hasXMLTVNS := false
+
+	for _, epNum := range programme.EpisodeNums {
+		if epNum.System == "xmltv_ns" {
+			hasXMLTVNS = true
+		}
+	}
+
+	if !hasXMLTVNS {
+		seasonNumber := 0
+		episodeNumber := 0
+		numbersFilled := false
+
+		for _, meta := range sdProgram.Metadata {
+			for _, metadata := range meta {
+				if metadata.Season != nil {
+					seasonNumber = *metadata.Season - 1 // SD metadata isnt 0 index
+					numbersFilled = true
+				}
+				if metadata.Episode != nil {
+					episodeNumber = *metadata.Episode - 1
+					numbersFilled = true
+				}
+			}
+		}
+
+		if numbersFilled {
+			// FIXME: There is currently no way to determine multipart episodes from SD.
+			// We could use the dd_progid to determine it though.
+			xmlTVNS := fmt.Sprintf("%d.%d.0/1", seasonNumber, episodeNumber)
+			programme.EpisodeNums = append(programme.EpisodeNums, xmltv.EpisodeNum{System: "xmltv_ns", Value: xmlTVNS})
+		}
+	}
+
+	return programme
+}
+
+func extractXMLTVNS(str string) (int, int, int, int, error) {
+	matches := xmlNSRegex.FindAllStringSubmatch(str, -1)
+
+	if len(matches) == 0 {
+		return 0, 0, 0, 0, fmt.Errorf("invalid xmltv_ns: %s", str)
+	}
+
+	season, seasonErr := strconv.Atoi(matches[0][1])
+	if seasonErr != nil {
+		return 0, 0, 0, 0, seasonErr
+	}
+
+	episode, episodeErr := strconv.Atoi(matches[0][2])
+	if episodeErr != nil {
+		return 0, 0, 0, 0, episodeErr
+	}
+
+	currentPartNum := 0
+	totalPartsNum := 0
+
+	if len(matches[0]) > 2 && matches[0][3] != "" {
+		currentPart, currentPartErr := strconv.Atoi(matches[0][3])
+		if currentPartErr != nil {
+			return 0, 0, 0, 0, currentPartErr
+		}
+		currentPartNum = currentPart
+	}
+
+	if len(matches[0]) > 3 && matches[0][4] != "" {
+		totalParts, totalPartsErr := strconv.Atoi(matches[0][4])
+		if totalPartsErr != nil {
+			return 0, 0, 0, 0, totalPartsErr
+		}
+		totalPartsNum = totalParts
+	}
+
+	// if season > 0 {
+	// 	season = season - 1
+	// }
+
+	// if episode > 0 {
+	// 	episode = episode - 1
+	// }
+
+	// if currentPartNum > 0 {
+	// 	currentPartNum = currentPartNum - 1
+	// }
+
+	// if totalPartsNum > 0 {
+	// 	totalPartsNum = totalPartsNum - 1
+	// }
+
+	return season, episode, currentPartNum, totalPartsNum, nil
+}
+
+func UniqueStrings(input []string) []string {
+	u := make([]string, 0, len(input))
+	m := make(map[string]bool)
+
+	for _, val := range input {
+		if _, ok := m[val]; !ok {
+			m[val] = true
+			u = append(u, val)
+		}
+	}
+
+	return u
 }

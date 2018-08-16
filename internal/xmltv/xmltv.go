@@ -33,6 +33,27 @@ func (t *Time) UnmarshalXMLAttr(attr xml.Attr) error {
 	return nil
 }
 
+type Date struct {
+	time.Time
+}
+
+func (c *Date) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	var v string
+	if decodeErr := d.DecodeElement(&v, &start); decodeErr != nil {
+		return decodeErr
+	}
+  dateFormat := "20060102" // yyyymmdd date format
+  if len(v) == 4 {
+    dateFormat = "2006"
+  }
+	parse, err := time.ParseInLocation(dateFormat, v, time.UTC)
+	if err != nil {
+		return err
+	}
+	*c = Date{parse}
+	return nil
+}
+
 // TV is the root element.
 type TV struct {
 	XMLName           xml.Name    `xml:"tv"                                 json:"-"`
@@ -78,7 +99,7 @@ type Programme struct {
 	SecondaryTitles []CommonElement  `xml:"sub-title,omitempty"        json:"secondary_titles,omitempty"`
 	Descriptions    []CommonElement  `xml:"desc,omitempty"             json:"descriptions,omitempty"`
 	Credits         *Credits         `xml:"credits,omitempty"          json:"credits,omitempty"`
-	Date            string           `xml:"date,omitempty"             json:"date,omitempty"`
+	Date            Date             `xml:"date,omitempty"             json:"date,omitempty"`
 	Categories      []CommonElement  `xml:"category,omitempty"         json:"categories,omitempty"`
 	Keywords        []CommonElement  `xml:"keyword,omitempty"          json:"keywords,omitempty"`
 	Languages       []CommonElement  `xml:"language,omitempty"         json:"languages,omitempty"`
