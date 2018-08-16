@@ -73,7 +73,7 @@ func newLineup() *lineup {
 		log.WithError(unmarshalErr).Panicln("Unable to unmarshal source configuration to slice of providers.Configuration, check your configuration!")
 	}
 
-	if viper.IsSet("iptv.playlist") {
+	if viper.GetString("iptv.playlist") != "" {
 		log.Warnln("Legacy --iptv.playlist argument or environment variable provided, using Custom provider with default configuration, this may fail! If so, you should use a configuration file for full flexibility.")
 		regexStr := ".*"
 		if viper.IsSet("filter.regex") {
@@ -153,11 +153,16 @@ func (l *lineup) processProvider(provider providers.Provider) (int, error) {
 		})
 	}
 
+	successChannels := []string{}
+	failedChannels := []string{}
+
 	for _, track := range m3u.Tracks {
 		// First, we run the filter.
 		if !l.FilterTrack(provider, track) {
-			log.Debugf("Channel %s didn't pass the provider (%s) filter, skipping!", track.Name, provider.Name())
-			return addedChannels, nil
+			failedChannels = append(failedChannels, track.Name)
+			continue
+		} else {
+			successChannels = append(successChannels, track.Name)
 		}
 
 		// Then we do the provider specific translation to a hdHomeRunLineupItem.
@@ -178,6 +183,9 @@ func (l *lineup) processProvider(provider providers.Provider) (int, error) {
 		l.channels[channel.Number] = newHDHRItem(&provider, channel)
 	}
 
+	log.Debugf("These channels (%d) passed the filter and successfully parsed: %s", len(successChannels), strings.Join(successChannels, ", "))
+	log.Debugf("These channels (%d) did NOT pass the filter: %s", len(failedChannels), strings.Join(failedChannels, ", "))
+
 	log.Infof("Loaded %d channels into the lineup from %s", addedChannels, provider.Name())
 
 	return addedChannels, nil
@@ -196,6 +204,10 @@ func (l *lineup) prepareProvider(provider providers.Provider) (*m3u.Playlist, ma
 	if err != nil {
 		log.WithError(err).Errorln("unable to parse m3u file")
 		return nil, nil, nil, err
+	}
+
+	if closeM3UErr := reader.Close(); closeM3UErr != nil {
+		log.WithError(closeM3UErr).Panicln("error when closing m3u reader")
 	}
 
 	channelMap, programmeMap, epgErr := l.prepareEPG(provider, cacheFiles)
@@ -285,12 +297,13 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 				}
 			}
 		}
+
 	}
 
 	return epgChannelMap, epgProgrammeMap, nil
 }
 
-func getM3U(path string, cacheFiles bool) (io.Reader, error) {
+func getM3U(path string, cacheFiles bool) (io.ReadCloser, error) {
 	safePath := safeStringsRegex.ReplaceAllStringFunc(path, stringSafer)
 	log.Infof("Loading M3U from %s", safePath)
 
@@ -317,10 +330,14 @@ func getXMLTV(path string, cacheFiles bool) (*xmltv.TV, error) {
 		return nil, err
 	}
 
+	if closeXMLErr := file.Close(); closeXMLErr != nil {
+		log.WithError(closeXMLErr).Panicln("error when closing xml reader")
+	}
+
 	return tvSetup, nil
 }
 
-func getFile(path string, cacheFiles bool) (io.Reader, string, error) {
+func getFile(path string, cacheFiles bool) (io.ReadCloser, string, error) {
 	transport := "disk"
 
 	if strings.HasPrefix(strings.ToLower(path), "http") {
@@ -330,26 +347,12 @@ func getFile(path string, cacheFiles bool) (io.Reader, string, error) {
 			return nil, transport, err
 		}
 
-		// defer func() {
-		// 	err := resp.Body.Close()
-		// 	if err != nil {
-		// 		log.WithError(err).Panicln("error when closing HTTP body reader")
-		// 	}
-		// }()
-
 		if strings.HasSuffix(strings.ToLower(path), ".gz") {
 			log.Infof("File (%s) is gzipp'ed, ungzipping now, this might take a while", path)
 			gz, gzErr := gzip.NewReader(resp.Body)
 			if gzErr != nil {
 				return nil, transport, gzErr
 			}
-
-			defer func() {
-				err := gz.Close()
-				if err != nil {
-					log.WithError(err).Panicln("error when closing gzip reader")
-				}
-			}()
 
 			if cacheFiles {
 				return writeFile(path, transport, gz)
@@ -373,7 +376,7 @@ func getFile(path string, cacheFiles bool) (io.Reader, string, error) {
 	return file, transport, nil
 }
 
-func writeFile(path, transport string, reader io.Reader) (io.Reader, string, error) {
+func writeFile(path, transport string, reader io.ReadCloser) (io.ReadCloser, string, error) {
 	// buf := new(bytes.Buffer)
 	// buf.ReadFrom(reader)
 	// buf.Bytes()

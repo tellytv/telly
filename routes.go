@@ -89,7 +89,7 @@ func serve(lineup *lineup) {
 	}
 
 	log.Infof("telly is live and on the air!")
-	log.Infof("Broadcasting on %s", viper.GetString("web.listen-address"))
+	log.Infof("Broadcasting from http://%s/", viper.GetString("web.listen-address"))
 	log.Infof("EPG URL: http://%s/epg.xml", viper.GetString("web.listen-address"))
 	if err := router.Run(viper.GetString("web.listen-address")); err != nil {
 		log.WithError(err).Panicln("Error starting up web server")

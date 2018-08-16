@@ -117,9 +117,13 @@ func (v *vader) ParseTrack(track m3u.Track, channelMap map[string]xmltv.Channel)
 }
 
 func (v *vader) ProcessProgramme(programme xmltv.Programme) *xmltv.Programme {
+	isNew := false
 	for idx, title := range programme.Titles {
+		isNew = strings.HasSuffix(title.Value, " [New!]")
 		programme.Titles[idx].Value = strings.Replace(title.Value, " [New!]", "", -1)
 	}
+
+	programme.New = xmltv.ElementPresent(isNew)
 
 	return &programme
 }
