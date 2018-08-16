@@ -1,5 +1,5 @@
 repository:
-    path: github.com/tombowditch/telly
+    path: github.com/tellytv/telly
 build:
     flags: -a -tags netgo
     ldflags: |

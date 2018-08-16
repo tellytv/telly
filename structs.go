@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/tombowditch/telly/m3u"
+	"github.com/tellytv/telly/m3u"
 )
 
 type config struct {
