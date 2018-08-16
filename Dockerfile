@@ -8,7 +8,7 @@ RUN chmod +x /usr/bin/dep
 RUN apk update && apk upgrade && apk add git
 
 # Copy the code from the host and compile it
-WORKDIR $GOPATH/src/github.com/tombowditch/telly
+WORKDIR $GOPATH/src/github.com/tellytv/telly
 COPY Gopkg.toml Gopkg.lock ./
 RUN dep ensure --vendor-only
 COPY . ./

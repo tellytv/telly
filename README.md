@@ -4,6 +4,8 @@ IPTV proxy for Plex Live written in Golang
 
 # Setup
 
+> **See end of setup section for an important note about channel filtering**
+
 1) Go to the releases page and download the correct version for your Operating System
 2) Mark the file as executable for non-windows platforms `chmod a+x <FILENAME>`
 3) Rename the file to "telly" if desired; note that from here this readme will refer to "telly"; the file you downloaded is probably called "telly-linux-amd64.dms" or something like that.
@@ -17,6 +19,8 @@ IPTV proxy for Plex Live written in Golang
 8) If `telly` tells you `[telly] [info] listening on ...` - great! Your .m3u file was successfully parsed and `telly` is running. Check below for how to add it into Plex.
 9) If `telly` fails to run, check the error. If it's self explanatory, great. If you don't understand, feel free to open an issue and we'll help you out. As of telly v0.4 `sed` commands are no longer needed. Woop!
 10) For your IPTV provider m3u, try using option `type=m3u_plus` and `output=ts`.
+
+> **Regex handling changed in 1.0.  `filter.regex` has become blacklist which defaults to blocking everything.  If you are not using a regex to filter your M3U file, you will need to add at a minimum `--regex.inclusive=true` to the command line.  If you do not add this, telly will by default EXCLUDE everything in your M3U.  The symptom here is typically telly seeming to start up just fine but reporting 0 channels.**
 
 # Adding it into Plex
 
@@ -42,13 +46,13 @@ docker run -d \
   -e TELLY_FILTER_REGEX='.*UK.*' \
   -p '6077:6077/tcp' \
   -v '/tmp/telly':'/tmp':'rw' \
-  tombowditch/telly --listen.base-address=localhost:6077
+  tellytv/telly --listen.base-address=localhost:6077
 ```
 
 ## docker-compose
 ```
 telly:
-  image: tombowditch/telly
+  image: tellytv/telly
   ports:
     - "6077:6077"
   environment:
