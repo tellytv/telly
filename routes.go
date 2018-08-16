@@ -5,24 +5,29 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	ssdp "github.com/koron/go-ssdp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	ginprometheus "github.com/zsais/go-gin-prometheus"
+	ginprometheus "github.com/tombowditch/telly/internal/go-gin-prometheus"
+	"github.com/tombowditch/telly/internal/xmltv"
 )
 
-func serve(lineup *Lineup) {
-	discoveryData := GetDiscoveryData()
+func serve(lineup *lineup) {
+	discoveryData := getDiscoveryData()
 
 	log.Debugln("creating device xml")
 	upnp := discoveryData.UPNP()
 
 	log.Debugln("creating webserver routes")
 
-	gin.SetMode(gin.ReleaseMode)
+	if viper.GetString("log.level") != logrus.DebugLevel.String() {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	router := gin.New()
 	router.Use(gin.Recovery())
@@ -43,7 +48,7 @@ func serve(lineup *Lineup) {
 			Source:         "Cable",
 			SourceList:     []string{"Cable"},
 		}
-		if lineup.Refreshing {
+		if lineup.Scanning {
 			payload = LineupStatus{
 				ScanInProgress: convertibleBoolean(true),
 				// Gotta fake out Plex.
@@ -57,7 +62,7 @@ func serve(lineup *Lineup) {
 	router.POST("/lineup.post", func(c *gin.Context) {
 		scanAction := c.Query("scan")
 		if scanAction == "start" {
-			if refreshErr := lineup.Refresh(); refreshErr != nil {
+			if refreshErr := lineup.Scan(); refreshErr != nil {
 				c.AbortWithError(http.StatusInternalServerError, refreshErr)
 			}
 			c.AbortWithStatus(http.StatusOK)
@@ -70,6 +75,7 @@ func serve(lineup *Lineup) {
 	})
 	router.GET("/device.xml", deviceXML(upnp))
 	router.GET("/lineup.json", serveLineup(lineup))
+	router.GET("/lineup.xml", serveLineup(lineup))
 	router.GET("/auto/:channelID", stream(lineup))
 	router.GET("/epg.xml", xmlTV(lineup))
 	router.GET("/debug.json", func(c *gin.Context) {
@@ -82,7 +88,9 @@ func serve(lineup *Lineup) {
 		}
 	}
 
-	log.Infof("Listening and serving HTTP on %s", viper.GetString("web.listen-address"))
+	log.Infof("telly is live and on the air!")
+	log.Infof("Broadcasting on %s", viper.GetString("web.listen-address"))
+	log.Infof("EPG URL: http://%s/epg.xml", viper.GetString("web.listen-address"))
 	if err := router.Run(viper.GetString("web.listen-address")); err != nil {
 		log.WithError(err).Panicln("Error starting up web server")
 	}
@@ -100,40 +108,71 @@ func discovery(data DiscoveryData) gin.HandlerFunc {
 	}
 }
 
-func lineupStatus(status LineupStatus) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, status)
-	}
+type hdhrLineupContainer struct {
+	XMLName  xml.Name `xml:"Lineup"    json:"-"`
+	Programs []hdHomeRunLineupItem
 }
 
-func serveLineup(lineup *Lineup) gin.HandlerFunc {
+func serveLineup(lineup *lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		allChannels := make([]HDHomeRunChannel, 0)
-		for _, playlist := range lineup.Playlists {
-			allChannels = append(allChannels, playlist.Channels...)
+		channels := make([]hdHomeRunLineupItem, 0)
+		for _, channel := range lineup.channels {
+			channels = append(channels, channel)
 		}
-		sort.Slice(allChannels, func(i, j int) bool { return allChannels[i].GuideNumber < allChannels[j].GuideNumber })
-		c.JSON(http.StatusOK, allChannels)
+		sort.Slice(channels, func(i, j int) bool {
+			return channels[i].GuideNumber < channels[j].GuideNumber
+		})
+		if strings.HasSuffix(c.Request.URL.String(), ".xml") {
+			buf, marshallErr := xml.MarshalIndent(hdhrLineupContainer{Programs: channels}, "", "\t")
+			if marshallErr != nil {
+				c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error marshalling lineup to XML"))
+			}
+			c.Data(http.StatusOK, "application/xml", []byte(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+"\n"+string(buf)))
+			return
+		}
+		c.JSON(http.StatusOK, channels)
 	}
 }
 
-func xmlTV(lineup *Lineup) gin.HandlerFunc {
+func xmlTV(lineup *lineup) gin.HandlerFunc {
+	epg := &xmltv.TV{
+		GeneratorInfoName: namespaceWithVersion,
+		GeneratorInfoURL:  "https://github.com/tombowditch/telly",
+	}
+
+	for _, channel := range lineup.channels {
+		if channel.providerChannel.EPGChannel != nil {
+			epg.Channels = append(epg.Channels, *channel.providerChannel.EPGChannel)
+			epg.Programmes = append(epg.Programmes, channel.providerChannel.EPGProgrammes...)
+		}
+	}
+
+	sort.Slice(epg.Channels, func(i, j int) bool { return epg.Channels[i].LCN < epg.Channels[j].LCN })
+
 	return func(c *gin.Context) {
-		buf, _ := xml.MarshalIndent(lineup.xmlTv, "", "\t")
+		buf, marshallErr := xml.MarshalIndent(epg, "", "\t")
+		if marshallErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error marshalling EPG to XML"))
+		}
 		c.Data(http.StatusOK, "application/xml", []byte(xml.Header+`<!DOCTYPE tv SYSTEM "xmltv.dtd">`+"\n"+string(buf)))
 	}
 }
 
-func stream(lineup *Lineup) gin.HandlerFunc {
+func stream(lineup *lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		channelID := c.Param("channelID")[1:]
-
-		if url, ok := lineup.chanNumToURLMap[channelID]; ok {
-			log.Infof("Serving channel number %s", channelID)
-			c.Redirect(http.StatusMovedPermanently, url)
+		channelIDStr := c.Param("channelID")[1:]
+		channelID, channelIDErr := strconv.Atoi(channelIDStr)
+		if channelIDErr != nil {
+			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("that (%s) doesn't appear to be a valid channel number", channelIDStr))
 			return
 		}
-		c.AbortWithError(http.StatusNotFound, fmt.Errorf("unknown channel number %s", channelID))
+
+		if channel, ok := lineup.channels[channelID]; ok {
+			log.Infof("Serving channel number %d", channelID)
+			c.Redirect(http.StatusMovedPermanently, channel.providerChannel.Track.URI)
+			return
+		}
+		c.AbortWithError(http.StatusNotFound, fmt.Errorf("unknown channel number %d", channelID))
 	}
 }
 

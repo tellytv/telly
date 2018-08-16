@@ -4,50 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"net"
-	"regexp"
 )
-
-type config struct {
-	Filter struct {
-		RegexInclusive bool           `toml:"Filter.RegexInclusive"`
-		Regex          *regexp.Regexp `toml:"-"`
-		RegexStr       string         `toml:"Filter.Regex"`
-	}
-
-	IPTV struct {
-		Playlists           []string `toml:"IPTV.Playlists"`
-		ConcurrentStreams   int      `toml:"IPTV.ConcurrentStreams"`
-		StartingChannel     int      `toml:"IPTV.StartingChannel"`
-		XMLTVChannelNumbers bool     `toml:"IPTV.XMLTVChannelNumbers"`
-	}
-
-	Discovery struct {
-		DeviceAuth      string `toml:"Discovery.DeviceAuth"`
-		DeviceID        int    `toml:"Discovery.DeviceID"`
-		DeviceUUID      string `toml:"Discovery.DeviceUUID"`
-		FriendlyName    string `toml:"Discovery.FriendlyName"`
-		Manufacturer    string `toml:"Discovery.Manufacturer"`
-		ModelNumber     string `toml:"Discovery.ModelNumber"`
-		FirmwareName    string `toml:"Discovery.FirmwareName"`
-		FirmwareVersion string `toml:"Discovery.FirmwareVersion"`
-		SSDP            bool   `toml:"Discovery.SSDP"`
-	}
-
-	Log struct {
-		LogRequests bool   `toml:"Log.Requests"`
-		Level       string `toml:"Log.Level"`
-	}
-
-	Web struct {
-		ListenAddress    *net.TCPAddr `toml:"-"`
-		BaseAddress      *net.TCPAddr `toml:"-"`
-		ListenAddressStr string       `toml:"Web.ListenAddress"`
-		BaseAddressStr   string       `toml:"Web.BaseAddress"`
-	}
-
-	lineup *Lineup
-}
 
 // DiscoveryData contains data about telly to expose in the HDHomeRun format for Plex detection.
 type DiscoveryData struct {
@@ -127,6 +84,32 @@ func (bit *convertibleBoolean) MarshalJSON() ([]byte, error) {
 
 func (bit *convertibleBoolean) UnmarshalJSON(data []byte) error {
 	asString := string(data)
+	if asString == "1" || asString == "true" {
+		*bit = true
+	} else if asString == "0" || asString == "false" {
+		*bit = false
+	} else {
+		return fmt.Errorf("Boolean unmarshal error: invalid input %s", asString)
+	}
+	return nil
+}
+
+// MarshalXML used to determine if the element is present or not. see https://stackoverflow.com/a/46516243
+func (bit *convertibleBoolean) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	var bitSetVar int8
+	if *bit {
+		bitSetVar = 1
+	}
+
+	return e.EncodeElement(bitSetVar, start)
+}
+
+// UnmarshalXML used to determine if the element is present or not. see https://stackoverflow.com/a/46516243
+func (bit *convertibleBoolean) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	var asString string
+	if decodeErr := d.DecodeElement(&asString, &start); decodeErr != nil {
+		return decodeErr
+	}
 	if asString == "1" || asString == "true" {
 		*bit = true
 	} else if asString == "0" || asString == "false" {

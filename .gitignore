@@ -10,3 +10,4 @@ vendor/
 /.release
 /.tarballs
 *.tar.gz
+telly.config.*

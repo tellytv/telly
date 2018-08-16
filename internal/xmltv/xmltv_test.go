@@ -17,7 +17,7 @@ func dummyReader(charset string, input io.Reader) (io.Reader, error) {
 }
 
 func TestDecode(t *testing.T) {
-	// Example downloaded from http://wiki.xmltv.org/index.php/XMLTVFormat
+	// Example downloaded from http://wiki.xmltv.org/index.php/internal/xmltvFormat
 	// One may check it with `xmllint --noout --dtdvalid xmltv.dtd example.xml`
 	f, err := os.Open("example.xml")
 	if err != nil {
@@ -60,7 +60,7 @@ func TestDecode(t *testing.T) {
 		},
 		Icons: []Icon{
 			Icon{
-				Source: `file://C:\Perl\site/share/xmltv/icons/KERA.gif`,
+				Source: `file://C:\Perl\site/share/internal/xmltv/icons/KERA.gif`,
 			},
 		},
 	}

@@ -65,6 +65,10 @@ type Channel struct {
 	Icons        []Icon          `xml:"icon,omitempty" json:"icons,omitempty"`
 	URLs         []string        `xml:"url,omitempty"  json:"urls,omitempty" `
 	ID           string          `xml:"id,attr"        json:"id,omitempty"   `
+
+	// These fields are outside of the XMLTV spec.
+	// LCN is the local channel number. Plex will show it in place of the channel ID if it exists.
+	LCN int `xml:"lcn"                   json:"lcn,omitempty"`
 }
 
 // Programme details of a single programme transmission
@@ -102,10 +106,6 @@ type Programme struct {
 	Videoplus       string           `xml:"videoplus,attr,omitempty"   json:"videoplus,omitempty"`
 	Channel         string           `xml:"channel,attr"               json:"channel"`
 	Clumpidx        string           `xml:"clumpidx,attr,omitempty"    json:"clumpidx,omitempty"`
-
-	// These fields are outside of the XMLTV spec.
-	// LCN is the local channel number. Plex will show it in place of the channel ID if it exists.
-	LCN int `xml:"lcn,attr"                   json:"lcn,omitempty"`
 }
 
 // CommonElement element structure that is common, i.e. <country lang="en">Italy</country>

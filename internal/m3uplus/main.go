@@ -1,4 +1,5 @@
-package m3u
+// Package m3uplus provides a M3U Plus parser.
+package m3uplus
 
 import (
 	"bytes"
@@ -13,7 +14,7 @@ import (
 
 // Playlist is a type that represents an m3u playlist containing 0 or more tracks
 type Playlist struct {
-	Tracks []*Track
+	Tracks []Track
 }
 
 // Track represents an m3u track
@@ -86,7 +87,7 @@ func decodeLine(playlist *Playlist, line string, lineNumber int) error {
 
 	switch {
 	case strings.HasPrefix(line, "#EXTINF:"):
-		track := &Track{
+		track := Track{
 			Raw:        line,
 			LineNumber: lineNumber,
 		}

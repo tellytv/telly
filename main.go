@@ -27,7 +27,6 @@ var (
 		Hooks: make(logrus.LevelHooks),
 		Level: logrus.DebugLevel,
 	}
-	opts = config{}
 
 	exposedChannels = prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -71,8 +70,8 @@ func main() {
 	flag.String("filter.regex", ".*", "Use regex to filter for channels that you want. A basic example would be .*UK.*. $(TELLY_FILTER_REGEX)")
 
 	// Web flags
-	flag.String("web.listen-address", "localhost:6077", "Address to listen on for web interface and telemetry $(TELLY_WEB_LISTEN_ADDRESS)")
-	flag.String("web.base-address", "localhost:6077", "The address to expose via discovery. Useful with reverse proxy $(TELLY_WEB_BASE_ADDRESS)")
+	flag.StringP("web.listen-address", "l", "localhost:6077", "Address to listen on for web interface and telemetry $(TELLY_WEB_LISTEN_ADDRESS)")
+	flag.StringP("web.base-address", "b", "localhost:6077", "The address to expose via discovery. Useful with reverse proxy $(TELLY_WEB_BASE_ADDRESS)")
 
 	// Log flags
 	flag.String("log.level", logrus.InfoLevel.String(), "Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal] $(TELLY_LOG_LEVEL)")
@@ -84,24 +83,62 @@ func main() {
 	flag.Int("iptv.starting-channel", 10000, "The channel number to start exposing from. $(TELLY_IPTV_STARTING_CHANNEL)")
 	flag.Bool("iptv.xmltv-channels", true, "Use channel numbers discovered via XMLTV file, if provided. $(TELLY_IPTV_XMLTV_CHANNELS)")
 
+	// Misc flags
+	flag.StringP("config.file", "c", "", "Path to your config file. If not set, configuration is searched for in the current working directory, $HOME/.telly/ and /etc/telly/. If provided, it will override all other arguments and environment variables. $(TELLY_CONFIG_FILE)")
+	flag.Bool("version", false, "Show application version")
+
 	flag.CommandLine.AddGoFlagSet(fflag.CommandLine)
+
+	deprecatedFlags := []string{
+		"discovery.device-id",
+		"discovery.device-friendly-name",
+		"discovery.device-auth",
+		"discovery.device-manufacturer",
+		"discovery.device-model-number",
+		"discovery.device-firmware-name",
+		"discovery.device-firmware-version",
+		"discovery.ssdp",
+		"iptv.playlist",
+		"iptv.streams",
+		"iptv.starting-channel",
+		"iptv.xmltv-channels",
+		"filter.regex-inclusive",
+		"filter.regex",
+	}
+
+	for _, depFlag := range deprecatedFlags {
+		if depErr := flag.CommandLine.MarkDeprecated(depFlag, "use the configuration file instead."); depErr != nil {
+			log.WithError(depErr).Panicf("error marking flag %s as deprecated", depFlag)
+		}
+	}
+
 	flag.Parse()
-	viper.BindPFlags(flag.CommandLine)
-	viper.SetConfigName("telly.config") // name of config file (without extension)
-	viper.AddConfigPath("/etc/telly/")  // path to look for the config file in
-	viper.AddConfigPath("$HOME/.telly") // call multiple times to add many search paths
-	viper.AddConfigPath(".")            // optionally look for config in the working directory
-	viper.SetEnvPrefix(namespace)
-	viper.AutomaticEnv()
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil {             // Handle errors reading the config file
+	if bindErr := viper.BindPFlags(flag.CommandLine); bindErr != nil {
+		log.WithError(bindErr).Panicln("error binding flags to viper")
+	}
+
+	if flag.Lookup("version").Changed {
+		fmt.Println(version.Print(namespace))
+		os.Exit(0)
+	}
+
+	if flag.Lookup("config.file").Changed {
+		viper.SetConfigFile(flag.Lookup("config.file").Value.String())
+	} else {
+		viper.SetConfigName("telly.config")
+		viper.AddConfigPath("/etc/telly/")
+		viper.AddConfigPath("$HOME/.telly")
+		viper.AddConfigPath(".")
+		viper.SetEnvPrefix(namespace)
+		viper.AutomaticEnv()
+	}
+
+	err := viper.ReadInConfig()
+	if err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			log.WithError(err).Panicln("fatal error while reading config file:")
 		}
 	}
-
-	log.Infoln("Starting telly", version.Info())
-	log.Infoln("Build context", version.BuildContext())
 
 	prometheus.MustRegister(version.NewCollector("telly"), exposedChannels)
 
@@ -111,11 +148,32 @@ func main() {
 	}
 	log.SetLevel(level)
 
+	log.Infoln("telly is preparing to go live", version.Info())
+	log.Debugln("Build context", version.BuildContext())
+
+	validateConfig()
+
+	viper.Set("discovery.device-friendly-name", fmt.Sprintf("HDHomerun (%s)", viper.GetString("discovery.device-friendly-name")))
+	viper.Set("discovery.device-uuid", fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", viper.GetInt("discovery.device-id")))
+
 	if log.Level == logrus.DebugLevel {
-		js, _ := json.MarshalIndent(viper.AllSettings(), "", "    ")
+		js, jsErr := json.MarshalIndent(viper.AllSettings(), "", "    ")
+		if jsErr != nil {
+			log.WithError(jsErr).Panicln("error marshal indenting viper config to JSON")
+		}
 		log.Debugf("Loaded configuration %s", js)
 	}
 
+	lineup := newLineup()
+
+	if scanErr := lineup.Scan(); scanErr != nil {
+		log.WithError(scanErr).Panicln("Error scanning lineup!")
+	}
+
+	serve(lineup)
+}
+
+func validateConfig() {
 	if viper.IsSet("filter.regexstr") {
 		if _, regexErr := regexp.Compile(viper.GetString("filter.regex")); regexErr != nil {
 			log.WithError(regexErr).Panicln("Error when compiling regex, is it valid?")
@@ -127,33 +185,17 @@ func main() {
 		log.WithError(addrErr).Panic("Error when parsing Listen address, please check the address and try again.")
 		return
 	}
+
 	if _, addrErr = net.ResolveTCPAddr("tcp", viper.GetString("web.base-address")); addrErr != nil {
 		log.WithError(addrErr).Panic("Error when parsing Base addresses, please check the address and try again.")
 		return
 	}
 
-	if GetTCPAddr("web.base-address").IP.IsUnspecified() {
+	if getTCPAddr("web.base-address").IP.IsUnspecified() {
 		log.Panicln("base URL is set to 0.0.0.0, this will not work. please use the --web.baseaddress option and set it to the (local) ip address telly is running on.")
 	}
 
-	if GetTCPAddr("web.listenaddress").IP.IsUnspecified() && GetTCPAddr("web.base-address").IP.IsLoopback() {
+	if getTCPAddr("web.listenaddress").IP.IsUnspecified() && getTCPAddr("web.base-address").IP.IsLoopback() {
 		log.Warnln("You are listening on all interfaces but your base URL is localhost (meaning Plex will try and load localhost to access your streams) - is this intended?")
 	}
-
-	viper.Set("discovery.device-friendly-name", fmt.Sprintf("HDHomerun (%s)", viper.GetString("discovery.device-friendly-name")))
-	viper.Set("discovery.device-uuid", fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", viper.GetInt("discovery.device-id")))
-
-	if flag.Lookup("iptv.playlist").Changed {
-		viper.Set("playlists.default.m3u", flag.Lookup("iptv.playlist").Value.String())
-	}
-
-	lineup := NewLineup()
-
-	log.Infof("Loaded %d channels into the lineup", lineup.FilteredTracksCount)
-
-	if lineup.FilteredTracksCount > 420 {
-		log.Panicf("telly has loaded more than 420 channels (%d) into the lineup. Plex does not deal well with more than this amount and will more than likely hang when trying to fetch channels. You must use regular expressions to filter out channels. You can also start another Telly instance.", lineup.FilteredTracksCount)
-	}
-
-	serve(lineup)
 }

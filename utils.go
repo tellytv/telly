@@ -3,28 +3,26 @@ package main
 import (
 	"fmt"
 	"net"
-	"regexp"
 	"strconv"
 
 	"github.com/spf13/viper"
 )
 
-func GetTCPAddr(key string) *net.TCPAddr {
-	addr, _ := net.ResolveTCPAddr("tcp", viper.GetString(key))
+func getTCPAddr(key string) *net.TCPAddr {
+	addr, addrErr := net.ResolveTCPAddr("tcp", viper.GetString(key))
+	if addrErr != nil {
+		panic(fmt.Errorf("error parsing address %s: %s", viper.GetString(key), addrErr))
+	}
 	return addr
 }
 
-func GetStringAsRegex(key string) *regexp.Regexp {
-	return regexp.MustCompile(viper.GetString(key))
-}
-
-func GetDiscoveryData() DiscoveryData {
+func getDiscoveryData() DiscoveryData {
 	return DiscoveryData{
 		FriendlyName:    viper.GetString("discovery.device-friendly-name"),
 		Manufacturer:    viper.GetString("discovery.device-manufacturer"),
 		ModelNumber:     viper.GetString("discovery.device-model-number"),
 		FirmwareName:    viper.GetString("discovery.device-firmware-name"),
-		TunerCount:      viper.GetInt("iptv.concurrent-streams"),
+		TunerCount:      viper.GetInt("iptv.streams"),
 		FirmwareVersion: viper.GetString("discovery.device-firmware-version"),
 		DeviceID:        strconv.Itoa(viper.GetInt("discovery.device-id")),
 		DeviceAuth:      viper.GetString("discovery.device-auth"),
