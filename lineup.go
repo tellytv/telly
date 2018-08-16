@@ -99,12 +99,17 @@ func newLineup() *lineup {
 		channels:              make(map[int]hdHomeRunLineupItem),
 	}
 
-	lineup.sd = GoSchedulesDirect.NewClient(viper.GetString("schedulesdirect.username"), viper.GetString("schedulesdirect.password"))
+	sdClient := GoSchedulesDirect.NewClient(viper.GetString("schedulesdirect.username"), viper.GetString("schedulesdirect.password"))
 
-	status, statusErr := lineup.sd.GetStatus()
+	// FIXME: Check that SD is online before continuing.
+
+	status, statusErr := sdClient.GetStatus()
 	if statusErr != nil {
 		panic(statusErr)
 	}
+
+	lineup.sd = sdClient
+
 	log.Infof("SD status %+v", status)
 
 	for _, cfg := range cfgs {
@@ -301,7 +306,7 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 			return epgChannelMap, epgProgrammeMap, epgErr
 		}
 
-		needsMoreInfo := make(map[string]xmltv.Programme) // TMSID:programme
+		sdEligible := make(map[string]xmltv.Programme)    // TMSID:programme
 		haveAllInfo := make(map[string][]xmltv.Programme) // channel number:[]programme
 
 		for _, channel := range epg.Channels {
@@ -310,8 +315,16 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 			for _, programme := range epg.Programmes {
 				if programme.Channel == channel.ID {
 					epgProgrammeMap[channel.ID] = append(epgProgrammeMap[channel.ID], *provider.ProcessProgramme(programme))
-					if len(programme.EpisodeNums) == 1 && programme.EpisodeNums[0].System == "dd_progid" {
-						needsMoreInfo[programme.EpisodeNums[0].Value] = programme
+					ddProgID := ""
+					if viper.IsSet("schedulesdirect.username") && viper.IsSet("schedulesdirect.password") {
+						for _, epNum := range programme.EpisodeNums {
+							if epNum.System == "dd_progid" {
+								ddProgID = epNum.Value
+							}
+						}
+					}
+					if ddProgID != "" {
+						sdEligible[ddProgID] = programme
 					} else {
 						haveAllInfo[channel.ID] = append(haveAllInfo[channel.ID], *provider.ProcessProgramme(programme))
 					}
@@ -321,16 +334,16 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 
 		tmsIDs := make([]string, 0)
 
-		// r := strings.NewReplacer("/", "", ".", "")
-
-		for tmsID := range needsMoreInfo {
-			splitID := strings.Split(tmsID, ".")
-			tmsIDs = append(tmsIDs, fmt.Sprintf("%s%s", splitID[0], splitID[1]))
+		for tmsID := range sdEligible {
+			cleanID := strings.Replace(tmsID, ".", "", -1)
+			if len(cleanID) < 14 {
+				log.Warnf("found an invalid TMS ID/dd_progid: %s", cleanID)
+				continue
+			}
+			tmsIDs = append(tmsIDs, cleanID[0:13])
 		}
 
-		log.Infof("GETTING %d programs from SD", len(tmsIDs))
-
-		//ids := []string{"EP00000204.0125.0/2", "EP00000204.0126.1/2", "EP03022620.0011.0/3", "EP03022786.0001", "EP03022786.0001", "EP03022786.0001", "EP03022786.0001", "EP03023628.0001", "EP03023750.0001", "EP03023787.0001", "EP03023787.0002", "EP03023971.0001", "EP03025363.0001", "EP03025363.0002", "EP03025363.0003", "EP03025363.0004", "EP03025363.0005", "EP03025363.0006", "EP03026541.0001", "EP03026541.0001", "EP03026541.0001", "EP03027284.0005", "EP03027284.0005", "EP03029229.0001", "MV00000031.0000", "SH00246313.0000", "SH02485979.0000.0/3", "SH02485979.0000.1/3"}
+		log.Infof("Requesting guide data for %d programs from Schedules Direct", len(tmsIDs))
 
 		allResponses := make([]GoSchedulesDirect.ProgramInfo, len(tmsIDs))
 
@@ -346,15 +359,16 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 
 		log.Infoln("Got %d responses from SD", len(allResponses))
 
-		for _, program := range allResponses {
-			newProgram := MergeSchedulesDirectAndXMLTVProgramme(needsMoreInfo[program.ProgramID], program)
-			log.Infof("newProgram %+v", newProgram)
+		for _, sdResponse := range allResponses {
+			mergedProgramme := MergeSchedulesDirectAndXMLTVProgramme(sdEligible[sdResponse.ProgramID], sdResponse)
+			haveAllInfo[mergedProgramme.Channel] = append(haveAllInfo[mergedProgramme.Channel], mergedProgramme)
 		}
 
-		//panic("bye")
-
-		// needsMoreInfo
-		//epgProgrammeMap[channel.ID] = append(epgProgrammeMap[channel.ID], *provider.ProcessProgramme(programme))
+		for _, programmes := range haveAllInfo {
+			for _, programme := range programmes {
+				epgProgrammeMap[programme.Channel] = append(epgProgrammeMap[programme.Channel], *provider.ProcessProgramme(programme))
+			}
+		}
 
 	}
 
