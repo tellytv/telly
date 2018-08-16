@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	m3u "github.com/tombowditch/telly/internal/m3uplus"
-	"github.com/tombowditch/telly/internal/xmltv"
+	m3u "github.com/tellytv/telly/internal/m3uplus"
+	"github.com/tellytv/telly/internal/xmltv"
 )
 
 type customProvider struct {

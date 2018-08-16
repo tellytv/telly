@@ -13,8 +13,8 @@ import (
 	ssdp "github.com/koron/go-ssdp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	ginprometheus "github.com/tombowditch/telly/internal/go-gin-prometheus"
-	"github.com/tombowditch/telly/internal/xmltv"
+	ginprometheus "github.com/tellytv/telly/internal/go-gin-prometheus"
+	"github.com/tellytv/telly/internal/xmltv"
 )
 
 func serve(lineup *lineup) {
@@ -137,7 +137,7 @@ func serveLineup(lineup *lineup) gin.HandlerFunc {
 func xmlTV(lineup *lineup) gin.HandlerFunc {
 	epg := &xmltv.TV{
 		GeneratorInfoName: namespaceWithVersion,
-		GeneratorInfoURL:  "https://github.com/tombowditch/telly",
+		GeneratorInfoURL:  "https://github.com/tellytv/telly",
 	}
 
 	for _, channel := range lineup.channels {

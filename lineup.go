@@ -14,9 +14,9 @@ import (
 
 	"github.com/nathanjjohnson/GoSchedulesDirect"
 	"github.com/spf13/viper"
-	m3u "github.com/tombowditch/telly/internal/m3uplus"
-	"github.com/tombowditch/telly/internal/providers"
-	"github.com/tombowditch/telly/internal/xmltv"
+	m3u "github.com/tellytv/telly/internal/m3uplus"
+	"github.com/tellytv/telly/internal/providers"
+	"github.com/tellytv/telly/internal/xmltv"
 )
 
 // var channelNumberRegex = regexp.MustCompile(`^[0-9]+[[:space:]]?$`).MatchString
@@ -348,7 +348,7 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 
 		for _, program := range allResponses {
 			newProgram := MergeSchedulesDirectAndXMLTVProgramme(needsMoreInfo[program.ProgramID], program)
-			log.Infof("newProgram %+v")
+			log.Infof("newProgram %+v", newProgram)
 		}
 
 		//panic("bye")

@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	m3u "github.com/tombowditch/telly/internal/m3uplus"
-	"github.com/tombowditch/telly/internal/xmltv"
+	m3u "github.com/tellytv/telly/internal/m3uplus"
+	"github.com/tellytv/telly/internal/xmltv"
 )
 
 // This regex matches and extracts the following URLs.
