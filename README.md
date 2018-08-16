@@ -16,11 +16,12 @@ IPTV proxy for Plex Live written in Golang
 5) Run `telly` with the `--iptv.playlist` commandline argument pointing to your .m3u file. (This can be a local file or a URL) For example: `./telly --iptv.playlist=/home/github/myiptv.m3u`
 6) If you would like multiple streams/tuners use the `--iptv.streams` commandline option. Default is 1. When setting or changing this option, `plexmediaserver` will need to be completely **restarted**.
 7) If you would like `telly` to attempt to the filter the m3u a bit, add the `--filter.regex` commandline option. If you would like to use your own regex, run `telly` with `--filter.regex="<regex>"`, for example `--filter.regex=".*UK.*"`
-8) If `telly` tells you `[telly] [info] listening on ...` - great! Your .m3u file was successfully parsed and `telly` is running. Check below for how to add it into Plex.
-9) If `telly` fails to run, check the error. If it's self explanatory, great. If you don't understand, feel free to open an issue and we'll help you out. As of telly v0.4 `sed` commands are no longer needed. Woop!
-10) For your IPTV provider m3u, try using option `type=m3u_plus` and `output=ts`.
+8) In addition to regex, the `--filter.groups` parameter allows for a comma-separated list of channel groups to expose. For example; `--filter.groups="Entertainment UK, Documentaries UK"` will expose all channels belonging to the 'Entertainment UK' and 'Documentaries UK' groups as defined by your playlist. Channels must have a valid `group-title` attribute defined within the m3u playlist for this to work.
+9) If `telly` tells you `[telly] [info] listening on ...` - great! Your .m3u file was successfully parsed and `telly` is running. Check below for how to add it into Plex.
+10) If `telly` fails to run, check the error. If it's self explanatory, great. If you don't understand, feel free to open an issue and we'll help you out. As of telly v0.4 `sed` commands are no longer needed. Woop!
+11) For your IPTV provider m3u, try using option `type=m3u_plus` and `output=ts`.
 
-> **Regex handling changed in 1.0.  `filter.regex` has become blacklist which defaults to blocking everything.  If you are not using a regex to filter your M3U file, you will need to add at a minimum `--regex.inclusive=true` to the command line.  If you do not add this, telly will by default EXCLUDE everything in your M3U.  The symptom here is typically telly seeming to start up just fine but reporting 0 channels.**
+> **Regex handling changed in 1.0.  `filter.regex` has become blacklist which defaults to blocking everything.  If you are not using a regex to filter your M3U file, you will need to add at a minimum `--regex.inclusive=true` to the command line.  If you do not add this, telly will by default EXCLUDE everything in your M3U.  The symptom here is typically telly seeming to start up just fine but reporting 0 channels. Note this parameter only affects `filter.regex`, `filter.groups` is always an inclusive list.**
 
 # Adding it into Plex
 
