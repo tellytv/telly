@@ -13,6 +13,7 @@ import (
 type config struct {
 	RegexInclusive bool
 	Regex          *regexp.Regexp
+	AllowedGroups  string
 
 	DirectMode        bool
 	M3UPath           string

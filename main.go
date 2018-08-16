@@ -6,13 +6,16 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/fatih/set"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
 	"github.com/tombowditch/telly/m3u"
+
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -44,6 +47,7 @@ func main() {
 	// Regex/filtering flags
 	kingpin.Flag("filter.regex-inclusive", "Whether the provided regex is inclusive (whitelisting) or exclusive (blacklisting). If true (--filter.regex-inclusive), only channels matching the provided regex pattern will be exposed. If false (--no-filter.regex-inclusive), only channels NOT matching the provided pattern will be exposed. $(TELLY_FILTER_REGEX_MODE)").Envar("TELLY_FILTER_REGEX_MODE").Default("false").BoolVar(&opts.RegexInclusive)
 	kingpin.Flag("filter.regex", "Use regex to filter for channels that you want. A basic example would be .*UK.*. $(TELLY_FILTER_REGEX)").Envar("TELLY_FILTER_REGEX").Default(".*").RegexpVar(&opts.Regex)
+	kingpin.Flag("filter.groups", "Comma separated list of channel groups to import. Works in addition to the filter.regex parameter $(TELLY_FILTER_GROUPS)").Envar("TELLY_FILTER_GROUPS").Default("").StringVar(&opts.AllowedGroups)
 
 	// Web flags
 	kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry $(TELLY_WEB_LISTEN_ADDRESS)").Envar("TELLY_WEB_LISTEN_ADDRESS").Default("localhost:6077").TCPVar(&opts.ListenAddress)
@@ -177,6 +181,12 @@ func getM3U(opts config) (io.Reader, error) {
 
 func filterTracks(tracks []*m3u.Track) ([]Track, error) {
 	allowedTracks := make([]Track, 0)
+	allowedGroups := set.New(set.NonThreadSafe)
+
+	re := regexp.MustCompile(`\s*,\s*`)
+	for _, group := range re.Split(opts.AllowedGroups, -1) {
+		allowedGroups.Add(group)
+	}
 
 	for _, oldTrack := range tracks {
 		track := Track{Track: oldTrack}
@@ -184,7 +194,7 @@ func filterTracks(tracks []*m3u.Track) ([]Track, error) {
 			return nil, unmarshalErr
 		}
 
-		if opts.Regex.MatchString(track.Name) == opts.RegexInclusive {
+		if opts.Regex.MatchString(track.Name) == opts.RegexInclusive || allowedGroups.Has(track.GroupTitle) {
 			allowedTracks = append(allowedTracks, track)
 		}
 	}
