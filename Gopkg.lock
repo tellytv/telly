@@ -224,6 +224,14 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:2f6be3c7ff8cc65d5f6b35c2acd928aed1386fc31dc11483045b393660698244"
+  name = "github.com/tellytv/go.schedulesdirect"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3d6704d3b108deaffd476ad2f27003dc38bf775d"
+
+[[projects]]
   digest = "1:c268acaa4a4d94a467980e5e91452eb61c460145765293dc0aed48e5e9919cc6"
   name = "github.com/ugorji/go"
   packages = ["codec"]
@@ -323,6 +331,7 @@
     "github.com/sirupsen/logrus",
     "github.com/spf13/pflag",
     "github.com/spf13/viper",
+    "github.com/tellytv/go.schedulesdirect",
     "golang.org/x/net/html/charset",
   ]
   solver-name = "gps-cdcl"
