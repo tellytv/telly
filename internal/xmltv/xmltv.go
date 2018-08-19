@@ -3,6 +3,7 @@ package xmltv
 
 import (
 	"encoding/xml"
+	"fmt"
 	"os"
 	"time"
 
@@ -33,24 +34,51 @@ func (t *Time) UnmarshalXMLAttr(attr xml.Attr) error {
 	return nil
 }
 
-type Date struct {
-	time.Time
+type Date time.Time
+
+func (p Date) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	t := time.Time(p)
+	if t.IsZero() {
+		return e.EncodeElement(nil, start)
+	}
+	return e.EncodeElement(t.Format("20060102"), start)
 }
 
-func (c *Date) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	var v string
-	if decodeErr := d.DecodeElement(&v, &start); decodeErr != nil {
-		return decodeErr
+func (p *Date) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
+	var content string
+	if e := d.DecodeElement(&content, &start); e != nil {
+		return fmt.Errorf("get the type Date field of %s error", start.Name.Local)
 	}
-  dateFormat := "20060102" // yyyymmdd date format
-  if len(v) == 4 {
-    dateFormat = "2006"
-  }
-	parse, err := time.ParseInLocation(dateFormat, v, time.UTC)
-	if err != nil {
-		return err
+
+	dateFormat := "20060102"
+
+	if len(content) == 4 {
+		dateFormat = "2006"
 	}
-	*c = Date{parse}
+
+	if v, e := time.Parse(dateFormat, content); e != nil {
+		return fmt.Errorf("the type Date field of %s is not a time, value is: %s", start.Name.Local, content)
+	} else {
+		*p = Date(v)
+	}
+	return nil
+}
+
+func (p Date) MarshalJSON() ([]byte, error) {
+	t := time.Time(p)
+	str := "\"" + t.Format("20060102") + "\""
+
+	return []byte(str), nil
+}
+
+func (p *Date) UnmarshalJSON(text []byte) (err error) {
+	strDate := string(text[1 : 8+1])
+
+	if v, e := time.Parse("20060102", strDate); e != nil {
+		return fmt.Errorf("Date should be a time, error value is: %s", strDate)
+	} else {
+		*p = Date(v)
+	}
 	return nil
 }
 
@@ -114,7 +142,7 @@ type Programme struct {
 	PreviouslyShown *PreviouslyShown `xml:"previously-shown,omitempty" json:"previously_shown,omitempty"`
 	Premiere        *CommonElement   `xml:"premiere,omitempty"         json:"premiere,omitempty"`
 	LastChance      *CommonElement   `xml:"last-chance,omitempty"      json:"last_chance,omitempty"`
-	New             ElementPresent   `xml:"new>placeholder,omitempty"  json:"new,omitempty"`
+	New             ElementPresent   `xml:"new"                        json:"new,omitempty"`
 	Subtitles       []Subtitle       `xml:"subtitles,omitempty"        json:"subtitles,omitempty"`
 	Ratings         []Rating         `xml:"rating,omitempty"           json:"ratings,omitempty"`
 	StarRatings     []Rating         `xml:"star-rating,omitempty"      json:"star_ratings,omitempty"`
@@ -140,7 +168,7 @@ type ElementPresent bool
 
 // MarshalXML used to determine if the element is present or not. see https://stackoverflow.com/a/46516243
 func (c *ElementPresent) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	return e.EncodeElement(*c, start)
+	return e.EncodeElement(nil, start)
 }
 
 // UnmarshalXML used to determine if the element is present or not. see https://stackoverflow.com/a/46516243

@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nathanjjohnson/GoSchedulesDirect"
 	"github.com/spf13/viper"
+	"github.com/tellytv/go.schedulesdirect"
 	m3u "github.com/tellytv/telly/internal/m3uplus"
 	"github.com/tellytv/telly/internal/providers"
 	"github.com/tellytv/telly/internal/xmltv"
@@ -23,6 +23,7 @@ import (
 // var callSignRegex = regexp.MustCompile(`^[A-Z0-9]+$`).MatchString
 // var hdRegex = regexp.MustCompile(`hd|4k`)
 var xmlNSRegex = regexp.MustCompile(`(\d).(\d).(?:(\d)/(\d))?`)
+var ddProgIDRegex = regexp.MustCompile(`(?m)(EP|SH|MV|SP)(\d{7,8}).(\d+).?(?:(\d).(\d))?`)
 
 // hdHomeRunLineupItem is a HDHomeRun specification compatible representation of a Track available in the lineup.
 type hdHomeRunLineupItem struct {
@@ -67,7 +68,7 @@ type lineup struct {
 
 	channels map[int]hdHomeRunLineupItem
 
-	sd *GoSchedulesDirect.Client
+	sd *schedulesdirect.Client
 }
 
 // newLineup returns a new lineup for the given config struct.
@@ -99,18 +100,12 @@ func newLineup() *lineup {
 		channels:              make(map[int]hdHomeRunLineupItem),
 	}
 
-	sdClient := GoSchedulesDirect.NewClient(viper.GetString("schedulesdirect.username"), viper.GetString("schedulesdirect.password"))
-
-	// FIXME: Check that SD is online before continuing.
-
-	status, statusErr := sdClient.GetStatus()
-	if statusErr != nil {
-		panic(statusErr)
+	sdClient, sdClientErr := schedulesdirect.NewClient(viper.GetString("schedulesdirect.username"), viper.GetString("schedulesdirect.password"))
+	if sdClientErr != nil {
+		log.WithError(sdClientErr).Panicln("error setting up schedules direct client")
 	}
 
 	lineup.sd = sdClient
-
-	log.Infof("SD status %+v", status)
 
 	for _, cfg := range cfgs {
 		provider, providerErr := cfg.GetProvider()
@@ -153,6 +148,7 @@ func (l *lineup) processProvider(provider providers.Provider) (int, error) {
 	m3u, channelMap, programmeMap, prepareErr := l.prepareProvider(provider)
 	if prepareErr != nil {
 		log.WithError(prepareErr).Errorln("error when preparing provider")
+		return 0, prepareErr
 	}
 
 	if provider.Configuration().SortKey != "" {
@@ -306,6 +302,8 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 			return epgChannelMap, epgProgrammeMap, epgErr
 		}
 
+		augmentWithSD := viper.IsSet("schedulesdirect.username") && viper.IsSet("schedulesdirect.password")
+
 		sdEligible := make(map[string]xmltv.Programme)    // TMSID:programme
 		haveAllInfo := make(map[string][]xmltv.Programme) // channel number:[]programme
 
@@ -314,54 +312,104 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 
 			for _, programme := range epg.Programmes {
 				if programme.Channel == channel.ID {
-					epgProgrammeMap[channel.ID] = append(epgProgrammeMap[channel.ID], *provider.ProcessProgramme(programme))
 					ddProgID := ""
-					if viper.IsSet("schedulesdirect.username") && viper.IsSet("schedulesdirect.password") {
+					if augmentWithSD {
 						for _, epNum := range programme.EpisodeNums {
 							if epNum.System == "dd_progid" {
 								ddProgID = epNum.Value
 							}
 						}
 					}
-					if ddProgID != "" {
-						sdEligible[ddProgID] = programme
+					if augmentWithSD == true && ddProgID != "" {
+						idType, uniqID, epID, _, _, extractErr := extractDDProgID(ddProgID)
+						if extractErr != nil {
+							log.WithError(extractErr).Errorln("error extracting dd_progid")
+							continue
+						}
+						cleanID := fmt.Sprintf("%s%s%s", idType, padNumberWithZero(uniqID, 8), padNumberWithZero(epID, 4))
+						if len(cleanID) < 14 {
+							log.Warnf("found an invalid TMS ID/dd_progid, expected length of exactly 14, got %d: %s\n", len(cleanID), cleanID)
+							continue
+						}
+
+						sdEligible[cleanID] = programme
 					} else {
-						haveAllInfo[channel.ID] = append(haveAllInfo[channel.ID], *provider.ProcessProgramme(programme))
+						haveAllInfo[channel.ID] = append(haveAllInfo[channel.ID], programme)
 					}
 				}
 			}
 		}
 
-		tmsIDs := make([]string, 0)
+		if augmentWithSD {
+			tmsIDs := make([]string, 0)
 
-		for tmsID := range sdEligible {
-			cleanID := strings.Replace(tmsID, ".", "", -1)
-			if len(cleanID) < 14 {
-				log.Warnf("found an invalid TMS ID/dd_progid: %s", cleanID)
-				continue
-			}
-			tmsIDs = append(tmsIDs, cleanID[0:13])
-		}
-
-		log.Infof("Requesting guide data for %d programs from Schedules Direct", len(tmsIDs))
-
-		allResponses := make([]GoSchedulesDirect.ProgramInfo, len(tmsIDs))
-
-		for _, chunk := range chunkStringSlice(tmsIDs, 5000) {
-			moreInfo, moreInfoErr := l.sd.GetProgramInfo(chunk)
-			if moreInfoErr != nil {
-				log.WithError(moreInfoErr).Errorln("Error when getting more program details from Schedules Direct")
-				return epgChannelMap, epgProgrammeMap, moreInfoErr
+			for tmsID := range sdEligible {
+				idType, uniqID, epID, _, _, extractErr := extractDDProgID(tmsID)
+				if extractErr != nil {
+					log.WithError(extractErr).Errorln("error extracting dd_progid")
+					continue
+				}
+				cleanID := fmt.Sprintf("%s%s%s", idType, padNumberWithZero(uniqID, 8), padNumberWithZero(epID, 4))
+				if len(cleanID) < 14 {
+					log.Warnf("found an invalid TMS ID/dd_progid, expected length of exactly 14, got %d: %s\n", len(cleanID), cleanID)
+					continue
+				}
+				tmsIDs = append(tmsIDs, cleanID)
 			}
 
-			allResponses = append(allResponses, moreInfo...)
-		}
+			log.Infof("Requesting guide data for %d programs from Schedules Direct", len(tmsIDs))
 
-		log.Infoln("Got %d responses from SD", len(allResponses))
+			allResponses := make([]schedulesdirect.ProgramInfo, 0)
 
-		for _, sdResponse := range allResponses {
-			mergedProgramme := MergeSchedulesDirectAndXMLTVProgramme(sdEligible[sdResponse.ProgramID], sdResponse)
-			haveAllInfo[mergedProgramme.Channel] = append(haveAllInfo[mergedProgramme.Channel], mergedProgramme)
+			artworkMap := make(map[string][]schedulesdirect.ProgramArtwork)
+
+			chunks := chunkStringSlice(tmsIDs, 5000)
+
+			log.Infof("Making %d requests to Schedules Direct for program information, this might take a while", len(chunks))
+
+			for _, chunk := range chunks {
+				moreInfo, moreInfoErr := l.sd.GetProgramInfo(chunk)
+				if moreInfoErr != nil {
+					log.WithError(moreInfoErr).Errorln("Error when getting more program details from Schedules Direct")
+					return epgChannelMap, epgProgrammeMap, moreInfoErr
+				}
+
+				log.Debugf("received %d responses for chunk", len(moreInfo))
+
+				allResponses = append(allResponses, moreInfo...)
+			}
+
+			artworkTMSIDs := make([]string, 0)
+
+			for _, entry := range allResponses {
+				if entry.HasArtwork() {
+					artworkTMSIDs = append(artworkTMSIDs, entry.ProgramID)
+				}
+			}
+
+			chunks = chunkStringSlice(artworkTMSIDs, 500)
+
+			log.Infof("Making %d requests to Schedules Direct for artwork, this might take a while", len(chunks))
+
+			for _, chunk := range chunks {
+				artwork, artworkErr := l.sd.GetArtworkForProgramIDs(chunk)
+				if artworkErr != nil {
+					log.WithError(artworkErr).Errorln("Error when getting program artwork from Schedules Direct")
+					return epgChannelMap, epgProgrammeMap, artworkErr
+				}
+
+				for _, artworks := range artwork {
+					artworkMap[artworks.ProgramID] = append(artworkMap[artworks.ProgramID], *artworks.Artwork...)
+				}
+			}
+
+			log.Debugf("Got %d responses from SD", len(allResponses))
+
+			for _, sdResponse := range allResponses {
+				programme := sdEligible[sdResponse.ProgramID]
+				mergedProgramme := MergeSchedulesDirectAndXMLTVProgramme(&programme, sdResponse, artworkMap[sdResponse.ProgramID])
+				haveAllInfo[mergedProgramme.Channel] = append(haveAllInfo[mergedProgramme.Channel], *mergedProgramme)
+			}
 		}
 
 		for _, programmes := range haveAllInfo {
@@ -479,7 +527,7 @@ func chunkStringSlice(sl []string, chunkSize int) [][]string {
 	return divided
 }
 
-func MergeSchedulesDirectAndXMLTVProgramme(programme xmltv.Programme, sdProgram GoSchedulesDirect.ProgramInfo) xmltv.Programme {
+func MergeSchedulesDirectAndXMLTVProgramme(programme *xmltv.Programme, sdProgram schedulesdirect.ProgramInfo, artworks []schedulesdirect.ProgramArtwork) *xmltv.Programme {
 
 	allTitles := make([]string, 0)
 
@@ -501,11 +549,14 @@ func MergeSchedulesDirectAndXMLTVProgramme(programme xmltv.Programme, sdProgram 
 		allKeywords = append(allKeywords, keyword.Value)
 	}
 
-	for keywordType, keywords := range sdProgram.Keywords {
-		log.Infoln("Adding keywords category", keywordType)
+	for _, keywords := range sdProgram.Keywords {
 		for _, keyword := range keywords {
 			allKeywords = append(allKeywords, keyword)
 		}
+	}
+
+	for _, keyword := range UniqueStrings(allKeywords) {
+		programme.Keywords = append(programme.Keywords, xmltv.CommonElement{Value: keyword})
 	}
 
 	// FIXME: We should really be making sure that we passthrough languages.
@@ -517,16 +568,17 @@ func MergeSchedulesDirectAndXMLTVProgramme(programme xmltv.Programme, sdProgram 
 
 	for _, descriptions := range sdProgram.Descriptions {
 		for _, description := range descriptions {
-			allDescriptions = append(allDescriptions, description.Description)
+			if description.Description100 != "" {
+				allDescriptions = append(allDescriptions, description.Description100)
+			}
+			if description.Description1000 != "" {
+				allDescriptions = append(allDescriptions, description.Description1000)
+			}
 		}
 	}
 
 	for _, description := range UniqueStrings(allDescriptions) {
 		programme.Descriptions = append(programme.Descriptions, xmltv.CommonElement{Value: description})
-	}
-
-	for _, keyword := range UniqueStrings(allKeywords) {
-		programme.Keywords = append(programme.Keywords, xmltv.CommonElement{Value: keyword})
 	}
 
 	allRatings := make(map[string]string, 0)
@@ -543,36 +595,83 @@ func MergeSchedulesDirectAndXMLTVProgramme(programme xmltv.Programme, sdProgram 
 		programme.Ratings = append(programme.Ratings, xmltv.Rating{Value: rating, System: system})
 	}
 
+	for _, artwork := range artworks {
+		programme.Icons = append(programme.Icons, xmltv.Icon{
+			Source: getImageURL(artwork.URI),
+			Width:  artwork.Width,
+			Height: artwork.Height,
+		})
+	}
+
 	hasXMLTVNS := false
+	ddProgID := ""
 
 	for _, epNum := range programme.EpisodeNums {
 		if epNum.System == "xmltv_ns" {
 			hasXMLTVNS = true
+		} else if epNum.System == "dd_progid" {
+			ddProgID = epNum.Value
 		}
 	}
 
 	if !hasXMLTVNS {
-		seasonNumber := 0
-		episodeNumber := 0
+		seasonNumber := int64(0)
+		episodeNumber := int64(0)
+		totalSeasons := int64(0)
+		totalEpisodes := int64(0)
 		numbersFilled := false
 
 		for _, meta := range sdProgram.Metadata {
 			for _, metadata := range meta {
-				if metadata.Season != nil {
-					seasonNumber = *metadata.Season - 1 // SD metadata isnt 0 index
+				if metadata.Season > 0 {
+					seasonNumber = metadata.Season - 1 // SD metadata isnt 0 index
 					numbersFilled = true
 				}
-				if metadata.Episode != nil {
-					episodeNumber = *metadata.Episode - 1
+				if metadata.Episode > 0 {
+					episodeNumber = metadata.Episode - 1
+					numbersFilled = true
+				}
+				if metadata.TotalEpisodes > 0 {
+					totalEpisodes = metadata.TotalEpisodes
+					numbersFilled = true
+				}
+				if metadata.TotalSeasons > 0 {
+					totalSeasons = metadata.TotalSeasons
 					numbersFilled = true
 				}
 			}
 		}
 
 		if numbersFilled {
-			// FIXME: There is currently no way to determine multipart episodes from SD.
-			// We could use the dd_progid to determine it though.
-			xmlTVNS := fmt.Sprintf("%d.%d.0/1", seasonNumber, episodeNumber)
+			seasonNumberStr := fmt.Sprintf("%d", seasonNumber)
+			if totalSeasons > 0 {
+				seasonNumberStr = fmt.Sprintf("%d/%d", seasonNumber, totalSeasons)
+			}
+			episodeNumberStr := fmt.Sprintf("%d", episodeNumber)
+			if totalEpisodes > 0 {
+				episodeNumberStr = fmt.Sprintf("%d/%d", episodeNumber, totalEpisodes)
+			}
+
+			partNumber := 0
+			totalParts := 0
+
+			if ddProgID != "" {
+				var extractErr error
+				_, _, _, partNumber, totalParts, extractErr = extractDDProgID(ddProgID)
+				if extractErr != nil {
+					panic(extractErr)
+				}
+			}
+
+			partStr := "0"
+			if partNumber > 0 {
+				partStr = fmt.Sprintf("%d", partNumber)
+				if totalParts > 0 {
+					partStr = fmt.Sprintf("%d/%d", partNumber, totalParts)
+				}
+			}
+
+			xmlTVNS := fmt.Sprintf("%s.%s.%s", seasonNumberStr, episodeNumberStr, partStr)
 			programme.EpisodeNums = append(programme.EpisodeNums, xmltv.EpisodeNum{System: "xmltv_ns", Value: xmlTVNS})
 		}
 	}
@@ -635,6 +734,48 @@ func extractXMLTVNS(str string) (int, int, int, int, error) {
 	return season, episode, currentPartNum, totalPartsNum, nil
 }
 
+// extractDDProgID returns type, ID, episode ID, part number, total parts, error.
+func extractDDProgID(progID string) (string, int, int, int, int, error) {
+	matches := ddProgIDRegex.FindAllStringSubmatch(progID, -1)
+
+	if len(matches) == 0 {
+		return "", 0, 0, 0, 0, fmt.Errorf("invalid dd_progid: %s", progID)
+	}
+
+	itemType := matches[0][1]
+
+	itemID, itemIDErr := strconv.Atoi(matches[0][2])
+	if itemIDErr != nil {
+		return itemType, 0, 0, 0, 0, itemIDErr
+	}
+
+	specificID, specificIDErr := strconv.Atoi(matches[0][3])
+	if specificIDErr != nil {
+		return itemType, itemID, 0, 0, 0, specificIDErr
+	}
+
+	currentPartNum := 0
+	totalPartsNum := 0
+
+	if len(matches[0]) > 2 && matches[0][4] != "" {
+		currentPart, currentPartErr := strconv.Atoi(matches[0][4])
+		if currentPartErr != nil {
+			return itemType, itemID, specificID, 0, 0, currentPartErr
+		}
+		currentPartNum = currentPart
+	}
+
+	if len(matches[0]) > 3 && matches[0][5] != "" {
+		totalParts, totalPartsErr := strconv.Atoi(matches[0][5])
+		if totalPartsErr != nil {
+			return itemType, itemID, specificID, currentPartNum, 0, totalPartsErr
+		}
+		totalPartsNum = totalParts
+	}
+
+	return itemType, itemID, specificID, currentPartNum, totalPartsNum, nil
+}
+
 func UniqueStrings(input []string) []string {
 	u := make([]string, 0, len(input))
 	m := make(map[string]bool)
@@ -647,4 +788,32 @@ func UniqueStrings(input []string) []string {
 	}
 
 	return u
+}
+
+func getImageURL(imageURI string) string {
+	if strings.HasPrefix(imageURI, "https://s3.amazonaws.com") {
+		return imageURI
+	}
+	return fmt.Sprint(schedulesdirect.DefaultBaseURL, schedulesdirect.APIVersion, "/image/", imageURI)
+}
+
+func padNumberWithZero(value int, expectedLength int) string {
+	padded := fmt.Sprintf("%02d", value)
+	valLength := countDigits(value)
+	if valLength != expectedLength {
+		return fmt.Sprintf("%s%d", strings.Repeat("0", expectedLength-valLength), value)
+	}
+	return padded
+}
+
+func countDigits(i int) int {
+	count := 0
+	if i == 0 {
+		count = 1
+	}
+	for i != 0 {
+		i /= 10
+		count = count + 1
+	}
+	return count
 }
