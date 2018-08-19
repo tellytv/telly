@@ -4,7 +4,7 @@ telly
 .DS_Store
 /.GOPATH
 /bin
-*.xml
+/*.xml
 vendor/
 /.build
 /.release
