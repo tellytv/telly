@@ -60,7 +60,7 @@ func TestDecode(t *testing.T) {
 		},
 		Icons: []Icon{
 			Icon{
-				Source: `file://C:\Perl\site/share/internal/xmltv/icons/KERA.gif`,
+				Source: `file://C:\Perl\site/share/xmltv/icons/KERA.gif`,
 			},
 		},
 	}
@@ -69,9 +69,10 @@ func TestDecode(t *testing.T) {
 	}
 
 	loc := time.FixedZone("", -6*60*60)
+	date := time.Date(2008, 07, 11, 0, 0, 0, 0, time.UTC)
 	pr := Programme{
 		ID:      "someId",
-		Date:    "20080711",
+		Date:    Date(date),
 		Channel: "I10436.labs.zap2it.com",
 		Start:   &Time{time.Date(2008, 07, 15, 0, 30, 0, 0, loc)},
 		Stop:    &Time{time.Date(2008, 07, 15, 1, 0, 0, 0, loc)},
