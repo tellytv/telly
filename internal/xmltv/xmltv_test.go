@@ -17,9 +17,14 @@ func dummyReader(charset string, input io.Reader) (io.Reader, error) {
 }
 
 func TestDecode(t *testing.T) {
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Example downloaded from http://wiki.xmltv.org/index.php/internal/xmltvFormat
 	// One may check it with `xmllint --noout --dtdvalid xmltv.dtd example.xml`
-	f, err := os.Open("example.xml")
+	f, err := os.Open(fmt.Sprintf("%s/example.xml", dir))
 	if err != nil {
 		t.Fatal(err)
 	}
