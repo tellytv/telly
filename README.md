@@ -41,9 +41,9 @@ Here's an example configuration file. It should be placed in `/etc/telly/telly.c
   Username = ""
   Password = ""
   Filter = "Sports|Premium Movies|United States.*|USA"
-  FilterKey = "tvg-name" // FilterKey normally defaults to whatever the provider file says is best, otherwise you must set this.
-  FilterRaw = false // FilterRaw will run your regex on the entire line instead of just specific keys.
-  Sort = "group-title" // Sort will alphabetically sort your channels by the M3U key provided
+  FilterKey = "tvg-name" # FilterKey normally defaults to whatever the provider file says is best, otherwise you must set this.
+  FilterRaw = false # FilterRaw will run your regex on the entire line instead of just specific keys.
+  Sort = "group-title" # Sort will alphabetically sort your channels by the M3U key provided
 
 [[Source]]
   Name = ""
