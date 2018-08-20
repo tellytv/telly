@@ -100,12 +100,14 @@ func newLineup() *lineup {
 		channels:              make(map[int]hdHomeRunLineupItem),
 	}
 
-	sdClient, sdClientErr := schedulesdirect.NewClient(viper.GetString("schedulesdirect.username"), viper.GetString("schedulesdirect.password"))
-	if sdClientErr != nil {
-		log.WithError(sdClientErr).Panicln("error setting up schedules direct client")
-	}
+	if viper.IsSet("schedulesdirect.username") && viper.IsSet("schedulesdirect.password") {
+		sdClient, sdClientErr := schedulesdirect.NewClient(viper.GetString("schedulesdirect.username"), viper.GetString("schedulesdirect.password"))
+		if sdClientErr != nil {
+			log.WithError(sdClientErr).Panicln("error setting up schedules direct client")
+		}
 
-	lineup.sd = sdClient
+		lineup.sd = sdClient
+	}
 
 	for _, cfg := range cfgs {
 		provider, providerErr := cfg.GetProvider()
