@@ -248,6 +248,9 @@ func (l *lineup) processProviderChannel(channel *providers.ProviderChannel, prog
 	}
 
 	if channel.Logo != "" && channel.EPGChannel != nil && !containsIcon(channel.EPGChannel.Icons, channel.Logo) {
+		if viper.GetBool("misc.ignore-epg-icons") {
+			channel.EPGChannel.Icons = nil
+		}
 		channel.EPGChannel.Icons = append(channel.EPGChannel.Icons, xmltv.Icon{Source: channel.Logo})
 	}
 
