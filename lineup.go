@@ -404,6 +404,9 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 				}
 
 				for _, artworks := range artwork {
+					if artworks.ProgramID == "" || artworks.Artwork == nil {
+						continue
+					}
 					artworkMap[artworks.ProgramID] = append(artworkMap[artworks.ProgramID], *artworks.Artwork...)
 				}
 			}
