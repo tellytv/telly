@@ -261,8 +261,12 @@ func (l *lineup) processProviderChannel(channel *providers.ProviderChannel, prog
 
 func (l *lineup) FilterTrack(provider providers.Provider, track m3u.Track) bool {
 	config := provider.Configuration()
-	if config.Filter == "" {
+	if config.Filter == "" && len(config.IncludeOnly) == 0 {
 		return true
+	}
+
+	if v, ok := track.Tags[config.IncludeOnlyTag]; len(config.IncludeOnly) > 0 && ok {
+		return contains(config.IncludeOnly, v)
 	}
 
 	filterRegex, regexErr := regexp.Compile(config.Filter)
@@ -831,4 +835,13 @@ func countDigits(i int) int {
 		count = count + 1
 	}
 	return count
+}
+
+func contains(s []string, e string) bool {
+	for _, ss := range s {
+		if e == ss {
+			return true
+		}
+	}
+	return false
 }

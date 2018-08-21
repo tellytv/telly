@@ -35,6 +35,9 @@ type Configuration struct {
 	Favorites   []string
 	FavoriteTag string
 
+	IncludeOnly    []string
+	IncludeOnlyTag string
+
 	CacheFiles bool
 
 	NameKey          string
