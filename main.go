@@ -40,9 +40,9 @@ var (
 	stringSafer = func(input string) string {
 		ret := input
 		if strings.HasPrefix(input, "username=") {
-			ret = "username=hunter1"
+			ret = "username=REDACTED"
 		} else if strings.HasPrefix(input, "password=") {
-			ret = "password=hunter2"
+			ret = "password=REDACTED"
 		} else if strings.HasPrefix(input, "token=") {
 			ret = "token=bm90Zm9yeW91" // "notforyou"
 		}
