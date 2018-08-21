@@ -4,7 +4,7 @@ IPTV proxy for Plex Live written in Golang
 
 # Configuration
 
-Here's an example configuration file. It should be placed in `/etc/telly/telly.config.toml` or `$HOME/.telly/telly.config.toml` or `telly.config.toml` in the directory that telly is running from.
+Here's an example configuration file. You will need to create this file.  It should be placed in `/etc/telly/telly.config.toml` or `$HOME/.telly/telly.config.toml` or `telly.config.toml` in the directory that telly is running from.
 
 ```toml
 [Discovery]
@@ -57,6 +57,11 @@ Here's an example configuration file. It should be placed in `/etc/telly/telly.c
   M3U = "http://myprovider.com/playlist.m3u"
   EPG = "http://myprovider.com/epg.xml"
 ```
+You only need one source; the ones you are not using should be commented out or deleted. The filter-related keys can be used with any of the sources.
+
+If you do not have a Schedules Direct account, that section can be removed or left blank.
+
+Set listen- and base-address to the IP address of the machine running telly.
 
 # Docker
 
