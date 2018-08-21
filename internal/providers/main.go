@@ -49,6 +49,8 @@ func (i *Configuration) GetProvider() (Provider, error) {
 		return newVaders(i)
 	case "iptv-epg", "iptvepg":
 		return newIPTVEPG(i)
+	case "iris", "iristv":
+		return newIris(i)
 	default:
 		return newCustomProvider(i)
 	}
