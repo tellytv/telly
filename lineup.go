@@ -467,12 +467,22 @@ func getFile(path string, cacheFiles bool) (io.ReadCloser, string, error) {
 
 	if strings.HasPrefix(strings.ToLower(path), "http") {
 
+		transport = "http"
+
+		req, reqErr := http.NewRequest("GET", path, nil)
+		if reqErr != nil {
+			return nil, transport, reqErr
+		}
+
+		// For whatever reason, some providers only allow access from a "real" User-Agent.
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36")
+
 		resp, err := http.Get(path)
 		if err != nil {
 			return nil, transport, err
 		}
 
-		if strings.HasSuffix(strings.ToLower(path), ".gz") {
+		if strings.HasSuffix(strings.ToLower(path), ".gz") || resp.Header.Get("Content-Type") == "application/x-gzip" {
 			log.Infof("File (%s) is gzipp'ed, ungzipping now, this might take a while", path)
 			gz, gzErr := gzip.NewReader(resp.Body)
 			if gzErr != nil {
