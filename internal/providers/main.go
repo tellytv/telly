@@ -51,6 +51,8 @@ func (i *Configuration) GetProvider() (Provider, error) {
 		return newIPTVEPG(i)
 	case "iris", "iristv":
 		return newIris(i)
+	case "area51":
+		return newArea51(i)
 	default:
 		return newCustomProvider(i)
 	}
