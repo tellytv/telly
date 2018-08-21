@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 	"github.com/tellytv/go.schedulesdirect"
@@ -424,9 +425,25 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 		for _, programmes := range haveAllInfo {
 			for _, programme := range programmes {
 				processedProgram := *provider.ProcessProgramme(programme)
-				if processedProgram.Start != nil {
-					if !processedProgram.Start.Time.IsZero() {
-						processedProgram.EpisodeNums = append(processedProgram.EpisodeNums, xmltv.EpisodeNum{System: "original-air-date", Value: processedProgram.Start.Time.Format("2006-01-02 15:04:05")})
+				hasXMLTV := false
+				itemType := ""
+				for _, epNum := range processedProgram.EpisodeNums {
+					if epNum.System == "dd_progid" {
+						idType, _, _, _, _, extractErr := extractDDProgID(epNum.Value)
+						if extractErr != nil {
+							log.WithError(extractErr).Errorln("error extracting dd_progid")
+							continue
+						}
+						itemType = idType
+					}
+					if epNum.System == "xmltv_ns" {
+						hasXMLTV = true
+					}
+				}
+				if (itemType == "SH" || itemType == "EP") && !hasXMLTV {
+					t := time.Time(processedProgram.Date)
+					if !t.IsZero() {
+						processedProgram.EpisodeNums = append(processedProgram.EpisodeNums, xmltv.EpisodeNum{System: "original-air-date", Value: t.Format("2006-01-02 15:04:05")})
 					}
 				}
 				epgProgrammeMap[programme.Channel] = append(epgProgrammeMap[programme.Channel], processedProgram)
