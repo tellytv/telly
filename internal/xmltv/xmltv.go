@@ -142,7 +142,7 @@ type Programme struct {
 	PreviouslyShown *PreviouslyShown `xml:"previously-shown,omitempty" json:"previously_shown,omitempty"`
 	Premiere        *CommonElement   `xml:"premiere,omitempty"         json:"premiere,omitempty"`
 	LastChance      *CommonElement   `xml:"last-chance,omitempty"      json:"last_chance,omitempty"`
-	New             ElementPresent   `xml:"new"                        json:"new,omitempty"`
+	New             ElementPresent   `xml:"new>placeholder"            json:"new,omitempty"`
 	Subtitles       []Subtitle       `xml:"subtitles,omitempty"        json:"subtitles,omitempty"`
 	Ratings         []Rating         `xml:"rating,omitempty"           json:"ratings,omitempty"`
 	StarRatings     []Rating         `xml:"star-rating,omitempty"      json:"star_ratings,omitempty"`

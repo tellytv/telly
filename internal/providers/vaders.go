@@ -123,7 +123,9 @@ func (v *vader) ProcessProgramme(programme xmltv.Programme) *xmltv.Programme {
 		programme.Titles[idx].Value = strings.Replace(title.Value, " [New!]", "", -1)
 	}
 
-	programme.New = xmltv.ElementPresent(isNew)
+	if isNew {
+		programme.New = xmltv.ElementPresent(true)
+	}
 
 	return &programme
 }
