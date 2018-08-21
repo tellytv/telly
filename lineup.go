@@ -423,7 +423,13 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 
 		for _, programmes := range haveAllInfo {
 			for _, programme := range programmes {
-				epgProgrammeMap[programme.Channel] = append(epgProgrammeMap[programme.Channel], *provider.ProcessProgramme(programme))
+				processedProgram := *provider.ProcessProgramme(programme)
+				if processedProgram.Start != nil {
+					if !processedProgram.Start.Time.IsZero() {
+						processedProgram.EpisodeNums = append(processedProgram.EpisodeNums, xmltv.EpisodeNum{System: "original-air-date", Value: processedProgram.Start.Time.Format("2006-01-02 15:04:05")})
+					}
+				}
+				epgProgrammeMap[programme.Channel] = append(epgProgrammeMap[programme.Channel], processedProgram)
 			}
 		}
 
