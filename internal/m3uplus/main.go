@@ -126,7 +126,7 @@ func decodeInfoLine(line string) (float64, string, map[string]string) {
 		if val == "" { // If empty string find a number in [3]
 			val = match[3]
 		}
-		keyMap[match[1]] = val
+		keyMap[strings.ToLower(match[1])] = val
 	}
 
 	return durationFloat, title, keyMap
