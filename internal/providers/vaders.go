@@ -124,7 +124,8 @@ func (v *vader) ProcessProgramme(programme xmltv.Programme) *xmltv.Programme {
 	}
 
 	if isNew {
-		programme.New = xmltv.ElementPresent(true)
+		elm := xmltv.ElementPresent(true)
+		programme.New = &elm
 	}
 
 	return &programme

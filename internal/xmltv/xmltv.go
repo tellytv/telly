@@ -142,7 +142,7 @@ type Programme struct {
 	PreviouslyShown *PreviouslyShown `xml:"previously-shown,omitempty" json:"previously_shown,omitempty"`
 	Premiere        *CommonElement   `xml:"premiere,omitempty"         json:"premiere,omitempty"`
 	LastChance      *CommonElement   `xml:"last-chance,omitempty"      json:"last_chance,omitempty"`
-	New             ElementPresent   `xml:"new>placeholder"            json:"new,omitempty"`
+	New             *ElementPresent  `xml:"new"            json:"new,omitempty"`
 	Subtitles       []Subtitle       `xml:"subtitles,omitempty"        json:"subtitles,omitempty"`
 	Ratings         []Rating         `xml:"rating,omitempty"           json:"ratings,omitempty"`
 	StarRatings     []Rating         `xml:"star-rating,omitempty"      json:"star_ratings,omitempty"`
@@ -168,7 +168,10 @@ type ElementPresent bool
 
 // MarshalXML used to determine if the element is present or not. see https://stackoverflow.com/a/46516243
 func (c *ElementPresent) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	return e.EncodeElement(nil, start)
+	if c == nil {
+		return e.EncodeElement(nil, start)
+	}
+	return e.EncodeElement("", start)
 }
 
 // UnmarshalXML used to determine if the element is present or not. see https://stackoverflow.com/a/46516243
