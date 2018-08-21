@@ -279,15 +279,12 @@ func (l *lineup) FilterTrack(provider providers.Provider, track m3u.Track) bool 
 
 	filterKey := provider.RegexKey()
 	if config.FilterKey != "" {
-		if key, ok := track.Tags[config.FilterKey]; key != "" && ok {
-			filterKey = config.FilterKey
-		} else {
-			log.Panicf("the provided filter key (%s) does not exist or is blank", config.FilterKey)
-		}
+		filterKey = config.FilterKey
 	}
 
-	if _, ok := track.Tags[filterKey]; !ok {
-		log.Panicf("Provided filter key %s doesn't exist in M3U tags", filterKey)
+	if key, ok := track.Tags[filterKey]; key != "" && !ok {
+		log.Warnf("the provided filter key (%s) does not exist or is blank, skipping track: %s", config.FilterKey, track.Raw)
+		return false
 	}
 
 	log.Debugf("Checking if filter (%s) matches string %s", config.Filter, track.Tags[filterKey])
