@@ -49,6 +49,10 @@
   name = "github.com/sirupsen/logrus"
   version = "1.0.6"
 
+[[constraint]]
+  name = "github.com/tellytv/go.schedulesdirect"
+  version = "master"
+
 [prune]
   go-tests = true
   unused-packages = true
