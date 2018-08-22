@@ -30,7 +30,7 @@ RUN find . -type f -print0 | xargs -0 sed -i 's/"listen", "localhost/"listen", "
   && CGO_ENABLED=0 GOOS=linux go install -ldflags '-w -s -extldflags "-static"'
 
 FROM scratch
-COPY --from=builder /app ./
+#COPY --from=builder /app ./
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
 EXPOSE 6077
 ENTRYPOINT ["./app"]
