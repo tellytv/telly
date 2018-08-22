@@ -7,9 +7,10 @@ RUN chmod +x /usr/bin/dep
 
 # Install git because gin/yaml needs it
 RUN apt update && apt upgrade && apt -y install git && apt -y install ffmpeg
+RUN apt-get -y install software-properties-common python-software-properties
 RUN add-apt-repository ppa:gophers/archive
 RUN apt-get update
-RUN apt-get install golang-1.10-go
+RUN apt-get -y install golang-1.10-go
 
 # Copy the code from the host and compile it
 WORKDIR $GOPATH/src/github.com/zenjabba/telly
