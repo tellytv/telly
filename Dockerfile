@@ -6,7 +6,7 @@ FROM ubuntu:16.04
 
 # Install git because gin/yaml needs it
 RUN apt -y update && apt -y upgrade
-RUN apt -y install git && apt -y install ffmpeg curl
+RUN apt -y install git && apt -y install ffmpeg curl coreutils
 #RUN add-apt-repository ppa:gophers/archive
 #RUN apt-get update
 #RUN apt-get -y install golang-1.10-go
