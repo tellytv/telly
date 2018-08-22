@@ -15,7 +15,7 @@ RUN apt-get -y install golang-1.10-go
 # Copy the code from the host and compile it
 WORKDIR $GOPATH/src/github.com/zenjabba/telly
 COPY Gopkg.toml Gopkg.lock ./
-RUN dep ensure --vendor-only
+#RUN dep ensure --vendor-only
 COPY . ./
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix nocgo -o /app .
 
