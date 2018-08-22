@@ -7,8 +7,8 @@ RUN mkdir /gopath
 ENV GOROOT /goroot
 ENV GOPATH /gopath
 ENV PATH $PATH:$GOROOT/bin:$GOPATH/bin
-#ADD https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 /usr/bin/dep
-#RUN chmod +x /usr/bin/dep
+ADD https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 /usr/bin/dep
+RUN chmod +x /usr/bin/dep
 
 # Install git because gin/yaml needs it
 RUN apt -y update && apt -y upgrade && apt -y install git && apt -y install ffmpeg
