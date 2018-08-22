@@ -89,6 +89,8 @@ func serve(lineup *lineup) {
 		c.JSON(http.StatusOK, lineup)
 	})
 
+	router.Static("/manage", "public")
+
 	if viper.GetBool("discovery.ssdp") {
 		if _, ssdpErr := setupSSDP(viper.GetString("web.base-address"), viper.GetString("discovery.device-friendly-name"), viper.GetString("discovery.device-uuid")); ssdpErr != nil {
 			log.WithError(ssdpErr).Errorln("telly cannot advertise over ssdp")
