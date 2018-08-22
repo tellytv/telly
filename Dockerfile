@@ -31,6 +31,6 @@ RUN find . -type f -print0 | xargs -0 sed -i 's/"listen", "localhost/"listen", "
 
 FROM scratch
 #COPY --from=builder /app ./
-COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
+#COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
 EXPOSE 6077
 ENTRYPOINT ["./app"]
