@@ -1,4 +1,4 @@
-FROM golang:ubuntu
+FROM nimmis/ubuntu
 #FROM golang:alpine as builder
 
 # Download and install the latest release of dep
