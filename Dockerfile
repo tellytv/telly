@@ -9,7 +9,7 @@ RUN chmod +x /usr/bin/dep
 RUN apt update && apt upgrade && apt -y install git && apt -y install ffmpeg && apt -y install golang-go
 
 # Copy the code from the host and compile it
-WORKDIR $GOPATH/src/github.com/tellytv/telly
+WORKDIR $GOPATH/src/github.com/zenjabba/telly
 COPY Gopkg.toml Gopkg.lock ./
 RUN dep ensure --vendor-only
 COPY . ./
