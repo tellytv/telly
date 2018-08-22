@@ -33,4 +33,4 @@ FROM scratch
 #COPY --from=builder /app ./
 #COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
 EXPOSE 6077
-ENTRYPOINT ["/gopath/bin/telly"]
+ENTRYPOINT ["/bin/bash"]
