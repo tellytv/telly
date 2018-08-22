@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM golang:ubuntu
 #FROM golang:alpine as builder
 
 # Download and install the latest release of dep
