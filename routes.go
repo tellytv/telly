@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -174,9 +178,61 @@ func stream(lineup *lineup) gin.HandlerFunc {
 
 		if channel, ok := lineup.channels[channelID]; ok {
 			log.Infof("Serving channel number %d", channelID)
-			c.Redirect(http.StatusMovedPermanently, channel.providerChannel.Track.URI)
+
+			if !viper.IsSet("iptv.ffmpeg") {
+				c.Redirect(http.StatusMovedPermanently, channel.providerChannel.Track.URI)
+				return
+			}
+
+			log.Infoln("Transcoding stream with ffmpeg")
+
+			run := exec.Command("ffmpeg", "-re", "-i", channel.providerChannel.Track.URI, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "pipe:1")
+			ffmpegout, err := run.StdoutPipe()
+			if err != nil {
+				log.WithError(err).Errorln("StdoutPipe Error")
+				return
+			}
+
+			stderr, stderrErr := run.StderrPipe()
+			if stderrErr != nil {
+				log.WithError(stderrErr).Errorln("Error creating ffmpeg stderr pipe")
+			}
+
+			if startErr := run.Start(); startErr != nil {
+				log.WithError(startErr).Errorln("Error starting ffmpeg")
+				return
+			}
+
+			go func() {
+				scanner := bufio.NewScanner(stderr)
+				scanner.Split(split)
+				for scanner.Scan() {
+					log.Println(scanner.Text())
+				}
+			}()
+
+			continueStream := true
+
+			c.Stream(func(w io.Writer) bool {
+				defer func() {
+					log.Infoln("Stopped streaming", channelID)
+					if killErr := run.Process.Kill(); killErr != nil {
+						panic(killErr)
+					}
+					continueStream = false
+					return
+				}()
+				if _, copyErr := io.Copy(w, ffmpegout); copyErr != nil {
+					log.WithError(copyErr).Errorln("Error when copying data")
+					continueStream = false
+					return false
+				}
+				return continueStream
+			})
+
 			return
 		}
+
 		c.AbortWithError(http.StatusNotFound, fmt.Errorf("unknown channel number %d", channelID))
 	}
 }
@@ -241,4 +297,23 @@ func setupSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, er
 	}(adv)
 
 	return adv, nil
+}
+
+func split(data []byte, atEOF bool) (advance int, token []byte, spliterror error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		// We have a full newline-terminated line.
+		return i + 1, data[0:i], nil
+	}
+	if i := bytes.IndexByte(data, '\r'); i >= 0 {
+		// We have a cr terminated line
+		return i + 1, data[0:i], nil
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	return 0, nil, nil
 }
