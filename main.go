@@ -12,7 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
-	"github.com/tellytv/telly/m3u"
+	"github.com/zenjabba/telly/m3u"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
