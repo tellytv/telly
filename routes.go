@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gobuffalo/packr"
 	ssdp "github.com/koron/go-ssdp"
@@ -35,6 +36,7 @@ func serve(lineup *lineup) {
 	}
 
 	router := gin.New()
+	router.Use(cors.Default())
 	router.Use(gin.Recovery())
 
 	if viper.GetBool("log.logrequests") {
@@ -100,6 +102,7 @@ func serve(lineup *lineup) {
 	log.Infof("telly is live and on the air!")
 	log.Infof("Broadcasting from http://%s/", viper.GetString("web.listen-address"))
 	log.Infof("EPG URL: http://%s/epg.xml", viper.GetString("web.listen-address"))
+
 	if err := router.Run(viper.GetString("web.listen-address")); err != nil {
 		log.WithError(err).Panicln("Error starting up web server")
 	}
