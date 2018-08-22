@@ -4,7 +4,7 @@ jobs:
     docker:
       - image: circleci/golang:1.8
 
-    working_directory: /go/src/github.com/tellytv/telly
+    working_directory: /go/src/github.com/zenjabba/telly
     steps:
       - checkout
 
