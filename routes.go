@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gobuffalo/packr"
 	ssdp "github.com/koron/go-ssdp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -87,6 +88,10 @@ func serve(lineup *lineup) {
 			log.WithError(ssdpErr).Errorln("telly cannot advertise over ssdp")
 		}
 	}
+
+	box := packr.NewBox("./frontend/dist/telly-fe")
+
+	router.StaticFS("/manage", box)
 
 	log.Infof("telly is live and on the air!")
 	log.Infof("Broadcasting from http://%s/", viper.GetString("web.listen-address"))
