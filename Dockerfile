@@ -6,7 +6,7 @@ ADD https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 /usr/
 RUN chmod +x /usr/bin/dep
 
 # Install git because gin/yaml needs it
-RUN apt update && apt upgrade && apt -y install git && apt -y install ffmpeg apt -y install golang-go
+RUN apt update && apt upgrade && apt -y install git && apt -y install ffmpeg && apt -y install golang-go
 
 # Copy the code from the host and compile it
 WORKDIR $GOPATH/src/github.com/tellytv/telly
