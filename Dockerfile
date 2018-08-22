@@ -10,7 +10,7 @@ RUN apt -y install git && apt -y install ffmpeg curl
 #RUN add-apt-repository ppa:gophers/archive
 #RUN apt-get update
 #RUN apt-get -y install golang-1.10-go
-RUN mkdir /goroot && curl https://storage.googleapis.com/golang/go1.7.linux-amd64.tar.gz | tar xvzf - -C /goroot --strip-components=1
+RUN mkdir /goroot && curl https://storage.googleapis.com/golang/go1.8.linux-amd64.tar.gz | tar xvzf - -C /goroot --strip-components=1
 RUN mkdir /gopath
 ENV GOROOT /goroot
 ENV GOPATH /gopath
