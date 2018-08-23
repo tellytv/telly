@@ -116,7 +116,20 @@ func (db *LineupChannelDB) InsertLineupChannel(channelStruct LineupChannel) (*Li
 // GetLineupChannelByID returns a single LineupChannel for the given ID.
 func (db *LineupChannelDB) GetLineupChannelByID(id string) (*LineupChannel, error) {
 	var channel LineupChannel
-	err := db.SQL.Get(&channel, fmt.Sprintf(`%s WHERE G.id = $1`, baseLineupChannelQuery), id)
+	err := db.SQL.Get(&channel, fmt.Sprintf(`%s WHERE C.id = $1`, baseLineupChannelQuery), id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Need to get the address and port number to properly fill
+	lineup, lineupErr := db.Collection.Lineup.GetLineupByID(strconv.Itoa(channel.LineupID))
+	if lineupErr != nil {
+		return nil, lineupErr
+	}
+
+	channel.lineup = lineup
+	channel.Fill(db.Collection)
+
 	return &channel, err
 }
 
