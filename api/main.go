@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -60,23 +59,4 @@ func ServeAPI(cc *context.CContext) {
 	if err := router.Run(viper.GetString("web.listen-address")); err != nil {
 		log.WithError(err).Panicln("Error starting up web server")
 	}
-}
-
-func split(data []byte, atEOF bool) (advance int, token []byte, spliterror error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	if i := bytes.IndexByte(data, '\n'); i >= 0 {
-		// We have a full newline-terminated line.
-		return i + 1, data[0:i], nil
-	}
-	if i := bytes.IndexByte(data, '\r'); i >= 0 {
-		// We have a cr terminated line
-		return i + 1, data[0:i], nil
-	}
-	if atEOF {
-		return len(data), data, nil
-	}
-
-	return 0, nil, nil
 }

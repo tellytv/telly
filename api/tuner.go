@@ -2,12 +2,14 @@ package api
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -168,7 +170,7 @@ func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 
 		log.Infoln("Transcoding stream with ffmpeg")
 
-		run := exec.Command("ffmpeg", "-re", "-i", channel.VideoTrack.StreamURL, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "pipe:1")
+		run := exec.Command("ffmpeg", "-re", "-i", channel.VideoTrack.StreamURL, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "-progress", "pipe:2", "pipe:1")
 		ffmpegout, err := run.StdoutPipe()
 		if err != nil {
 			log.WithError(err).Errorln("StdoutPipe Error")
@@ -188,8 +190,15 @@ func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 		go func() {
 			scanner := bufio.NewScanner(stderr)
 			scanner.Split(split)
+			buf := make([]byte, 2)
+			scanner.Buffer(buf, bufio.MaxScanTokenSize)
+
 			for scanner.Scan() {
-				log.Println(scanner.Text())
+				line := scanner.Text()
+				status := processFFMPEGStatus(line)
+				if status != nil {
+					fmt.Printf("\rFFMPEG Status: channel number: %d bitrate: %s frames: %s total time: %s speed: %s", channel.ID, status.CurrentBitrate, status.FramesProcessed, status.CurrentTime, status.Speed)
+				}
 			}
 		}()
 
@@ -256,4 +265,80 @@ func lineupStatus(lineup *models.SQLLineup) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, payload)
 	}
+}
+
+func split(data []byte, atEOF bool) (advance int, token []byte, spliterror error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		// We have a full newline-terminated line.
+		return i + 1, data[0:i], nil
+	}
+	if i := bytes.IndexByte(data, '\r'); i >= 0 {
+		// We have a cr terminated line
+		return i + 1, data[0:i], nil
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	return 0, nil, nil
+}
+
+type FFMPEGStatus struct {
+	FramesProcessed string
+	CurrentTime     string
+	CurrentBitrate  string
+	Progress        float64
+	Speed           string
+}
+
+func processFFMPEGStatus(line string) *FFMPEGStatus {
+	status := new(FFMPEGStatus)
+	if strings.Contains(line, "frame=") && strings.Contains(line, "time=") && strings.Contains(line, "bitrate=") {
+		var re = regexp.MustCompile(`=\s+`)
+		st := re.ReplaceAllString(line, `=`)
+
+		f := strings.Fields(st)
+		var framesProcessed string
+		var currentTime string
+		var currentBitrate string
+		var currentSpeed string
+
+		for j := 0; j < len(f); j++ {
+			field := f[j]
+			fieldSplit := strings.Split(field, "=")
+
+			if len(fieldSplit) > 1 {
+				fieldname := strings.Split(field, "=")[0]
+				fieldvalue := strings.Split(field, "=")[1]
+
+				if fieldname == "frame" {
+					framesProcessed = fieldvalue
+				}
+
+				if fieldname == "time" {
+					currentTime = fieldvalue
+				}
+
+				if fieldname == "bitrate" {
+					currentBitrate = fieldvalue
+				}
+				if fieldname == "speed" {
+					currentSpeed = fieldvalue
+					if currentSpeed == "1x" {
+						currentSpeed = "1.000x"
+					}
+				}
+			}
+		}
+
+		status.CurrentBitrate = currentBitrate
+		status.FramesProcessed = framesProcessed
+		status.CurrentTime = currentTime
+		status.Speed = currentSpeed
+		return status
+	}
+	return nil
 }
