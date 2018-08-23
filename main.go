@@ -8,7 +8,6 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
@@ -28,13 +27,6 @@ var (
 		Hooks: make(logrus.LevelHooks),
 		Level: logrus.DebugLevel,
 	}
-
-	exposedChannels = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "exposed_channels_total",
-			Help: "Number of exposed channels.",
-		},
-	)
 )
 
 func main() {
@@ -123,8 +115,6 @@ func main() {
 			log.WithError(err).Panicln("fatal error while reading config file:")
 		}
 	}
-
-	prometheus.MustRegister(version.NewCollector("telly"), exposedChannels)
 
 	level, parseLevelErr := logrus.ParseLevel(viper.GetString("log.level"))
 	if parseLevelErr != nil {

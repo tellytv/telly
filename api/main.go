@@ -11,16 +11,18 @@ import (
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
-var log = &logrus.Logger{
-	Out: os.Stderr,
-	Formatter: &logrus.TextFormatter{
-		FullTimestamp: true,
-	},
-	Hooks: make(logrus.LevelHooks),
-	Level: logrus.DebugLevel,
-}
+var (
+	log = &logrus.Logger{
+		Out: os.Stderr,
+		Formatter: &logrus.TextFormatter{
+			FullTimestamp: true,
+		},
+		Hooks: make(logrus.LevelHooks),
+		Level: logrus.DebugLevel,
+	}
 
-var prom = ginprometheus.NewPrometheus("http")
+	prom = ginprometheus.NewPrometheus("http")
+)
 
 func ServeAPI(cc *context.CContext) {
 	log.Debugln("creating webserver routes")

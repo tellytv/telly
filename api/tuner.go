@@ -18,10 +18,23 @@ import (
 	ssdp "github.com/koron/go-ssdp"
 	"github.com/spf13/viper"
 	ccontext "github.com/tellytv/telly/context"
+	"github.com/tellytv/telly/metrics"
 	"github.com/tellytv/telly/models"
 )
 
 func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.SQLLineup) {
+	channels, channelsErr := cc.API.LineupChannel.GetChannelsForLineup(lineup.ID, true)
+	if channelsErr != nil {
+		log.WithError(channelsErr).Errorln("error getting channels in lineup")
+		return
+	}
+
+	hdhrItems := make([]models.HDHomeRunLineupItem, 0)
+	for _, channel := range channels {
+		hdhrItems = append(hdhrItems, *channel.HDHR)
+	}
+
+	metrics.ExposedChannels.WithLabelValues(lineup.Name).Set(float64(len(channels)))
 	discoveryData := lineup.GetDiscoveryData()
 
 	log.Debugln("creating device xml")
@@ -32,10 +45,10 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.SQLLineup
 	router.GET("/", deviceXML(upnp))
 	router.GET("/device.xml", deviceXML(upnp))
 	router.GET("/discover.json", discovery(discoveryData))
-	router.GET("/lineup_status.json", lineupStatus(lineup)) // FIXME: replace bool with lineup.Scanning
+	router.GET("/lineup_status.json", lineupStatus(lineup))
 	router.POST("/lineup.post", scanChannels(lineup))
-	router.GET("/lineup.json", serveHDHRLineup(cc, lineup))
-	router.GET("/lineup.xml", serveHDHRLineup(cc, lineup))
+	router.GET("/lineup.json", serveHDHRLineup(hdhrItems))
+	router.GET("/lineup.xml", serveHDHRLineup(hdhrItems))
 	router.GET("/auto/:channelID", stream(cc, lineup))
 
 	baseAddr := fmt.Sprintf("%s:%d", lineup.ListenAddress, lineup.Port)
@@ -125,20 +138,8 @@ type hdhrLineupContainer struct {
 	Programs []models.HDHomeRunLineupItem
 }
 
-func serveHDHRLineup(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
+func serveHDHRLineup(hdhrItems []models.HDHomeRunLineupItem) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		channels, channelsErr := cc.API.LineupChannel.GetChannelsForLineup(lineup.ID, true)
-		if channelsErr != nil {
-			c.AbortWithError(http.StatusInternalServerError, channelsErr)
-			return
-		}
-
-		hdhrItems := make([]models.HDHomeRunLineupItem, 0)
-		for _, channel := range channels {
-			hdhrItems = append(hdhrItems, *channel.HDHR)
-		}
-
 		if strings.HasSuffix(c.Request.URL.String(), ".xml") {
 			buf, marshallErr := xml.MarshalIndent(hdhrLineupContainer{Programs: hdhrItems}, "", "\t")
 			if marshallErr != nil {
@@ -187,6 +188,8 @@ func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 			return
 		}
 
+		metrics.ActiveStreams.WithLabelValues(lineup.Name).Inc()
+
 		go func() {
 			scanner := bufio.NewScanner(stderr)
 			scanner.Split(split)
@@ -206,6 +209,7 @@ func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 
 		c.Stream(func(w io.Writer) bool {
 			defer func() {
+				metrics.ActiveStreams.WithLabelValues(lineup.Name).Dec()
 				log.Infoln("Stopped streaming", channelID)
 				if killErr := run.Process.Kill(); killErr != nil {
 					panic(killErr)
