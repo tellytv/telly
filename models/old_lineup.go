@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"compress/gzip"
@@ -26,38 +26,37 @@ import (
 var xmlNSRegex = regexp.MustCompile(`(\d).(\d).(?:(\d)/(\d))?`)
 var ddProgIDRegex = regexp.MustCompile(`(?m)(EP|SH|MV|SP)(\d{7,8}).(\d+).?(?:(\d).(\d))?`)
 
-// hdHomeRunLineupItem is a HDHomeRun specification compatible representation of a Track available in the lineup.
-type hdHomeRunLineupItem struct {
-	XMLName xml.Name `xml:"Program"    json:"-"`
-
+// HDHomeRunLineupItem is a HDHomeRun specification compatible representation of a Track available in the lineup.
+type HDHomeRunLineupItem struct {
+	XMLName     xml.Name           `xml:"Program"    json:"-"`
 	AudioCodec  string             `xml:",omitempty" json:",omitempty"`
-	DRM         convertibleBoolean `xml:",omitempty" json:",string,omitempty"`
-	Favorite    convertibleBoolean `xml:",omitempty" json:",string,omitempty"`
+	DRM         ConvertibleBoolean `xml:",omitempty" json:",string,omitempty"`
+	Favorite    ConvertibleBoolean `xml:",omitempty" json:",string,omitempty"`
 	GuideName   string             `xml:",omitempty" json:",omitempty"`
 	GuideNumber int                `xml:",omitempty" json:",string,omitempty"`
-	HD          convertibleBoolean `xml:",omitempty" json:",string,omitempty"`
+	HD          ConvertibleBoolean `xml:",omitempty" json:",string,omitempty"`
 	URL         string             `xml:",omitempty" json:",omitempty"`
 	VideoCodec  string             `xml:",omitempty" json:",omitempty"`
 
 	provider        providers.Provider
-	providerChannel providers.ProviderChannel
+	ProviderChannel providers.ProviderChannel
 }
 
-func newHDHRItem(provider *providers.Provider, providerChannel *providers.ProviderChannel) hdHomeRunLineupItem {
-	return hdHomeRunLineupItem{
-		DRM:             convertibleBoolean(false),
-		GuideName:       providerChannel.Name,
-		GuideNumber:     providerChannel.Number,
-		Favorite:        convertibleBoolean(providerChannel.Favorite),
-		HD:              convertibleBoolean(providerChannel.HD),
-		URL:             fmt.Sprintf("http://%s/auto/v%d", viper.GetString("web.base-address"), providerChannel.Number),
+func newHDHRItem(provider *providers.Provider, ProviderChannel *providers.ProviderChannel) HDHomeRunLineupItem {
+	return HDHomeRunLineupItem{
+		DRM:             ConvertibleBoolean(false),
+		GuideName:       ProviderChannel.Name,
+		GuideNumber:     ProviderChannel.Number,
+		Favorite:        ConvertibleBoolean(ProviderChannel.Favorite),
+		HD:              ConvertibleBoolean(ProviderChannel.HD),
+		URL:             fmt.Sprintf("http://%s/auto/v%d", viper.GetString("web.base-address"), ProviderChannel.Number),
 		provider:        *provider,
-		providerChannel: *providerChannel,
+		ProviderChannel: *ProviderChannel,
 	}
 }
 
-// lineup contains the state of the application.
-type lineup struct {
+// Lineup contains the state of the application.
+type Lineup struct {
 	Sources []providers.Provider
 
 	Scanning bool
@@ -67,13 +66,13 @@ type lineup struct {
 	// If true, use channel numbers found in EPG, if any, before assigning.
 	xmlTVChannelNumbers bool
 
-	channels map[int]hdHomeRunLineupItem
+	Channels map[int]HDHomeRunLineupItem
 
 	sd *schedulesdirect.Client
 }
 
-// newLineup returns a new lineup for the given config struct.
-func newLineup() *lineup {
+// NewLineup returns a new Lineup for the given config struct.
+func NewLineup() *Lineup {
 	var cfgs []providers.Configuration
 
 	if unmarshalErr := viper.UnmarshalKey("source", &cfgs); unmarshalErr != nil {
@@ -95,10 +94,10 @@ func newLineup() *lineup {
 		})
 	}
 
-	lineup := &lineup{
+	lineup := &Lineup{
 		assignedChannelNumber: viper.GetInt("iptv.starting-channel"),
 		xmlTVChannelNumbers:   viper.GetBool("iptv.xmltv-channels"),
-		channels:              make(map[int]hdHomeRunLineupItem),
+		Channels:              make(map[int]HDHomeRunLineupItem),
 	}
 
 	if viper.IsSet("schedulesdirect.username") && viper.IsSet("schedulesdirect.password") {
@@ -123,7 +122,7 @@ func newLineup() *lineup {
 }
 
 // Scan processes all sources.
-func (l *lineup) Scan() error {
+func (l *Lineup) Scan() error {
 
 	l.Scanning = true
 
@@ -146,7 +145,7 @@ func (l *lineup) Scan() error {
 	return nil
 }
 
-func (l *lineup) processProvider(provider providers.Provider) (int, error) {
+func (l *Lineup) processProvider(provider providers.Provider) (int, error) {
 	addedChannels := 0
 	m3u, channelMap, programmeMap, prepareErr := l.prepareProvider(provider)
 	if prepareErr != nil {
@@ -182,7 +181,7 @@ func (l *lineup) processProvider(provider providers.Provider) (int, error) {
 			successChannels = append(successChannels, track.Name)
 		}
 
-		// Then we do the provider specific translation to a hdHomeRunLineupItem.
+		// Then we do the provider specific translation to a HDHomeRunLineupItem.
 		channel, channelErr := provider.ParseTrack(track, channelMap)
 		if channelErr != nil {
 			return addedChannels, channelErr
@@ -197,7 +196,7 @@ func (l *lineup) processProvider(provider providers.Provider) (int, error) {
 		}
 		addedChannels = addedChannels + 1
 
-		l.channels[channel.Number] = newHDHRItem(&provider, channel)
+		l.Channels[channel.Number] = newHDHRItem(&provider, channel)
 	}
 
 	log.Debugf("These channels (%d) passed the filter and successfully parsed: %s", len(successChannels), strings.Join(successChannels, ", "))
@@ -208,10 +207,10 @@ func (l *lineup) processProvider(provider providers.Provider) (int, error) {
 	return addedChannels, nil
 }
 
-func (l *lineup) prepareProvider(provider providers.Provider) (*m3u.Playlist, map[string]xmltv.Channel, map[string][]xmltv.Programme, error) {
+func (l *Lineup) prepareProvider(provider providers.Provider) (*m3u.Playlist, map[string]xmltv.Channel, map[string][]xmltv.Programme, error) {
 	cacheFiles := provider.Configuration().CacheFiles
 
-	reader, m3uErr := getM3U(provider.PlaylistURL(), cacheFiles)
+	reader, m3uErr := GetM3U(provider.PlaylistURL(), cacheFiles)
 	if m3uErr != nil {
 		log.WithError(m3uErr).Errorln("unable to get m3u file")
 		return nil, nil, nil, m3uErr
@@ -236,7 +235,7 @@ func (l *lineup) prepareProvider(provider providers.Provider) (*m3u.Playlist, ma
 	return rawPlaylist, channelMap, programmeMap, nil
 }
 
-func (l *lineup) processProviderChannel(channel *providers.ProviderChannel, programmeMap map[string][]xmltv.Programme) (*providers.ProviderChannel, error) {
+func (l *Lineup) processProviderChannel(channel *providers.ProviderChannel, programmeMap map[string][]xmltv.Programme) (*providers.ProviderChannel, error) {
 	if channel.EPGChannel != nil {
 		channel.EPGProgrammes = programmeMap[channel.EPGMatch]
 	}
@@ -260,7 +259,7 @@ func (l *lineup) processProviderChannel(channel *providers.ProviderChannel, prog
 	return channel, nil
 }
 
-func (l *lineup) FilterTrack(provider providers.Provider, track m3u.Track) bool {
+func (l *Lineup) FilterTrack(provider providers.Provider, track m3u.Track) bool {
 	config := provider.Configuration()
 	if config.Filter == "" && len(config.IncludeOnly) == 0 {
 		return true
@@ -298,13 +297,13 @@ func (l *lineup) FilterTrack(provider providers.Provider, track m3u.Track) bool 
 
 }
 
-func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[string]xmltv.Channel, map[string][]xmltv.Programme, error) {
+func (l *Lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[string]xmltv.Channel, map[string][]xmltv.Programme, error) {
 	var epg *xmltv.TV
 	epgChannelMap := make(map[string]xmltv.Channel)
 	epgProgrammeMap := make(map[string][]xmltv.Programme)
 	if provider.EPGURL() != "" {
 		var epgErr error
-		epg, epgErr = getXMLTV(provider.EPGURL(), cacheFiles)
+		epg, epgErr = GetXMLTV(provider.EPGURL(), cacheFiles)
 		if epgErr != nil {
 			return epgChannelMap, epgProgrammeMap, epgErr
 		}
@@ -455,11 +454,11 @@ func (l *lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 	return epgChannelMap, epgProgrammeMap, nil
 }
 
-func getM3U(path string, cacheFiles bool) (io.ReadCloser, error) {
+func GetM3U(path string, cacheFiles bool) (io.ReadCloser, error) {
 	safePath := safeStringsRegex.ReplaceAllStringFunc(path, stringSafer)
 	log.Infof("Loading M3U from %s", safePath)
 
-	file, _, err := getFile(path, cacheFiles)
+	file, _, err := GetFile(path, cacheFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -467,10 +466,10 @@ func getM3U(path string, cacheFiles bool) (io.ReadCloser, error) {
 	return file, nil
 }
 
-func getXMLTV(path string, cacheFiles bool) (*xmltv.TV, error) {
+func GetXMLTV(path string, cacheFiles bool) (*xmltv.TV, error) {
 	safePath := safeStringsRegex.ReplaceAllStringFunc(path, stringSafer)
 	log.Infof("Loading XMLTV from %s", safePath)
-	file, _, err := getFile(path, cacheFiles)
+	file, _, err := GetFile(path, cacheFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -489,7 +488,7 @@ func getXMLTV(path string, cacheFiles bool) (*xmltv.TV, error) {
 	return tvSetup, nil
 }
 
-func getFile(path string, cacheFiles bool) (io.ReadCloser, string, error) {
+func GetFile(path string, cacheFiles bool) (io.ReadCloser, string, error) {
 	transport := "disk"
 
 	if strings.HasPrefix(strings.ToLower(path), "http") {

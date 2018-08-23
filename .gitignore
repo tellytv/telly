@@ -11,3 +11,4 @@ vendor/
 /.tarballs
 *.tar.gz
 telly.config.*
+*.db

@@ -82,6 +82,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:7654989089e5bd5b6734ec3be8b695e87d3f1f8d95620b343fd7d3995a5b60d7"
+  name = "github.com/jmoiron/sqlx"
+  packages = [
+    ".",
+    "reflectx",
+  ]
+  pruneopts = "UT"
+  revision = "0dae4fefe7c0e190f7b5a78dac28a1c82cc8d849"
+
+[[projects]]
+  branch = "master"
   digest = "1:8f57afa9ef1d9205094e9d89b9cb4ecb3123f342c4eb0053d7631181b511e6e4"
   name = "github.com/koron/go-ssdp"
   packages = ["."]
@@ -118,6 +129,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "57fdcb988a5c543893cc61bce354a6e24ab70022"
+
+[[projects]]
+  digest = "1:3cafc6a5a1b8269605d9df4c6956d43d8011fc57f266ca6b9d04da6c09dee548"
+  name = "github.com/mattn/go-sqlite3"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "25ecb14adfc7543176f7d85291ec7dba82c6f7e4"
+  version = "v1.9.0"
 
 [[projects]]
   digest = "1:ff5ebae34cfbf047d505ee150de27e60570e8c394b3b8fdbb720ff6ac71985fc"
@@ -264,6 +283,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:6b5a4150d244cc9966fcf654c8354c96827786bb5b59cc09604cd0c566e35b02"
+  name = "github.com/zsais/go-gin-prometheus"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f09dfa9cedec6f3e4ed39e49cceeda09cbed464f"
+
+[[projects]]
+  branch = "master"
   digest = "1:3f3a05ae0b95893d90b9b3b5afdb79a9b3d96e4e36e099d841ae602e4aca0da8"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
@@ -348,16 +375,18 @@
     "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
     "github.com/gobuffalo/packr",
+    "github.com/jmoiron/sqlx",
     "github.com/koron/go-ssdp",
     "github.com/kr/pretty",
+    "github.com/mattn/go-sqlite3",
     "github.com/mitchellh/mapstructure",
     "github.com/prometheus/client_golang/prometheus",
-    "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/common/version",
     "github.com/sirupsen/logrus",
     "github.com/spf13/pflag",
     "github.com/spf13/viper",
     "github.com/tellytv/go.schedulesdirect",
+    "github.com/zsais/go-gin-prometheus",
     "golang.org/x/net/html/charset",
   ]
   solver-name = "gps-cdcl"

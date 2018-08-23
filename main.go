@@ -7,13 +7,14 @@ import (
 	"net"
 	"os"
 	"regexp"
-	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/tellytv/telly/api"
+	"github.com/tellytv/telly/context"
 )
 
 var (
@@ -34,23 +35,6 @@ var (
 			Help: "Number of exposed channels.",
 		},
 	)
-
-	safeStringsRegex = regexp.MustCompile(`(?m)(username|password|token)=[\w=]+(&?)`)
-
-	stringSafer = func(input string) string {
-		ret := input
-		if strings.HasPrefix(input, "username=") {
-			ret = "username=REDACTED"
-		} else if strings.HasPrefix(input, "password=") {
-			ret = "password=REDACTED"
-		} else if strings.HasPrefix(input, "token=") {
-			ret = "token=bm90Zm9yeW91" // "notforyou"
-		}
-		if strings.HasSuffix(input, "&") {
-			return fmt.Sprintf("%s&", ret)
-		}
-		return ret
-	}
 )
 
 func main() {
@@ -164,13 +148,12 @@ func main() {
 		log.Debugf("Loaded configuration %s", js)
 	}
 
-	lineup := newLineup()
-
-	if scanErr := lineup.Scan(); scanErr != nil {
-		log.WithError(scanErr).Panicln("Error scanning lineup!")
+	cc, err := context.NewCContext()
+	if err != nil {
+		log.Fatalln("Couldn't create context", err)
 	}
 
-	serve(lineup)
+	api.ServeAPI(cc)
 }
 
 func validateConfig() {
