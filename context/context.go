@@ -17,6 +17,7 @@ type CContext struct {
 	Ctx    ctx.Context
 	Lineup *models.Lineup
 	Log    *logrus.Logger
+	Tuners map[int]chan bool
 
 	RawSQL *sqlx.DB
 }
@@ -28,6 +29,7 @@ func (cc *CContext) Copy() *CContext {
 		Ctx:    cc.Ctx,
 		Lineup: cc.Lineup,
 		Log:    cc.Log,
+		Tuners: cc.Tuners,
 		RawSQL: cc.RawSQL,
 	}
 }
@@ -61,11 +63,14 @@ func NewCContext() (*CContext, error) {
 	// 	log.WithError(scanErr).Panicln("Error scanning lineup!")
 	// }
 
+	tuners := make(map[int]chan bool)
+
 	context := &CContext{
 		API: api,
 		Ctx: theCtx,
 		Log: log,
 		// Lineup: lineup,
+		Tuners: tuners,
 		RawSQL: sql,
 	}
 

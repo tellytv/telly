@@ -33,20 +33,20 @@ type HDHomeRunLineupItem struct {
 	DRM         ConvertibleBoolean `xml:",omitempty" json:",string,omitempty"`
 	Favorite    ConvertibleBoolean `xml:",omitempty" json:",string,omitempty"`
 	GuideName   string             `xml:",omitempty" json:",omitempty"`
-	GuideNumber int                `xml:",omitempty" json:",string,omitempty"`
+	GuideNumber string             `xml:",omitempty" json:",omitempty"`
 	HD          ConvertibleBoolean `xml:",omitempty" json:",string,omitempty"`
 	URL         string             `xml:",omitempty" json:",omitempty"`
 	VideoCodec  string             `xml:",omitempty" json:",omitempty"`
 
 	provider        providers.Provider
-	ProviderChannel providers.ProviderChannel
+	ProviderChannel providers.ProviderChannel `json:"-"`
 }
 
 func newHDHRItem(provider *providers.Provider, ProviderChannel *providers.ProviderChannel) HDHomeRunLineupItem {
 	return HDHomeRunLineupItem{
 		DRM:             ConvertibleBoolean(false),
 		GuideName:       ProviderChannel.Name,
-		GuideNumber:     ProviderChannel.Number,
+		GuideNumber:     strconv.Itoa(ProviderChannel.Number),
 		Favorite:        ConvertibleBoolean(ProviderChannel.Favorite),
 		HD:              ConvertibleBoolean(ProviderChannel.HD),
 		URL:             fmt.Sprintf("http://%s/auto/v%d", viper.GetString("web.base-address"), ProviderChannel.Number),

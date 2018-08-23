@@ -2,64 +2,72 @@ package api
 
 import (
 	"bufio"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
 	"os/exec"
-	"sort"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/gin-contrib/cors"
+	upnp "github.com/NebulousLabs/go-upnp/goupnp"
 	"github.com/gin-gonic/gin"
 	ssdp "github.com/koron/go-ssdp"
 	"github.com/spf13/viper"
-	"github.com/tellytv/telly/context"
-	"github.com/tellytv/telly/internal/xmltv"
+	ccontext "github.com/tellytv/telly/context"
 	"github.com/tellytv/telly/models"
-	"github.com/zsais/go-gin-prometheus"
 )
 
-func ServeLineup(cc *context.CContext) {
-	discoveryData := GetDiscoveryData()
+func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.SQLLineup) {
+	discoveryData := lineup.GetDiscoveryData()
 
 	log.Debugln("creating device xml")
 	upnp := discoveryData.UPNP()
 
-	router := gin.New()
-	router.Use(cors.Default())
-	router.Use(gin.Recovery())
-
-	if viper.GetBool("log.logrequests") {
-		router.Use(ginrus())
-	}
-
-	p := ginprometheus.NewPrometheus("http")
-	p.Use(router)
+	router := newGin()
 
 	router.GET("/", deviceXML(upnp))
 	router.GET("/device.xml", deviceXML(upnp))
 	router.GET("/discover.json", discovery(discoveryData))
-	router.GET("/lineup_status.json", lineupStatus(false)) // FIXME: replace bool with cc.Lineup.Scanning
-	router.POST("/lineup.post", scanChannels(cc))
-	router.GET("/lineup.json", serveHDHRLineup(cc.Lineup))
-	router.GET("/lineup.xml", serveHDHRLineup(cc.Lineup))
-	router.GET("/auto/:channelID", stream(cc.Lineup))
-	router.GET("/epg.xml", xmlTV(cc.Lineup))
-	router.GET("/debug.json", func(c *gin.Context) {
-		c.JSON(http.StatusOK, cc.Lineup)
-	})
+	router.GET("/lineup_status.json", lineupStatus(lineup)) // FIXME: replace bool with lineup.Scanning
+	router.POST("/lineup.post", scanChannels(lineup))
+	router.GET("/lineup.json", serveHDHRLineup(cc, lineup))
+	router.GET("/lineup.xml", serveHDHRLineup(cc, lineup))
+	router.GET("/auto/:channelID", stream(cc, lineup))
+
+	baseAddr := fmt.Sprintf("%s:%d", lineup.ListenAddress, lineup.Port)
 
 	if viper.GetBool("discovery.ssdp") {
-		if _, ssdpErr := setupSSDP(viper.GetString("web.base-address"), viper.GetString("discovery.device-friendly-name"), viper.GetString("discovery.device-uuid")); ssdpErr != nil {
+		if _, ssdpErr := setupSSDP(baseAddr, lineup.Name, lineup.DeviceUUID); ssdpErr != nil {
 			log.WithError(ssdpErr).Errorln("telly cannot advertise over ssdp")
 		}
 	}
 
-	if err := router.Run(viper.GetString("web.listen-address")); err != nil {
-		log.WithError(err).Panicln("Error starting up web server")
+	log.Infof(`telly lineup "%s" is live at http://%s/`, lineup.Name, baseAddr)
+
+	srv := &http.Server{
+		Addr:    baseAddr,
+		Handler: router,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.WithError(err).Panicln("Error starting up web server")
+		}
+	}()
+
+	for {
+		select {
+		case <-exit:
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := srv.Shutdown(ctx); err != nil {
+				log.WithError(err).Fatalln("error during tuner shutdown")
+			}
+			log.Warnln("Tuner restart commanded")
+			return
+		}
 	}
 }
 
@@ -93,13 +101,18 @@ func setupSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, er
 	return adv, nil
 }
 
-func deviceXML(deviceXML UPNP) gin.HandlerFunc {
+type dXMLContainer struct {
+	upnp.RootDevice
+	XMLName xml.Name `xml:"urn:schemas-upnp-org:device-1-0 root"`
+}
+
+func deviceXML(deviceXML upnp.RootDevice) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.XML(http.StatusOK, deviceXML)
+		c.XML(http.StatusOK, dXMLContainer{deviceXML, xml.Name{}})
 	}
 }
 
-func discovery(data DiscoveryData) gin.HandlerFunc {
+func discovery(data models.DiscoveryData) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusOK, data)
 	}
@@ -110,131 +123,109 @@ type hdhrLineupContainer struct {
 	Programs []models.HDHomeRunLineupItem
 }
 
-func serveHDHRLineup(lineup *models.Lineup) gin.HandlerFunc {
+func serveHDHRLineup(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		channels := make([]models.HDHomeRunLineupItem, 0)
-		for _, channel := range lineup.Channels {
-			channels = append(channels, channel)
+
+		channels, channelsErr := cc.API.LineupChannel.GetChannelsForLineup(lineup.ID, true)
+		if channelsErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, channelsErr)
+			return
 		}
-		sort.Slice(channels, func(i, j int) bool {
-			return channels[i].GuideNumber < channels[j].GuideNumber
-		})
+
+		hdhrItems := make([]models.HDHomeRunLineupItem, 0)
+		for _, channel := range channels {
+			hdhrItems = append(hdhrItems, *channel.HDHR)
+		}
+
 		if strings.HasSuffix(c.Request.URL.String(), ".xml") {
-			buf, marshallErr := xml.MarshalIndent(hdhrLineupContainer{Programs: channels}, "", "\t")
+			buf, marshallErr := xml.MarshalIndent(hdhrLineupContainer{Programs: hdhrItems}, "", "\t")
 			if marshallErr != nil {
 				c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error marshalling lineup to XML"))
 			}
 			c.Data(http.StatusOK, "application/xml", []byte(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+"\n"+string(buf)))
 			return
 		}
-		c.JSON(http.StatusOK, channels)
+		c.JSON(http.StatusOK, hdhrItems)
 	}
 }
 
-func xmlTV(lineup *models.Lineup) gin.HandlerFunc {
+func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// FIXME: Move this outside of the function stuff.
-		epg := &xmltv.TV{
-			GeneratorInfoName: "telly",
-			GeneratorInfoURL:  "https://github.com/tellytv/telly",
+		channelID := c.Param("channelID")[1:]
+
+		channel, channelErr := cc.API.LineupChannel.GetLineupChannelByID(channelID)
+		if channelErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, channelErr)
+			return
 		}
 
-		for _, channel := range lineup.Channels {
-			if channel.ProviderChannel.EPGChannel != nil {
-				epg.Channels = append(epg.Channels, *channel.ProviderChannel.EPGChannel)
-				epg.Programmes = append(epg.Programmes, channel.ProviderChannel.EPGProgrammes...)
+		log.Infof("Serving channel number %s", channelID)
+
+		if !viper.IsSet("iptv.ffmpeg") {
+			c.Redirect(http.StatusMovedPermanently, channel.VideoTrack.StreamURL)
+			return
+		}
+
+		log.Infoln("Transcoding stream with ffmpeg")
+
+		run := exec.Command("ffmpeg", "-re", "-i", channel.VideoTrack.StreamURL, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "pipe:1")
+		ffmpegout, err := run.StdoutPipe()
+		if err != nil {
+			log.WithError(err).Errorln("StdoutPipe Error")
+			return
+		}
+
+		stderr, stderrErr := run.StderrPipe()
+		if stderrErr != nil {
+			log.WithError(stderrErr).Errorln("Error creating ffmpeg stderr pipe")
+		}
+
+		if startErr := run.Start(); startErr != nil {
+			log.WithError(startErr).Errorln("Error starting ffmpeg")
+			return
+		}
+
+		go func() {
+			scanner := bufio.NewScanner(stderr)
+			scanner.Split(split)
+			for scanner.Scan() {
+				log.Println(scanner.Text())
 			}
-		}
+		}()
 
-		sort.Slice(epg.Channels, func(i, j int) bool {
-			return epg.Channels[i].LCN < epg.Channels[j].LCN
+		continueStream := true
+
+		c.Stream(func(w io.Writer) bool {
+			defer func() {
+				log.Infoln("Stopped streaming", channelID)
+				if killErr := run.Process.Kill(); killErr != nil {
+					panic(killErr)
+				}
+				continueStream = false
+				return
+			}()
+			if _, copyErr := io.Copy(w, ffmpegout); copyErr != nil {
+				log.WithError(copyErr).Errorln("Error when copying data")
+				continueStream = false
+				return false
+			}
+			return continueStream
 		})
 
-		buf, marshallErr := xml.MarshalIndent(epg, "", "\t")
-		if marshallErr != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error marshalling EPG to XML"))
-		}
-		c.Data(http.StatusOK, "application/xml", []byte(xml.Header+`<!DOCTYPE tv SYSTEM "xmltv.dtd">`+"\n"+string(buf)))
-	}
-}
-
-func stream(lineup *models.Lineup) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		channelIDStr := c.Param("channelID")[1:]
-		channelID, channelIDErr := strconv.Atoi(channelIDStr)
-		if channelIDErr != nil {
-			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("that (%s) doesn't appear to be a valid channel number", channelIDStr))
-			return
-		}
-
-		if channel, ok := lineup.Channels[channelID]; ok {
-			log.Infof("Serving channel number %d", channelID)
-
-			if !viper.IsSet("iptv.ffmpeg") {
-				c.Redirect(http.StatusMovedPermanently, channel.ProviderChannel.Track.URI)
-				return
-			}
-
-			log.Infoln("Transcoding stream with ffmpeg")
-
-			run := exec.Command("ffmpeg", "-re", "-i", channel.ProviderChannel.Track.URI, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "pipe:1")
-			ffmpegout, err := run.StdoutPipe()
-			if err != nil {
-				log.WithError(err).Errorln("StdoutPipe Error")
-				return
-			}
-
-			stderr, stderrErr := run.StderrPipe()
-			if stderrErr != nil {
-				log.WithError(stderrErr).Errorln("Error creating ffmpeg stderr pipe")
-			}
-
-			if startErr := run.Start(); startErr != nil {
-				log.WithError(startErr).Errorln("Error starting ffmpeg")
-				return
-			}
-
-			go func() {
-				scanner := bufio.NewScanner(stderr)
-				scanner.Split(split)
-				for scanner.Scan() {
-					log.Println(scanner.Text())
-				}
-			}()
-
-			continueStream := true
-
-			c.Stream(func(w io.Writer) bool {
-				defer func() {
-					log.Infoln("Stopped streaming", channelID)
-					if killErr := run.Process.Kill(); killErr != nil {
-						panic(killErr)
-					}
-					continueStream = false
-					return
-				}()
-				if _, copyErr := io.Copy(w, ffmpegout); copyErr != nil {
-					log.WithError(copyErr).Errorln("Error when copying data")
-					continueStream = false
-					return false
-				}
-				return continueStream
-			})
-
-			return
-		}
+		return
 
 		c.AbortWithError(http.StatusNotFound, fmt.Errorf("unknown channel number %d", channelID))
 	}
 }
 
-func scanChannels(cc *context.CContext) gin.HandlerFunc {
+func scanChannels(lineup *models.SQLLineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		scanAction := c.Query("scan")
 		if scanAction == "start" {
-			if refreshErr := cc.Lineup.Scan(); refreshErr != nil {
-				c.AbortWithError(http.StatusInternalServerError, refreshErr)
-			}
+			// FIXME: Actually implement a scan...
+			// if refreshErr := lineup.Scan(); refreshErr != nil {
+			// 	c.AbortWithError(http.StatusInternalServerError, refreshErr)
+			// }
 			c.AbortWithStatus(http.StatusOK)
 			return
 		} else if scanAction == "abort" {
@@ -245,7 +236,7 @@ func scanChannels(cc *context.CContext) gin.HandlerFunc {
 	}
 }
 
-func lineupStatus(scanning bool) gin.HandlerFunc {
+func lineupStatus(lineup *models.SQLLineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		payload := LineupStatus{
 			ScanInProgress: models.ConvertibleBoolean(false),
@@ -253,7 +244,8 @@ func lineupStatus(scanning bool) gin.HandlerFunc {
 			Source:         "Cable",
 			SourceList:     []string{"Cable"},
 		}
-		if scanning {
+		// FIXME: Implement a scan param on SQLLineup.
+		if false {
 			payload = LineupStatus{
 				ScanInProgress: models.ConvertibleBoolean(true),
 				// Gotta fake out Plex.

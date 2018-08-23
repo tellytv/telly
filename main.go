@@ -150,7 +150,16 @@ func main() {
 
 	cc, err := context.NewCContext()
 	if err != nil {
-		log.Fatalln("Couldn't create context", err)
+		log.WithError(err).Panicln("Couldn't create context")
+	}
+
+	lineups, lineupsErr := cc.API.Lineup.GetEnabledLineups(false)
+	if lineupsErr != nil {
+		log.WithError(lineupsErr).Panicln("Error getting all enabled lineups")
+	}
+
+	for _, lineup := range lineups {
+		api.StartTuner(cc, &lineup)
 	}
 
 	api.ServeAPI(cc)

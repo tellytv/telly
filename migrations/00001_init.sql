@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS video_source (
   username    VARCHAR(64) NULL,
   password    VARCHAR(64) NULL,
   m3u_url     TEXT,
+  max_streams INTEGER,
   imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -49,20 +50,38 @@ CREATE TABLE IF NOT EXISTS guide_source_channel (
 );
 
 CREATE TABLE IF NOT EXISTS lineup (
-  id             INTEGER PRIMARY KEY AUTOINCREMENT,
-  name           TEXT,
-  created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  name                TEXT,
+  ssdp                BOOLEAN DEFAULT TRUE,
+  listen_address      TEXT DEFAULT '127.0.0.1',
+  discovery_address   TEXT DEFAULT '127.0.0.1',
+  port                INTEGER,
+  tuners              INTEGER,
+  manufacturer        TEXT DEFAULT 'Silicondust',
+  model_name          TEXT DEFAULT 'HDHomeRun EXTEND',
+  model_number        TEXT DEFAULT 'HDTC-2US',
+  firmware_name       TEXT DEFAULT 'hdhomeruntc_atsc',
+  firmware_version    TEXT DEFAULT '20150826',
+  device_id           TEXT DEFAULT '12345678',
+  device_auth         TEXT DEFAULT 'telly',
+  device_uuid         TEXT DEFAULT '12345678-AE2A-4E54-BBC9-33AF7D5D6A92',
+  created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS lineup_channel (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  lineup_id        INTEGER,
   title            TEXT,
   channel_number   TEXT,
   video_track_id   INTEGER,
-  guide_channel_id TEXT,
+  guide_channel_id INTEGER,
   hd               BOOLEAN,
   favorite         BOOLEAN,
-  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY(lineup_id) REFERENCES lineup(id),
+  FOREIGN KEY(video_track_id) REFERENCES video_source_track(id),
+  FOREIGN KEY(guide_channel_id) REFERENCES guide_source_channel(id)
 );
 
 

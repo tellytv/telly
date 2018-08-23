@@ -36,6 +36,7 @@ type VideoSource struct {
 	Username   string     `db:"username"    json:"username,omitempty"`
 	Password   string     `db:"password"    json:"password,omitempty"`
 	M3UURL     string     `db:"m3u_url"     json:"m3uURL,omitempty"`
+	MaxStreams int        `db:"max_streams" json:"maxStreams,omitempty"`
 	ImportedAt *time.Time `db:"imported_at" json:"importedAt,omitempty"`
 
 	Tracks []VideoSourceTrack `db:"tracks"  json:"tracks,omitempty"`
@@ -67,6 +68,8 @@ SELECT
   V.provider,
   V.username,
   V.password,
+  V.m3u_url,
+  V.max_streams,
   V.imported_at
   FROM video_source V`
 
@@ -74,8 +77,8 @@ SELECT
 func (db *VideoSourceDB) InsertVideoSource(videoSourceStruct VideoSource) (*VideoSource, error) {
 	videoSource := VideoSource{}
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO video_source (name, provider, username, password, m3u_url)
-    VALUES (:name, :provider, :username, :password, :m3u_url);`, videoSourceStruct)
+    INSERT INTO video_source (name, provider, username, password, m3u_url, max_streams)
+    VALUES (:name, :provider, :username, :password, :m3u_url, :max_streams);`, videoSourceStruct)
 	if err != nil {
 		return &videoSource, err
 	}

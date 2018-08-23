@@ -3,6 +3,20 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:2c68a4843f0c805c1f69225bee2c8effb7be91437aa427a0155383e9d551f486"
+  name = "github.com/NebulousLabs/go-upnp"
+  packages = [
+    "goupnp",
+    "goupnp/httpu",
+    "goupnp/scpd",
+    "goupnp/soap",
+    "goupnp/ssdp",
+  ]
+  pruneopts = "UT"
+  revision = "29b680b06c82d044ebea91bf3069038eb562df2a"
+
+[[projects]]
+  branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
@@ -372,6 +386,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/NebulousLabs/go-upnp/goupnp",
     "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
     "github.com/gobuffalo/packr",

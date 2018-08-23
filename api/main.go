@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"os"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gobuffalo/packr"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/tellytv/telly/context"
-	"github.com/zsais/go-gin-prometheus"
+	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
 var log = &logrus.Logger{
@@ -22,6 +21,8 @@ var log = &logrus.Logger{
 	Level: logrus.DebugLevel,
 }
 
+var prom = ginprometheus.NewPrometheus("http")
+
 func ServeAPI(cc *context.CContext) {
 	log.Debugln("creating webserver routes")
 
@@ -29,25 +30,22 @@ func ServeAPI(cc *context.CContext) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	router := gin.New()
-	router.Use(cors.Default())
-	router.Use(gin.Recovery())
-
-	if viper.GetBool("log.logrequests") {
-		router.Use(ginrus())
-	}
-
-	p := ginprometheus.NewPrometheus("http")
-	p.Use(router)
+	router := newGin()
 
 	box := packr.NewBox("../frontend/dist/telly-fe")
 
 	router.Use(ServeBox("/", box))
 
+	router.GET("/epg.xml", wrapContext(cc, xmlTV))
+
 	apiGroup := router.Group("/api")
 
-	apiGroup.GET("/lineup/scan", scanM3U)
 	apiGroup.GET("/guide/scan", scanXMLTV)
+
+	apiGroup.GET("/lineups", wrapContext(cc, getLineups))
+	apiGroup.POST("/lineups", wrapContext(cc, addLineup))
+	apiGroup.POST("/lineups/:lineupId/channels", lineupRoute(cc, addLineupChannel))
+	apiGroup.GET("/lineup/scan", scanM3U)
 
 	apiGroup.GET("/guide_sources", wrapContext(cc, getGuideSources))
 	apiGroup.POST("/guide_sources", wrapContext(cc, addGuide))
