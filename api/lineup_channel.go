@@ -8,6 +8,10 @@ import (
 	"github.com/tellytv/telly/models"
 )
 
+func getLineup(lineup *models.SQLLineup, cc *context.CContext, c *gin.Context) {
+	c.JSON(http.StatusOK, lineup)
+}
+
 func addLineupChannel(lineup *models.SQLLineup, cc *context.CContext, c *gin.Context) {
 	var payload models.LineupChannel
 	if c.BindJSON(&payload) == nil {

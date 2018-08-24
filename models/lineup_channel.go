@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -30,31 +29,31 @@ func (db *LineupChannelDB) tableName() string {
 }
 
 type LineupChannel struct {
-	ID             int        `db:"id"                json:"id"`
-	LineupID       int        `db:"lineup_id"         json:"lineupID"`
-	Title          string     `db:"title"             json:"title"`
-	ChannelNumber  string     `db:"channel_number"    json:"channelNumber"`
-	VideoTrackID   int        `db:"video_track_id"    json:"videoTrackID"`
-	GuideChannelID int        `db:"guide_channel_id"  json:"guideChannelID"`
-	HighDefinition bool       `db:"hd"                json:"hd"`
-	Favorite       bool       `db:"favorite"          json:"favorite"`
-	CreatedAt      *time.Time `db:"created_at"        json:"createdAt"`
+	ID             int        `db:"id"`
+	LineupID       int        `db:"lineup_id"`
+	Title          string     `db:"title"`
+	ChannelNumber  string     `db:"channel_number"`
+	VideoTrackID   int        `db:"video_track_id"`
+	GuideChannelID int        `db:"guide_channel_id"`
+	HighDefinition bool       `db:"hd" json:"HD"`
+	Favorite       bool       `db:"favorite"`
+	CreatedAt      *time.Time `db:"created_at"`
 
-	VideoTrack   *VideoSourceTrack   `json:"videoSourceTrack"`
-	GuideChannel *GuideSourceChannel `json:"guideSourceChannel"`
+	VideoTrack   *VideoSourceTrack
+	GuideChannel *GuideSourceChannel
 	HDHR         *HDHomeRunLineupItem
 
 	lineup *SQLLineup
 }
 
 func (l *LineupChannel) Fill(api *APICollection) {
-	gChannel, gChannelErr := api.GuideSourceChannel.GetGuideSourceChannelByID(strconv.Itoa(l.GuideChannelID))
+	gChannel, gChannelErr := api.GuideSourceChannel.GetGuideSourceChannelByID(l.GuideChannelID, true)
 	if gChannelErr != nil {
 		log.WithError(gChannelErr).Panicln("error getting channel during LineupChannel fill")
 		return
 	}
 	l.GuideChannel = gChannel
-	vTrack, vTrackErr := api.VideoSourceTrack.GetVideoSourceTrackByID(strconv.Itoa(l.VideoTrackID))
+	vTrack, vTrackErr := api.VideoSourceTrack.GetVideoSourceTrackByID(l.VideoTrackID, true)
 	if vTrackErr != nil {
 		log.WithError(vTrackErr).Panicln("error getting track during LineupChannel fill")
 		return
@@ -77,9 +76,9 @@ func (l *LineupChannel) HDHomeRunLineupItem() *HDHomeRunLineupItem {
 // LineupChannelAPI contains all methods for the User struct
 type LineupChannelAPI interface {
 	InsertLineupChannel(channelStruct LineupChannel) (*LineupChannel, error)
-	DeleteLineupChannel(channelID string) (*LineupChannel, error)
-	UpdateLineupChannel(channelID, description string) (*LineupChannel, error)
-	GetLineupChannelByID(id string) (*LineupChannel, error)
+	DeleteLineupChannel(channelID int) (*LineupChannel, error)
+	UpdateLineupChannel(channelID int, description string) (*LineupChannel, error)
+	GetLineupChannelByID(id int) (*LineupChannel, error)
 	GetChannelsForLineup(lineupID int, expanded bool) ([]LineupChannel, error)
 }
 
@@ -114,7 +113,7 @@ func (db *LineupChannelDB) InsertLineupChannel(channelStruct LineupChannel) (*Li
 }
 
 // GetLineupChannelByID returns a single LineupChannel for the given ID.
-func (db *LineupChannelDB) GetLineupChannelByID(id string) (*LineupChannel, error) {
+func (db *LineupChannelDB) GetLineupChannelByID(id int) (*LineupChannel, error) {
 	var channel LineupChannel
 	err := db.SQL.Get(&channel, fmt.Sprintf(`%s WHERE C.id = $1`, baseLineupChannelQuery), id)
 	if err != nil {
@@ -122,7 +121,7 @@ func (db *LineupChannelDB) GetLineupChannelByID(id string) (*LineupChannel, erro
 	}
 
 	// Need to get the address and port number to properly fill
-	lineup, lineupErr := db.Collection.Lineup.GetLineupByID(strconv.Itoa(channel.LineupID))
+	lineup, lineupErr := db.Collection.Lineup.GetLineupByID(channel.LineupID, false)
 	if lineupErr != nil {
 		return nil, lineupErr
 	}
@@ -134,14 +133,14 @@ func (db *LineupChannelDB) GetLineupChannelByID(id string) (*LineupChannel, erro
 }
 
 // DeleteLineupChannel marks a channel with the given ID as deleted.
-func (db *LineupChannelDB) DeleteLineupChannel(channelID string) (*LineupChannel, error) {
+func (db *LineupChannelDB) DeleteLineupChannel(channelID int) (*LineupChannel, error) {
 	channel := LineupChannel{}
 	err := db.SQL.Get(&channel, `DELETE FROM lineup_channel WHERE id = $1`, channelID)
 	return &channel, err
 }
 
 // UpdateLineupChannel updates a channel.
-func (db *LineupChannelDB) UpdateLineupChannel(channelID, description string) (*LineupChannel, error) {
+func (db *LineupChannelDB) UpdateLineupChannel(channelID int, description string) (*LineupChannel, error) {
 	channel := LineupChannel{}
 	err := db.SQL.Get(&channel, `UPDATE lineup_channel SET description = $2 WHERE id = $1 RETURNING *`, channelID, description)
 	return &channel, err
@@ -156,7 +155,7 @@ func (db *LineupChannelDB) GetChannelsForLineup(lineupID int, expanded bool) ([]
 	}
 	if expanded {
 		// Need to get the address and port number to properly fill
-		lineup, lineupErr := db.Collection.Lineup.GetLineupByID(strconv.Itoa(lineupID))
+		lineup, lineupErr := db.Collection.Lineup.GetLineupByID(lineupID, false)
 		if lineupErr != nil {
 			return nil, lineupErr
 		}

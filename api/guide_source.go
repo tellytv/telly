@@ -69,3 +69,22 @@ func getGuideSources(cc *context.CContext, c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, sources)
 }
+
+func getAllChannels(cc *context.CContext, c *gin.Context) {
+	sources, sourcesErr := cc.API.GuideSource.GetAllGuideSources(true)
+	if sourcesErr != nil {
+		c.AbortWithError(http.StatusInternalServerError, sourcesErr)
+		return
+	}
+
+	channels := make([]models.GuideSourceChannel, 0)
+
+	for _, source := range sources {
+		for _, channel := range source.Channels {
+			channel.GuideSourceName = source.Name
+			channels = append(channels, channel)
+		}
+	}
+
+	c.JSON(http.StatusOK, channels)
+}

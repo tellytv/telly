@@ -73,3 +73,22 @@ func addVideoSource(cc *context.CContext, c *gin.Context) {
 		c.JSON(http.StatusOK, newProvider)
 	}
 }
+
+func getAllTracks(cc *context.CContext, c *gin.Context) {
+	sources, sourcesErr := cc.API.VideoSource.GetAllVideoSources(true)
+	if sourcesErr != nil {
+		c.AbortWithError(http.StatusInternalServerError, sourcesErr)
+		return
+	}
+
+	tracks := make([]models.VideoSourceTrack, 0)
+
+	for _, source := range sources {
+		for _, track := range source.Tracks {
+			track.VideoSourceName = source.Name
+			tracks = append(tracks, track)
+		}
+	}
+
+	c.JSON(http.StatusOK, tracks)
+}

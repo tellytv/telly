@@ -36,16 +36,19 @@ type VideoSourceTrack struct {
 	Tags           json.RawMessage `db:"tags"`
 	RawLine        string          `db:"raw_line"`
 	StreamURL      string          `db:"stream_url"`
-	HighDefinition bool            `db:"hd"`
+	HighDefinition bool            `db:"hd" json:"HD"`
 	ImportedAt     *time.Time      `db:"imported_at"`
+
+	VideoSource     *VideoSource
+	VideoSourceName string
 }
 
 // VideoSourceTrackAPI contains all methods for the User struct
 type VideoSourceTrackAPI interface {
 	InsertVideoSourceTrack(trackStruct VideoSourceTrack) (*VideoSourceTrack, error)
-	DeleteVideoSourceTrack(trackID string) (*VideoSourceTrack, error)
-	UpdateVideoSourceTrack(trackID, description string) (*VideoSourceTrack, error)
-	GetVideoSourceTrackByID(id string) (*VideoSourceTrack, error)
+	DeleteVideoSourceTrack(trackID int) (*VideoSourceTrack, error)
+	UpdateVideoSourceTrack(trackID int, description string) (*VideoSourceTrack, error)
+	GetVideoSourceTrackByID(id int, expanded bool) (*VideoSourceTrack, error)
 	GetTracksForVideoSource(videoSourceID int) ([]VideoSourceTrack, error)
 }
 
@@ -79,21 +82,28 @@ func (db *VideoSourceTrackDB) InsertVideoSourceTrack(trackStruct VideoSourceTrac
 }
 
 // GetVideoSourceTrackByID returns a single VideoSourceTrack for the given ID.
-func (db *VideoSourceTrackDB) GetVideoSourceTrackByID(id string) (*VideoSourceTrack, error) {
+func (db *VideoSourceTrackDB) GetVideoSourceTrackByID(id int, expanded bool) (*VideoSourceTrack, error) {
 	var track VideoSourceTrack
 	err := db.SQL.Get(&track, fmt.Sprintf(`%s WHERE T.id = $1`, baseVideoSourceTrackQuery), id)
+	if expanded {
+		video, videoErr := db.Collection.VideoSource.GetVideoSourceByID(track.VideoSourceID)
+		if videoErr != nil {
+			return nil, videoErr
+		}
+		track.VideoSource = video
+	}
 	return &track, err
 }
 
 // DeleteVideoSourceTrack marks a track with the given ID as deleted.
-func (db *VideoSourceTrackDB) DeleteVideoSourceTrack(trackID string) (*VideoSourceTrack, error) {
+func (db *VideoSourceTrackDB) DeleteVideoSourceTrack(trackID int) (*VideoSourceTrack, error) {
 	track := VideoSourceTrack{}
 	err := db.SQL.Get(&track, `DELETE FROM video_source_track WHERE id = $1`, trackID)
 	return &track, err
 }
 
 // UpdateVideoSourceTrack updates a track.
-func (db *VideoSourceTrackDB) UpdateVideoSourceTrack(trackID, description string) (*VideoSourceTrack, error) {
+func (db *VideoSourceTrackDB) UpdateVideoSourceTrack(trackID int, description string) (*VideoSourceTrack, error) {
 	track := VideoSourceTrack{}
 	err := db.SQL.Get(&track, `UPDATE video_source_track SET description = $2 WHERE id = $1 RETURNING *`, trackID, description)
 	return &track, err

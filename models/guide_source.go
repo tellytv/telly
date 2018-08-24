@@ -30,15 +30,15 @@ func (db *GuideSourceDB) tableName() string {
 }
 
 type GuideSource struct {
-	ID         int        `db:"id"           json:"id"`
-	Name       string     `db:"name"         json:"name"`
-	Provider   string     `db:"provider"     json:"provider"`
-	Username   string     `db:"username"     json:"username"`
-	Password   string     `db:"password"     json:"password"`
-	URL        string     `db:"xmltv_url"    json:"url"`
-	ImportedAt *time.Time `db:"imported_at"  json:"importedAt"`
+	ID         int        `db:"id"`
+	Name       string     `db:"name"`
+	Provider   string     `db:"provider"`
+	Username   string     `db:"username"`
+	Password   string     `db:"password"`
+	URL        string     `db:"xmltv_url"`
+	ImportedAt *time.Time `db:"imported_at"`
 
-	Channels []GuideSourceChannel `db:"-" json:"channels"`
+	Channels []GuideSourceChannel `db:"-"`
 }
 
 func (g *GuideSource) ProviderConfiguration() *providers.Configuration {
@@ -54,9 +54,9 @@ func (g *GuideSource) ProviderConfiguration() *providers.Configuration {
 // GuideSourceAPI contains all methods for the User struct
 type GuideSourceAPI interface {
 	InsertGuideSource(guideSourceStruct GuideSource) (*GuideSource, error)
-	DeleteGuideSource(guideSourceID string) (*GuideSource, error)
-	UpdateGuideSource(guideSourceID, description string) (*GuideSource, error)
-	GetGuideSourceByID(id string) (*GuideSource, error)
+	DeleteGuideSource(guideSourceID int) (*GuideSource, error)
+	UpdateGuideSource(guideSourceID int, description string) (*GuideSource, error)
+	GetGuideSourceByID(id int) (*GuideSource, error)
 	GetAllGuideSources(includeChannels bool) ([]GuideSource, error)
 }
 
@@ -89,21 +89,21 @@ func (db *GuideSourceDB) InsertGuideSource(guideSourceStruct GuideSource) (*Guid
 }
 
 // GetGuideSourceByID returns a single GuideSource for the given ID.
-func (db *GuideSourceDB) GetGuideSourceByID(id string) (*GuideSource, error) {
+func (db *GuideSourceDB) GetGuideSourceByID(id int) (*GuideSource, error) {
 	var guideSource GuideSource
 	err := db.SQL.Get(&guideSource, fmt.Sprintf(`%s WHERE G.id = $1`, baseGuideSourceQuery), id)
 	return &guideSource, err
 }
 
 // DeleteGuideSource marks a guideSource with the given ID as deleted.
-func (db *GuideSourceDB) DeleteGuideSource(guideSourceID string) (*GuideSource, error) {
+func (db *GuideSourceDB) DeleteGuideSource(guideSourceID int) (*GuideSource, error) {
 	guideSource := GuideSource{}
 	err := db.SQL.Get(&guideSource, `DELETE FROM guide_source WHERE id = $1`, guideSourceID)
 	return &guideSource, err
 }
 
 // UpdateGuideSource updates a guideSource.
-func (db *GuideSourceDB) UpdateGuideSource(guideSourceID, description string) (*GuideSource, error) {
+func (db *GuideSourceDB) UpdateGuideSource(guideSourceID int, description string) (*GuideSource, error) {
 	guideSource := GuideSource{}
 	err := db.SQL.Get(&guideSource, `UPDATE guide_source SET description = $2 WHERE id = $1 RETURNING *`, guideSourceID, description)
 	return &guideSource, err

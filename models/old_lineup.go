@@ -23,6 +23,7 @@ import (
 // var channelNumberRegex = regexp.MustCompile(`^[0-9]+[[:space:]]?$`).MatchString
 // var callSignRegex = regexp.MustCompile(`^[A-Z0-9]+$`).MatchString
 // var hdRegex = regexp.MustCompile(`hd|4k`)
+// var plexXMLTVNSRegex = regexp.MustCompile(`([0-9]+)?(/[0-9]+)?[ ]*\\.[ ]*([0-9]+)?(/[0-9]+)?[ ]*\\.[ ]*([0-9]+)?(/[0-9]+)?`)
 var xmlNSRegex = regexp.MustCompile(`(\d).(\d).(?:(\d)/(\d))?`)
 var ddProgIDRegex = regexp.MustCompile(`(?m)(EP|SH|MV|SP)(\d{7,8}).(\d+).?(?:(\d).(\d))?`)
 

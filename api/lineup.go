@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tellytv/telly/context"
@@ -37,7 +38,12 @@ func getLineups(cc *context.CContext, c *gin.Context) {
 
 func lineupRoute(cc *context.CContext, originalFunc func(*models.SQLLineup, *context.CContext, *gin.Context)) gin.HandlerFunc {
 	return wrapContext(cc, func(cc *context.CContext, c *gin.Context) {
-		lineup, lineupErr := cc.API.Lineup.GetLineupByID(c.Param("lineupId"))
+		lineupID, lineupIDErr := strconv.Atoi(c.Param("lineupId"))
+		if lineupIDErr != nil {
+			c.AbortWithError(http.StatusBadRequest, lineupIDErr)
+			return
+		}
+		lineup, lineupErr := cc.API.Lineup.GetLineupByID(lineupID, true)
 		if lineupErr != nil {
 			c.AbortWithError(http.StatusInternalServerError, lineupErr)
 			return

@@ -30,16 +30,16 @@ func (db *VideoSourceDB) tableName() string {
 }
 
 type VideoSource struct {
-	ID         int        `db:"id"          json:"id,omitempty"`
-	Name       string     `db:"name"        json:"name,omitempty"`
-	Provider   string     `db:"provider"    json:"provider,omitempty"`
-	Username   string     `db:"username"    json:"username,omitempty"`
-	Password   string     `db:"password"    json:"password,omitempty"`
-	M3UURL     string     `db:"m3u_url"     json:"m3uURL,omitempty"`
-	MaxStreams int        `db:"max_streams" json:"maxStreams,omitempty"`
-	ImportedAt *time.Time `db:"imported_at" json:"importedAt,omitempty"`
+	ID         int        `db:"id"`
+	Name       string     `db:"name"`
+	Provider   string     `db:"provider"`
+	Username   string     `db:"username"`
+	Password   string     `db:"password"`
+	M3UURL     string     `db:"m3u_url"`
+	MaxStreams int        `db:"max_streams"`
+	ImportedAt *time.Time `db:"imported_at"`
 
-	Tracks []VideoSourceTrack `db:"tracks"  json:"tracks,omitempty"`
+	Tracks []VideoSourceTrack `db:"tracks"`
 }
 
 func (v *VideoSource) ProviderConfiguration() *providers.Configuration {
@@ -55,9 +55,9 @@ func (v *VideoSource) ProviderConfiguration() *providers.Configuration {
 // VideoSourceAPI contains all methods for the User struct
 type VideoSourceAPI interface {
 	InsertVideoSource(videoSourceStruct VideoSource) (*VideoSource, error)
-	DeleteVideoSource(videoSourceID string) (*VideoSource, error)
-	UpdateVideoSource(videoSourceID, description string) (*VideoSource, error)
-	GetVideoSourceByID(id string) (*VideoSource, error)
+	DeleteVideoSource(videoSourceID int) (*VideoSource, error)
+	UpdateVideoSource(videoSourceID int, description string) (*VideoSource, error)
+	GetVideoSourceByID(id int) (*VideoSource, error)
 	GetAllVideoSources(includeTracks bool) ([]VideoSource, error)
 }
 
@@ -91,21 +91,21 @@ func (db *VideoSourceDB) InsertVideoSource(videoSourceStruct VideoSource) (*Vide
 }
 
 // GetVideoSourceByID returns a single VideoSource for the given ID.
-func (db *VideoSourceDB) GetVideoSourceByID(id string) (*VideoSource, error) {
+func (db *VideoSourceDB) GetVideoSourceByID(id int) (*VideoSource, error) {
 	var videoSource VideoSource
 	err := db.SQL.Get(&videoSource, fmt.Sprintf(`%s WHERE V.id = $1`, baseVideoSourceQuery), id)
 	return &videoSource, err
 }
 
 // DeleteVideoSource marks a videoSource with the given ID as deleted.
-func (db *VideoSourceDB) DeleteVideoSource(videoSourceID string) (*VideoSource, error) {
+func (db *VideoSourceDB) DeleteVideoSource(videoSourceID int) (*VideoSource, error) {
 	videoSource := VideoSource{}
 	err := db.SQL.Get(&videoSource, `DELETE FROM video_source WHERE id = $1`, videoSourceID)
 	return &videoSource, err
 }
 
 // UpdateVideoSource updates a videoSource.
-func (db *VideoSourceDB) UpdateVideoSource(videoSourceID, description string) (*VideoSource, error) {
+func (db *VideoSourceDB) UpdateVideoSource(videoSourceID int, description string) (*VideoSource, error) {
 	videoSource := VideoSource{}
 	err := db.SQL.Get(&videoSource, `UPDATE video_source SET description = $2 WHERE id = $1 RETURNING *`, videoSourceID, description)
 	return &videoSource, err

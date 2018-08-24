@@ -30,23 +30,26 @@ func (db *GuideSourceChannelDB) tableName() string {
 }
 
 type GuideSourceChannel struct {
-	ID             int             `db:"id"             json:"id"`
-	GuideID        int             `db:"guide_id"       json:"guideID"`
-	XMLTVID        string          `db:"xmltv_id"       json:"xmltvID"`
-	DisplayNames   json.RawMessage `db:"display_names"  json:"displayNames"`
-	URLs           json.RawMessage `db:"urls"           json:"urls"`
-	Icons          json.RawMessage `db:"icons"          json:"icons"`
-	ChannelNumber  string          `db:"channel_number" json:"channelNumber"`
-	HighDefinition bool            `db:"hd"             json:"hd"`
-	ImportedAt     *time.Time      `db:"imported_at"    json:"importedAt"`
+	ID             int             `db:"id"`
+	GuideID        int             `db:"guide_id"`
+	XMLTVID        string          `db:"xmltv_id"`
+	DisplayNames   json.RawMessage `db:"display_names"`
+	URLs           json.RawMessage `db:"urls"`
+	Icons          json.RawMessage `db:"icons"`
+	ChannelNumber  string          `db:"channel_number"`
+	HighDefinition bool            `db:"hd" json:"HD"`
+	ImportedAt     *time.Time      `db:"imported_at"`
+
+	GuideSource     *GuideSource
+	GuideSourceName string
 }
 
 // GuideSourceChannelAPI contains all methods for the User struct
 type GuideSourceChannelAPI interface {
 	InsertGuideSourceChannel(channelStruct GuideSourceChannel) (*GuideSourceChannel, error)
-	DeleteGuideSourceChannel(channelID string) (*GuideSourceChannel, error)
-	UpdateGuideSourceChannel(channelID, description string) (*GuideSourceChannel, error)
-	GetGuideSourceChannelByID(id string) (*GuideSourceChannel, error)
+	DeleteGuideSourceChannel(channelID int) (*GuideSourceChannel, error)
+	UpdateGuideSourceChannel(channelID int, description string) (*GuideSourceChannel, error)
+	GetGuideSourceChannelByID(id int, expanded bool) (*GuideSourceChannel, error)
 	GetChannelsForGuideSource(guideSourceID int) ([]GuideSourceChannel, error)
 }
 
@@ -81,21 +84,31 @@ func (db *GuideSourceChannelDB) InsertGuideSourceChannel(channelStruct GuideSour
 }
 
 // GetGuideSourceChannelByID returns a single GuideSourceChannel for the given ID.
-func (db *GuideSourceChannelDB) GetGuideSourceChannelByID(id string) (*GuideSourceChannel, error) {
+func (db *GuideSourceChannelDB) GetGuideSourceChannelByID(id int, expanded bool) (*GuideSourceChannel, error) {
 	var channel GuideSourceChannel
 	err := db.SQL.Get(&channel, fmt.Sprintf(`%s WHERE G.id = $1`, baseGuideSourceChannelQuery), id)
+	if err != nil {
+		return nil, err
+	}
+	if expanded {
+		guide, guideErr := db.Collection.GuideSource.GetGuideSourceByID(channel.GuideID)
+		if guideErr != nil {
+			return nil, guideErr
+		}
+		channel.GuideSource = guide
+	}
 	return &channel, err
 }
 
 // DeleteGuideSourceChannel marks a channel with the given ID as deleted.
-func (db *GuideSourceChannelDB) DeleteGuideSourceChannel(channelID string) (*GuideSourceChannel, error) {
+func (db *GuideSourceChannelDB) DeleteGuideSourceChannel(channelID int) (*GuideSourceChannel, error) {
 	channel := GuideSourceChannel{}
 	err := db.SQL.Get(&channel, `DELETE FROM guide_source_channel WHERE id = $1`, channelID)
 	return &channel, err
 }
 
 // UpdateGuideSourceChannel updates a channel.
-func (db *GuideSourceChannelDB) UpdateGuideSourceChannel(channelID, description string) (*GuideSourceChannel, error) {
+func (db *GuideSourceChannelDB) UpdateGuideSourceChannel(channelID int, description string) (*GuideSourceChannel, error) {
 	channel := GuideSourceChannel{}
 	err := db.SQL.Get(&channel, `UPDATE guide_source_channel SET description = $2 WHERE id = $1 RETURNING *`, channelID, description)
 	return &channel, err

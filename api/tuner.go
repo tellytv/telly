@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -154,7 +155,11 @@ func serveHDHRLineup(hdhrItems []models.HDHomeRunLineupItem) gin.HandlerFunc {
 
 func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		channelID := c.Param("channelID")[1:]
+		channelID, channelIDErr := strconv.Atoi(c.Param("channelID")[1:])
+		if channelIDErr != nil {
+			c.AbortWithError(http.StatusBadRequest, channelIDErr)
+			return
+		}
 
 		channel, channelErr := cc.API.LineupChannel.GetLineupChannelByID(channelID)
 		if channelErr != nil {

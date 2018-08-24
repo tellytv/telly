@@ -69,24 +69,24 @@ func (d *DiscoveryData) UPNP() upnp.RootDevice {
 }
 
 type SQLLineup struct {
-	ID               int        `db:"id"                json:"id"`
-	Name             string     `db:"name"              json:"name"`
-	SSDP             bool       `db:"ssdp"              json:"ssdp"`
-	ListenAddress    string     `db:"listen_address"    json:"listenAddress"`
-	DiscoveryAddress string     `db:"discovery_address" json:"discoveryAddress"`
-	Port             int        `db:"port"              json:"port"`
-	Tuners           int        `db:"tuners"            json:"tuners"`
-	Manufacturer     string     `db:"manufacturer"      json:"manufacturer"`
-	ModelName        string     `db:"model_name"        json:"modelName"`
-	ModelNumber      string     `db:"model_number"      json:"modelNumber"`
-	FirmwareName     string     `db:"firmware_name"     json:"firmwareName"`
-	FirmwareVersion  string     `db:"firmware_version"  json:"firmwareVersion"`
-	DeviceID         string     `db:"device_id"         json:"deviceID"`
-	DeviceAuth       string     `db:"device_auth"       json:"deviceAuth"`
-	DeviceUUID       string     `db:"device_uuid"       json:"deviceUUID"`
-	CreatedAt        *time.Time `db:"created_at"        json:"createdAt"`
+	ID               int        `db:"id"`
+	Name             string     `db:"name"`
+	SSDP             bool       `db:"ssdp"`
+	ListenAddress    string     `db:"listen_address"`
+	DiscoveryAddress string     `db:"discovery_address"`
+	Port             int        `db:"port"`
+	Tuners           int        `db:"tuners"`
+	Manufacturer     string     `db:"manufacturer"`
+	ModelName        string     `db:"model_name"`
+	ModelNumber      string     `db:"model_number"`
+	FirmwareName     string     `db:"firmware_name"`
+	FirmwareVersion  string     `db:"firmware_version"`
+	DeviceID         string     `db:"device_id"`
+	DeviceAuth       string     `db:"device_auth"`
+	DeviceUUID       string     `db:"device_uuid"`
+	CreatedAt        *time.Time `db:"created_at"`
 
-	Channels []LineupChannel `json:"channels"`
+	Channels []LineupChannel
 }
 
 func (s *SQLLineup) GetDiscoveryData() DiscoveryData {
@@ -110,9 +110,9 @@ func (s *SQLLineup) GetDiscoveryData() DiscoveryData {
 // LineupAPI contains all methods for the User struct
 type LineupAPI interface {
 	InsertLineup(lineupStruct SQLLineup) (*SQLLineup, error)
-	DeleteLineup(lineupID string) (*SQLLineup, error)
-	UpdateLineup(lineupID, description string) (*SQLLineup, error)
-	GetLineupByID(id string) (*SQLLineup, error)
+	DeleteLineup(lineupID int) (*SQLLineup, error)
+	UpdateLineup(lineupID int, description string) (*SQLLineup, error)
+	GetLineupByID(id int, withChannels bool) (*SQLLineup, error)
 	GetEnabledLineups(withChannels bool) ([]SQLLineup, error)
 }
 
@@ -154,21 +154,28 @@ func (db *LineupDB) InsertLineup(lineupStruct SQLLineup) (*SQLLineup, error) {
 }
 
 // GetLineupByID returns a single Lineup for the given ID.
-func (db *LineupDB) GetLineupByID(id string) (*SQLLineup, error) {
+func (db *LineupDB) GetLineupByID(id int, withChannels bool) (*SQLLineup, error) {
 	var lineup SQLLineup
 	err := db.SQL.Get(&lineup, fmt.Sprintf(`%s WHERE L.id = $1`, baseLineupQuery), id)
+	if withChannels {
+		channels, channelsErr := db.Collection.LineupChannel.GetChannelsForLineup(lineup.ID, true)
+		if channelsErr != nil {
+			return nil, channelsErr
+		}
+		lineup.Channels = channels
+	}
 	return &lineup, err
 }
 
 // DeleteLineup marks a lineup with the given ID as deleted.
-func (db *LineupDB) DeleteLineup(lineupID string) (*SQLLineup, error) {
+func (db *LineupDB) DeleteLineup(lineupID int) (*SQLLineup, error) {
 	lineup := SQLLineup{}
 	err := db.SQL.Get(&lineup, `DELETE FROM lineup WHERE id = $1`, lineupID)
 	return &lineup, err
 }
 
 // UpdateLineup updates a lineup.
-func (db *LineupDB) UpdateLineup(lineupID, description string) (*SQLLineup, error) {
+func (db *LineupDB) UpdateLineup(lineupID int, description string) (*SQLLineup, error) {
 	lineup := SQLLineup{}
 	err := db.SQL.Get(&lineup, `UPDATE lineup SET description = $2 WHERE id = $1 RETURNING *`, lineupID, description)
 	return &lineup, err
@@ -179,16 +186,11 @@ func (db *LineupDB) GetEnabledLineups(withChannels bool) ([]SQLLineup, error) {
 	lineups := make([]SQLLineup, 0)
 	err := db.SQL.Select(&lineups, baseLineupQuery)
 	if withChannels {
-		// newLineups := make([]SQLLineup, len(lineups))
 		for idx, lineup := range lineups {
 			channels, channelsErr := db.Collection.LineupChannel.GetChannelsForLineup(lineup.ID, true)
 			if channelsErr != nil {
 				return nil, channelsErr
 			}
-			// lineup.HDHRItems = make([]HDHomeRunLineupItem, 0)
-			// for _, channel := range channels {
-			// 	lineup.HDHRItems = append(lineup.HDHRItems, channel.HDHomeRunLineupItem())
-			// }
 			lineup.Channels = channels
 			lineups[idx] = lineup
 		}

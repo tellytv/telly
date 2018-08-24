@@ -45,14 +45,17 @@ func ServeAPI(cc *context.CContext) {
 
 	apiGroup.GET("/lineups", wrapContext(cc, getLineups))
 	apiGroup.POST("/lineups", wrapContext(cc, addLineup))
+	apiGroup.GET("/lineups/:lineupId", lineupRoute(cc, getLineup))
 	apiGroup.POST("/lineups/:lineupId/channels", lineupRoute(cc, addLineupChannel))
 	apiGroup.GET("/lineup/scan", scanM3U)
 
 	apiGroup.GET("/guide_sources", wrapContext(cc, getGuideSources))
 	apiGroup.POST("/guide_sources", wrapContext(cc, addGuide))
+	apiGroup.GET("/guide_sources/channels", wrapContext(cc, getAllChannels))
 
 	apiGroup.GET("/video_sources", wrapContext(cc, getVideoSources))
 	apiGroup.POST("/video_sources", wrapContext(cc, addVideoSource))
+	apiGroup.GET("/video_sources/tracks", wrapContext(cc, getAllTracks))
 
 	log.Infof("telly is live and on the air!")
 	log.Infof("Broadcasting from http://%s/", viper.GetString("web.listen-address"))
