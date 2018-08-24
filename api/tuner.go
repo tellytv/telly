@@ -167,7 +167,7 @@ func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 			return
 		}
 
-		log.Infof("Serving channel number %s", channelID)
+		log.Infof("Serving channel number %d", channelID)
 
 		if !viper.IsSet("iptv.ffmpeg") {
 			c.Redirect(http.StatusMovedPermanently, channel.VideoTrack.StreamURL)
