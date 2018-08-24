@@ -22,6 +22,7 @@ Here's an example configuration file. You will need to create this file.  It sho
   Streams = 1
   Starting-Channel = 10000
   XMLTV-Channels = true
+  FFMpeg = true            # if true, streams are buffered through ffmpeg; ffmpeg must be on your $PATH
 
 [Log]
   Level = "info"
