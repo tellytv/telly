@@ -38,7 +38,7 @@ Here's an example configuration file. You will need to create this file.  It sho
 
 [[Source]]
   Name = ""
-  Provider = "Vaders"
+  Provider = "Vaders"  # named providers currently supported are "Vaders", "area51", "Iris"
   Username = ""
   Password = ""
   Filter = "Sports|Premium Movies|United States.*|USA"
