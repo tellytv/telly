@@ -1,6 +1,9 @@
 <!-- READ THIS FIRST:
 - Make sure you are running the latest version of telly before reporting an issue: https://github.com/tellytv/telly/releases
-- Provide as many details as possible. Paste logs, configuration sample and code into the backticks. Do not delete any text from this template!
+- Provide as many details as possible. Paste logs, configurations and code into the backticks. Do not delete any text from this template!
+- REMEMBER TO DELETE ANY CREDENTIALS IN CONFIG FILES OR COMMAND LINES
+- finally
+- REMEMBER TO DELETE ANY CREDENTIALS IN CONFIG FILES OR COMMAND LINES
 -->
 
 **telly release with the issue:**
@@ -22,16 +25,19 @@ Please provide details about your environment.
 
 
 **Contents of `telly.config.toml` [if you're using a version above 1.1]:**
+- REMEMBER TO DELETE ANY CREDENTIALS IN CONFIG FILES OR COMMAND LINES
 ```toml
 
 ```
 
 **Command line used to run telly [if applicable]:**
+- REMEMBER TO DELETE ANY CREDENTIALS IN CONFIG FILES OR COMMAND LINES
 ```
 
 ```
 
 **Docker run command used to run telly [if applicable]:**
+- REMEMBER TO DELETE ANY CREDENTIALS IN CONFIG FILES OR COMMAND LINES
 ```
 
 ```
