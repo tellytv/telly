@@ -246,8 +246,8 @@ func (l *Lineup) processProviderChannel(channel *providers.ProviderChannel, prog
 		l.assignedChannelNumber = l.assignedChannelNumber + 1
 	}
 
-	if channel.EPGChannel != nil && channel.EPGChannel.LCN == 0 {
-		channel.EPGChannel.LCN = channel.Number
+	if channel.EPGChannel != nil && channel.EPGChannel.LCN == "" {
+		channel.EPGChannel.LCN = strconv.Itoa(channel.Number)
 	}
 
 	if channel.Logo != "" && channel.EPGChannel != nil && !containsIcon(channel.EPGChannel.Icons, channel.Logo) {

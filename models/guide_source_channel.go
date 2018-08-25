@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/tellytv/telly/internal/xmltv"
 )
 
 // GuideSourceChannelDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -30,23 +31,20 @@ func (db *GuideSourceChannelDB) tableName() string {
 }
 
 type GuideSourceChannel struct {
-	ID             int             `db:"id"`
-	GuideID        int             `db:"guide_id"`
-	XMLTVID        string          `db:"xmltv_id"`
-	DisplayNames   json.RawMessage `db:"display_names"`
-	URLs           json.RawMessage `db:"urls"`
-	Icons          json.RawMessage `db:"icons"`
-	ChannelNumber  string          `db:"channel_number"`
-	HighDefinition bool            `db:"hd" json:"HD"`
-	ImportedAt     *time.Time      `db:"imported_at"`
+	ID         int             `db:"id"`
+	GuideID    int             `db:"guide_id"`
+	XMLTVID    string          `db:"xmltv_id"`
+	Data       json.RawMessage `db:"data"`
+	ImportedAt *time.Time      `db:"imported_at"`
 
 	GuideSource     *GuideSource
 	GuideSourceName string
+	XMLTV           *xmltv.Channel `json:"-"`
 }
 
 // GuideSourceChannelAPI contains all methods for the User struct
 type GuideSourceChannelAPI interface {
-	InsertGuideSourceChannel(channelStruct GuideSourceChannel) (*GuideSourceChannel, error)
+	InsertGuideSourceChannel(guideID int, channel xmltv.Channel) (*GuideSourceChannel, error)
 	DeleteGuideSourceChannel(channelID int) (*GuideSourceChannel, error)
 	UpdateGuideSourceChannel(channelID int, description string) (*GuideSourceChannel, error)
 	GetGuideSourceChannelByID(id int, expanded bool) (*GuideSourceChannel, error)
@@ -58,29 +56,41 @@ SELECT
   G.id,
   G.guide_id,
   G.xmltv_id,
-  G.display_names,
-  G.urls,
-  G.icons,
-  G.channel_number,
-  G.hd,
+  G.data,
   G.imported_at
   FROM guide_source_channel G`
 
 // InsertGuideSourceChannel inserts a new GuideSourceChannel into the database.
-func (db *GuideSourceChannelDB) InsertGuideSourceChannel(channelStruct GuideSourceChannel) (*GuideSourceChannel, error) {
-	channel := GuideSourceChannel{}
+func (db *GuideSourceChannelDB) InsertGuideSourceChannel(guideID int, channel xmltv.Channel) (*GuideSourceChannel, error) {
+	marshalled, marshalErr := json.Marshal(channel)
+	if marshalErr != nil {
+		return nil, marshalErr
+	}
+
+	insertingChannel := GuideSourceChannel{
+		GuideID: guideID,
+		XMLTVID: channel.ID,
+		Data:    marshalled,
+	}
+
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO guide_source_channel (guide_id, xmltv_id, display_names, urls, icons, channel_number, hd)
-    VALUES (:guide_id, :xmltv_id, :display_names, :urls, :icons, :channel_number, :hd)`, channelStruct)
+    INSERT INTO guide_source_channel (guide_id, xmltv_id, data)
+    VALUES (:guide_id, :xmltv_id, :data)`, insertingChannel)
 	if err != nil {
-		return &channel, err
+		return nil, err
 	}
 	rowID, rowIDErr := res.LastInsertId()
 	if rowIDErr != nil {
-		return &channel, rowIDErr
+		return nil, rowIDErr
 	}
-	err = db.SQL.Get(&channel, "SELECT * FROM guide_source_channel WHERE id = $1", rowID)
-	return &channel, err
+	outputChannel := GuideSourceChannel{}
+	if getErr := db.SQL.Get(&outputChannel, "SELECT * FROM guide_source_channel WHERE id = $1", rowID); getErr != nil {
+		return nil, getErr
+	}
+	if unmarshalErr := json.Unmarshal(outputChannel.Data, &outputChannel.XMLTV); unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+	return &outputChannel, err
 }
 
 // GetGuideSourceChannelByID returns a single GuideSourceChannel for the given ID.

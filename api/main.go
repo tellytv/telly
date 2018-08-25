@@ -53,6 +53,7 @@ func ServeAPI(cc *context.CContext) {
 	apiGroup.GET("/guide_sources", wrapContext(cc, getGuideSources))
 	apiGroup.POST("/guide_sources", wrapContext(cc, addGuide))
 	apiGroup.GET("/guide_sources/channels", wrapContext(cc, getAllChannels))
+	apiGroup.GET("/guide_sources/programmes", wrapContext(cc, getAllProgrammes))
 
 	apiGroup.GET("/video_sources", wrapContext(cc, getVideoSources))
 	apiGroup.POST("/video_sources", wrapContext(cc, addVideoSource))

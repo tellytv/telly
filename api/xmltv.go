@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tellytv/telly/context"
@@ -12,27 +13,40 @@ import (
 )
 
 func xmlTV(cc *context.CContext, c *gin.Context) {
-	// FIXME: Move this outside of the function stuff.
 	epg := &xmltv.TV{
 		GeneratorInfoName: "telly",
 		GeneratorInfoURL:  "https://github.com/tellytv/telly",
 	}
 
-	// FIXME: Not actually a lineup...
-	// lineup := &models.SQLLineup{}
+	lineups, lineupsErr := cc.API.Lineup.GetEnabledLineups(true)
+	if lineupsErr != nil {
+		c.AbortWithError(http.StatusInternalServerError, lineupsErr)
+		return
+	}
 
-	// lineups, lineupsErr := cc.API.Lineup.GetEnabledLineups(true)
-	// if lineupsErr != nil {
-	// 	c.AbortWithError(http.StatusInternalServerError, lineupsErr)
-	// 	return
-	// }
+	programmes, programmesErr := cc.API.GuideSourceProgramme.GetProgrammesForActiveChannels()
+	if programmesErr != nil {
+		c.AbortWithError(http.StatusInternalServerError, programmesErr)
+		return
+	}
 
-	// for _, channel := range lineup.Channels {
-	// 	if channel.ProviderChannel.EPGChannel != nil {
-	// 		epg.Channels = append(epg.Channels, *channel.ProviderChannel.EPGChannel)
-	// 		epg.Programmes = append(epg.Programmes, channel.ProviderChannel.EPGProgrammes...)
-	// 	}
-	// }
+	epgMatchMap := make(map[string]int)
+
+	for _, lineup := range lineups {
+		for _, channel := range lineup.Channels {
+			epgMatchMap[channel.GuideChannel.XMLTVID] = channel.ID
+			epg.Channels = append(epg.Channels, xmltv.Channel{
+				ID:           strconv.Itoa(channel.ID),
+				DisplayNames: []xmltv.CommonElement{xmltv.CommonElement{Value: channel.Title}},
+				LCN:          channel.ChannelNumber,
+			})
+		}
+	}
+
+	for _, programme := range programmes {
+		programme.XMLTV.Channel = strconv.Itoa(epgMatchMap[programme.Channel])
+		epg.Programmes = append(epg.Programmes, *programme.XMLTV)
+	}
 
 	sort.Slice(epg.Channels, func(i, j int) bool {
 		return epg.Channels[i].LCN < epg.Channels[j].LCN

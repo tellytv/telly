@@ -39,13 +39,23 @@ CREATE TABLE IF NOT EXISTS guide_source_channel (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   guide_id        INTEGER,
   xmltv_id        TEXT,
-  display_names   TEXT,
-  urls            TEXT,
-  icons           TEXT,
-  channel_number  TEXT,
-  hd              BOOLEAN,
+  data            TEXT,
   imported_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+  CONSTRAINT channel_unique UNIQUE (guide_id, xmltv_id),
+  FOREIGN KEY(guide_id) REFERENCES guide_source(id)
+);
+
+CREATE TABLE IF NOT EXISTS guide_source_programme (
+  guide_id        INT,
+  channel         TEXT,
+  start           TIMESTAMP,
+  end             TIMESTAMP,
+  date            DATE,
+  data            TEXT,
+  imported_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT programme_unique UNIQUE (guide_id, channel, start, end),
   FOREIGN KEY(guide_id) REFERENCES guide_source(id)
 );
 

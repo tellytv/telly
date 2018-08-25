@@ -1,9 +1,7 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tellytv/telly/context"
@@ -13,13 +11,13 @@ import (
 func addGuide(cc *context.CContext, c *gin.Context) {
 	var payload models.GuideSource
 	if c.BindJSON(&payload) == nil {
-		newProvider, providerErr := cc.API.GuideSource.InsertGuideSource(payload)
+		newGuide, providerErr := cc.API.GuideSource.InsertGuideSource(payload)
 		if providerErr != nil {
 			c.AbortWithError(http.StatusInternalServerError, providerErr)
 			return
 		}
 
-		providerCfg := newProvider.ProviderConfiguration()
+		providerCfg := newGuide.ProviderConfiguration()
 
 		log.Infof("providerCfg %+v", providerCfg)
 
@@ -39,25 +37,25 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 		}
 
 		for _, channel := range xmlTV.Channels {
-			displayNames, _ := json.Marshal(channel.DisplayNames)
-			urls, _ := json.Marshal(channel.URLs)
-			icons, _ := json.Marshal(channel.Icons)
-			newChannel, newChannelErr := cc.API.GuideSourceChannel.InsertGuideSourceChannel(models.GuideSourceChannel{
-				GuideID:       newProvider.ID,
-				XMLTVID:       channel.ID,
-				DisplayNames:  displayNames,
-				URLs:          urls,
-				Icons:         icons,
-				ChannelNumber: strconv.Itoa(channel.LCN),
-			})
+			newChannel, newChannelErr := cc.API.GuideSourceChannel.InsertGuideSourceChannel(newGuide.ID, channel)
 			if newChannelErr != nil {
 				log.WithError(newChannelErr).Errorln("Error creating new guide source channel!")
 				c.AbortWithError(http.StatusInternalServerError, newChannelErr)
 				return
 			}
-			newProvider.Channels = append(newProvider.Channels, *newChannel)
+			newGuide.Channels = append(newGuide.Channels, *newChannel)
 		}
-		c.JSON(http.StatusOK, newProvider)
+		// FIXME: Instead of importing _every_ programme when we add a new guide source, we should only import programmes for channels in a lineup.
+		// Otherwise, SQLite DB gets a lot bigger and harder to manage.
+		for _, programme := range xmlTV.Programmes {
+			_, programmeErr := cc.API.GuideSourceProgramme.InsertGuideSourceProgramme(newGuide.ID, programme)
+			if programmeErr != nil {
+				log.WithError(programmeErr).Errorln("Error creating new guide source channel during programme import!")
+				c.AbortWithError(http.StatusInternalServerError, programmeErr)
+				return
+			}
+		}
+		c.JSON(http.StatusOK, newGuide)
 	}
 }
 
@@ -87,4 +85,13 @@ func getAllChannels(cc *context.CContext, c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, channels)
+}
+
+func getAllProgrammes(cc *context.CContext, c *gin.Context) {
+	programmes, programmesErr := cc.API.GuideSourceProgramme.GetProgrammesForGuideID(2)
+	if programmesErr != nil {
+		c.AbortWithError(http.StatusInternalServerError, programmesErr)
+		return
+	}
+	c.JSON(http.StatusOK, programmes)
 }

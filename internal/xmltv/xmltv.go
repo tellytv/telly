@@ -88,11 +88,11 @@ type TV struct {
 	Channels          []Channel   `xml:"channel"                            json:"channels"                      db:"channels"`
 	Programmes        []Programme `xml:"programme"                          json:"programmes"                    db:"programmes"`
 	Date              string      `xml:"date,attr,omitempty"                json:"date,omitempty"                db:"date,omitempty"`
-	SourceInfoURL     string      `xml:"source-info-url,attr,omitempty"     json:"sourceInfoURL,omitempty"     db:"source_info_url,omitempty"`
-	SourceInfoName    string      `xml:"source-info-name,attr,omitempty"    json:"sourceInfoName,omitempty"    db:"source_info_name,omitempty"`
-	SourceDataURL     string      `xml:"source-data-url,attr,omitempty"     json:"sourceDataURL,omitempty"     db:"source_data_url,omitempty"`
-	GeneratorInfoName string      `xml:"generator-info-name,attr,omitempty" json:"generatorInfoName,omitempty" db:"generator_info_name,omitempty"`
-	GeneratorInfoURL  string      `xml:"generator-info-url,attr,omitempty"  json:"generatorInfoURL,omitempty"  db:"generator_info_url,omitempty"`
+	SourceInfoURL     string      `xml:"source-info-url,attr,omitempty"     json:"sourceInfoURL,omitempty"       db:"source_info_url,omitempty"`
+	SourceInfoName    string      `xml:"source-info-name,attr,omitempty"    json:"sourceInfoName,omitempty"      db:"source_info_name,omitempty"`
+	SourceDataURL     string      `xml:"source-data-url,attr,omitempty"     json:"sourceDataURL,omitempty"       db:"source_data_url,omitempty"`
+	GeneratorInfoName string      `xml:"generator-info-name,attr,omitempty" json:"generatorInfoName,omitempty"   db:"generator_info_name,omitempty"`
+	GeneratorInfoURL  string      `xml:"generator-info-url,attr,omitempty"  json:"generatorInfoURL,omitempty"    db:"generator_info_url,omitempty"`
 }
 
 // LoadXML loads the XMLTV XML from file.
@@ -110,44 +110,44 @@ func (t *TV) LoadXML(f *os.File) error {
 
 // Channel details of a channel
 type Channel struct {
-	DisplayNames []CommonElement `xml:"display-name"   json:"displayNames"   db:"display_names"  `
+	DisplayNames []CommonElement `xml:"display-name"   json:"displayNames"    db:"display_names"`
 	Icons        []Icon          `xml:"icon,omitempty" json:"icons,omitempty" db:"icons,omitempty"`
-	URLs         []string        `xml:"url,omitempty"  json:"urls,omitempty"  db:"urls,omitempty" `
-	ID           string          `xml:"id,attr"        json:"id,omitempty"    db:"id,omitempty"   `
-	LCN          int             `xml:"lcn"            json:"lcn,omitempty"   db:"lcn,omitempty"` // LCN is the local channel number. Plex will show it in place of the channel ID if it exists.
+	URLs         []string        `xml:"url,omitempty"  json:"urls,omitempty"  db:"urls,omitempty"`
+	ID           string          `xml:"id,attr"        json:"id,omitempty"    db:"id,omitempty"`
+	LCN          string          `xml:"lcn"            json:"lcn,omitempty"   db:"lcn,omitempty"` // LCN is the local channel number. Plex will show it in place of the channel ID if it exists.
 }
 
 // Programme details of a single programme transmission
 type Programme struct {
 	ID              string           `xml:"id,attr,omitempty"          json:"id,omitempty"               db:"id,omitempty"` // not defined by standard, but often present
 	Titles          []CommonElement  `xml:"title"                      json:"titles"                     db:"titles"`
-	SecondaryTitles []CommonElement  `xml:"sub-title,omitempty"        json:"secondaryTitles,omitempty" db:"secondary_titles,omitempty"`
+	SecondaryTitles []CommonElement  `xml:"sub-title,omitempty"        json:"secondaryTitles,omitempty"  db:"secondary_titles,omitempty"`
 	Descriptions    []CommonElement  `xml:"desc,omitempty"             json:"descriptions,omitempty"     db:"descriptions,omitempty"`
 	Credits         *Credits         `xml:"credits,omitempty"          json:"credits,omitempty"          db:"credits,omitempty"`
 	Date            Date             `xml:"date,omitempty"             json:"date,omitempty"             db:"date,omitempty"`
 	Categories      []CommonElement  `xml:"category,omitempty"         json:"categories,omitempty"       db:"categories,omitempty"`
 	Keywords        []CommonElement  `xml:"keyword,omitempty"          json:"keywords,omitempty"         db:"keywords,omitempty"`
 	Languages       []CommonElement  `xml:"language,omitempty"         json:"languages,omitempty"        db:"languages,omitempty"`
-	OrigLanguages   []CommonElement  `xml:"orig-language,omitempty"    json:"origLanguages,omitempty"   db:"orig_languages,omitempty"`
+	OrigLanguages   []CommonElement  `xml:"orig-language,omitempty"    json:"origLanguages,omitempty"    db:"orig_languages,omitempty"`
 	Length          *Length          `xml:"length,omitempty"           json:"length,omitempty"           db:"length,omitempty"`
 	Icons           []Icon           `xml:"icon,omitempty"             json:"icons,omitempty"            db:"icons,omitempty"`
 	URLs            []string         `xml:"url,omitempty"              json:"urls,omitempty"             db:"urls,omitempty"`
 	Countries       []CommonElement  `xml:"country,omitempty"          json:"countries,omitempty"        db:"countries,omitempty"`
-	EpisodeNums     []EpisodeNum     `xml:"episode-num,omitempty"      json:"episodeNums,omitempty"     db:"episode_nums,omitempty"`
+	EpisodeNums     []EpisodeNum     `xml:"episode-num,omitempty"      json:"episodeNums,omitempty"      db:"episode_nums,omitempty"`
 	Video           *Video           `xml:"video,omitempty"            json:"video,omitempty"            db:"video,omitempty"`
 	Audio           *Audio           `xml:"audio,omitempty"            json:"audio,omitempty"            db:"audio,omitempty"`
-	PreviouslyShown *PreviouslyShown `xml:"previously-shown,omitempty" json:"previouslyShown,omitempty" db:"previously_shown,omitempty"`
+	PreviouslyShown *PreviouslyShown `xml:"previously-shown,omitempty" json:"previouslyShown,omitempty"  db:"previously_shown,omitempty"`
 	Premiere        *CommonElement   `xml:"premiere,omitempty"         json:"premiere,omitempty"         db:"premiere,omitempty"`
-	LastChance      *CommonElement   `xml:"last-chance,omitempty"      json:"lastChance,omitempty"      db:"last_chance,omitempty"`
+	LastChance      *CommonElement   `xml:"last-chance,omitempty"      json:"lastChance,omitempty"       db:"last_chance,omitempty"`
 	New             *ElementPresent  `xml:"new"                        json:"new,omitempty"              db:"new,omitempty"`
 	Subtitles       []Subtitle       `xml:"subtitles,omitempty"        json:"subtitles,omitempty"        db:"subtitles,omitempty"`
 	Ratings         []Rating         `xml:"rating,omitempty"           json:"ratings,omitempty"          db:"ratings,omitempty"`
-	StarRatings     []Rating         `xml:"star-rating,omitempty"      json:"starRatings,omitempty"     db:"star_ratings,omitempty"`
+	StarRatings     []Rating         `xml:"star-rating,omitempty"      json:"starRatings,omitempty"      db:"star_ratings,omitempty"`
 	Reviews         []Review         `xml:"review,omitempty"           json:"reviews,omitempty"          db:"reviews,omitempty"`
 	Start           *Time            `xml:"start,attr"                 json:"start"                      db:"start"`
 	Stop            *Time            `xml:"stop,attr,omitempty"        json:"stop,omitempty"             db:"stop,omitempty"`
-	PDCStart        *Time            `xml:"pdc-start,attr,omitempty"   json:"pdcStart,omitempty"        db:"pdc_start,omitempty"`
-	VPSStart        *Time            `xml:"vps-start,attr,omitempty"   json:"vpsStart,omitempty"        db:"vps_start,omitempty"`
+	PDCStart        *Time            `xml:"pdc-start,attr,omitempty"   json:"pdcStart,omitempty"         db:"pdc_start,omitempty"`
+	VPSStart        *Time            `xml:"vps-start,attr,omitempty"   json:"vpsStart,omitempty"         db:"vps_start,omitempty"`
 	Showview        string           `xml:"showview,attr,omitempty"    json:"showview,omitempty"         db:"showview,omitempty"`
 	Videoplus       string           `xml:"videoplus,attr,omitempty"   json:"videoplus,omitempty"        db:"videoplus,omitempty"`
 	Channel         string           `xml:"channel,attr"               json:"channel"                    db:"channel"`
