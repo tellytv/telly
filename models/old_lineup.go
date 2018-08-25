@@ -31,16 +31,16 @@ var ddProgIDRegex = regexp.MustCompile(`(?m)(EP|SH|MV|SP)(\d{7,8}).(\d+).?(?:(\d
 type HDHomeRunLineupItem struct {
 	XMLName     xml.Name           `xml:"Program"    json:"-"`
 	AudioCodec  string             `xml:",omitempty" json:",omitempty"`
-	DRM         ConvertibleBoolean `xml:",omitempty" json:",string,omitempty"`
-	Favorite    ConvertibleBoolean `xml:",omitempty" json:",string,omitempty"`
+	DRM         ConvertibleBoolean `xml:",omitempty" json:",omitempty"`
+	Favorite    ConvertibleBoolean `xml:",omitempty" json:",omitempty"`
 	GuideName   string             `xml:",omitempty" json:",omitempty"`
 	GuideNumber string             `xml:",omitempty" json:",omitempty"`
-	HD          ConvertibleBoolean `xml:",omitempty" json:",string,omitempty"`
+	HD          ConvertibleBoolean `xml:",omitempty" json:",omitempty"`
 	URL         string             `xml:",omitempty" json:",omitempty"`
 	VideoCodec  string             `xml:",omitempty" json:",omitempty"`
 
-	provider        providers.Provider
-	ProviderChannel providers.ProviderChannel `json:"-"`
+	provider        providers.Provider        `xml:"-"`
+	ProviderChannel providers.ProviderChannel `xml:"-" json:"-"`
 }
 
 func newHDHRItem(provider *providers.Provider, ProviderChannel *providers.ProviderChannel) HDHomeRunLineupItem {

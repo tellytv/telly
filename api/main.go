@@ -46,6 +46,7 @@ func ServeAPI(cc *context.CContext) {
 	apiGroup.GET("/lineups", wrapContext(cc, getLineups))
 	apiGroup.POST("/lineups", wrapContext(cc, addLineup))
 	apiGroup.GET("/lineups/:lineupId", lineupRoute(cc, getLineup))
+	apiGroup.PUT("/lineups/:lineupId/channels", lineupRoute(cc, updateLineupChannels))
 	apiGroup.POST("/lineups/:lineupId/channels", lineupRoute(cc, addLineupChannel))
 	apiGroup.GET("/lineup/scan", scanM3U)
 

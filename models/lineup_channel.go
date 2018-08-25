@@ -39,14 +39,25 @@ type LineupChannel struct {
 	Favorite       bool       `db:"favorite"`
 	CreatedAt      *time.Time `db:"created_at"`
 
-	VideoTrack   *VideoSourceTrack
-	GuideChannel *GuideSourceChannel
-	HDHR         *HDHomeRunLineupItem
+	VideoTrack   *VideoSourceTrack    `json:",omitempty"`
+	GuideChannel *GuideSourceChannel  `json:",omitempty"`
+	HDHR         *HDHomeRunLineupItem `json:",omitempty"`
 
 	lineup *SQLLineup
 }
 
 func (l *LineupChannel) Fill(api *APICollection) {
+	if l.lineup == nil {
+		// Need to get the address and port number to properly fill
+		lineup, lineupErr := api.Lineup.GetLineupByID(l.LineupID, false)
+		if lineupErr != nil {
+			log.WithError(lineupErr).Panicln("error getting lineup during LineupChannel fill")
+			return
+		}
+
+		l.lineup = lineup
+	}
+
 	gChannel, gChannelErr := api.GuideSourceChannel.GetGuideSourceChannelByID(l.GuideChannelID, true)
 	if gChannelErr != nil {
 		log.WithError(gChannelErr).Panicln("error getting channel during LineupChannel fill")
@@ -76,9 +87,10 @@ func (l *LineupChannel) HDHomeRunLineupItem() *HDHomeRunLineupItem {
 // LineupChannelAPI contains all methods for the User struct
 type LineupChannelAPI interface {
 	InsertLineupChannel(channelStruct LineupChannel) (*LineupChannel, error)
+	UpsertLineupChannel(channelStruct LineupChannel) (*LineupChannel, error)
 	DeleteLineupChannel(channelID int) (*LineupChannel, error)
-	UpdateLineupChannel(channelID int, description string) (*LineupChannel, error)
-	GetLineupChannelByID(id int) (*LineupChannel, error)
+	UpdateLineupChannel(channelStruct LineupChannel) (*LineupChannel, error)
+	GetLineupChannelByID(lineupID int, channelNumber string) (*LineupChannel, error)
 	GetChannelsForLineup(lineupID int, expanded bool) ([]LineupChannel, error)
 }
 
@@ -112,21 +124,22 @@ func (db *LineupChannelDB) InsertLineupChannel(channelStruct LineupChannel) (*Li
 	return &channel, err
 }
 
+// UpsertLineupChannel upserts a LineupChannel in the database.
+func (db *LineupChannelDB) UpsertLineupChannel(channelStruct LineupChannel) (*LineupChannel, error) {
+	if channelStruct.ID != 0 {
+		return db.UpdateLineupChannel(channelStruct)
+	}
+	return db.InsertLineupChannel(channelStruct)
+}
+
 // GetLineupChannelByID returns a single LineupChannel for the given ID.
-func (db *LineupChannelDB) GetLineupChannelByID(id int) (*LineupChannel, error) {
+func (db *LineupChannelDB) GetLineupChannelByID(lineupID int, channelNumber string) (*LineupChannel, error) {
 	var channel LineupChannel
-	err := db.SQL.Get(&channel, fmt.Sprintf(`%s WHERE C.id = $1`, baseLineupChannelQuery), id)
+	err := db.SQL.Get(&channel, fmt.Sprintf(`%s WHERE C.lineup_id = $1 AND C.channel_number = $2`, baseLineupChannelQuery), lineupID, channelNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	// Need to get the address and port number to properly fill
-	lineup, lineupErr := db.Collection.Lineup.GetLineupByID(channel.LineupID, false)
-	if lineupErr != nil {
-		return nil, lineupErr
-	}
-
-	channel.lineup = lineup
 	channel.Fill(db.Collection)
 
 	return &channel, err
@@ -140,9 +153,13 @@ func (db *LineupChannelDB) DeleteLineupChannel(channelID int) (*LineupChannel, e
 }
 
 // UpdateLineupChannel updates a channel.
-func (db *LineupChannelDB) UpdateLineupChannel(channelID int, description string) (*LineupChannel, error) {
+func (db *LineupChannelDB) UpdateLineupChannel(channelStruct LineupChannel) (*LineupChannel, error) {
 	channel := LineupChannel{}
-	err := db.SQL.Get(&channel, `UPDATE lineup_channel SET description = $2 WHERE id = $1 RETURNING *`, channelID, description)
+	_, err := db.SQL.NamedExec(`UPDATE lineup_channel SET lineup_id = :lineup_id, title = :title, channel_number = :channel_number, video_track_id = :video_track_id, guide_channel_id = :guide_channel_id, favorite = :favorite, hd =:hd WHERE id = :id`, channelStruct)
+	if err != nil {
+		return &channel, err
+	}
+	err = db.SQL.Get(&channel, "SELECT * FROM lineup_channel WHERE id = $1", channelStruct.ID)
 	return &channel, err
 }
 

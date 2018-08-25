@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -50,7 +49,7 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.SQLLineup
 	router.POST("/lineup.post", scanChannels(lineup))
 	router.GET("/lineup.json", serveHDHRLineup(hdhrItems))
 	router.GET("/lineup.xml", serveHDHRLineup(hdhrItems))
-	router.GET("/auto/:channelID", stream(cc, lineup))
+	router.GET("/auto/:channelNumber", stream(cc, lineup))
 
 	baseAddr := fmt.Sprintf("%s:%d", lineup.ListenAddress, lineup.Port)
 
@@ -135,8 +134,8 @@ func discovery(data models.DiscoveryData) gin.HandlerFunc {
 }
 
 type hdhrLineupContainer struct {
-	XMLName  xml.Name `xml:"Lineup"    json:"-"`
-	Programs []models.HDHomeRunLineupItem
+	XMLName  xml.Name                     `xml:"Lineup"    json:"-"`
+	Programs []models.HDHomeRunLineupItem `xml:"Program"`
 }
 
 func serveHDHRLineup(hdhrItems []models.HDHomeRunLineupItem) gin.HandlerFunc {
@@ -144,7 +143,7 @@ func serveHDHRLineup(hdhrItems []models.HDHomeRunLineupItem) gin.HandlerFunc {
 		if strings.HasSuffix(c.Request.URL.String(), ".xml") {
 			buf, marshallErr := xml.MarshalIndent(hdhrLineupContainer{Programs: hdhrItems}, "", "\t")
 			if marshallErr != nil {
-				c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error marshalling lineup to XML"))
+				c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error marshalling lineup to XML: %s", marshallErr))
 			}
 			c.Data(http.StatusOK, "application/xml", []byte(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`+"\n"+string(buf)))
 			return
@@ -155,19 +154,13 @@ func serveHDHRLineup(hdhrItems []models.HDHomeRunLineupItem) gin.HandlerFunc {
 
 func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		channelID, channelIDErr := strconv.Atoi(c.Param("channelID")[1:])
-		if channelIDErr != nil {
-			c.AbortWithError(http.StatusBadRequest, channelIDErr)
-			return
-		}
-
-		channel, channelErr := cc.API.LineupChannel.GetLineupChannelByID(channelID)
+		channel, channelErr := cc.API.LineupChannel.GetLineupChannelByID(lineup.ID, c.Param("channelNumber")[1:])
 		if channelErr != nil {
 			c.AbortWithError(http.StatusInternalServerError, channelErr)
 			return
 		}
 
-		log.Infof("Serving channel number %d", channelID)
+		log.Infof("Serving channel number %s", channel.ChannelNumber)
 
 		if !viper.IsSet("iptv.ffmpeg") {
 			c.Redirect(http.StatusMovedPermanently, channel.VideoTrack.StreamURL)
@@ -212,27 +205,29 @@ func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 
 		continueStream := true
 
-		c.Stream(func(w io.Writer) bool {
+		streamVideo := func(w io.Writer) bool {
 			defer func() {
 				metrics.ActiveStreams.WithLabelValues(lineup.Name).Dec()
-				log.Infoln("Stopped streaming", channelID)
+				log.Infoln("Stopped streaming", channel.ChannelNumber)
 				if killErr := run.Process.Kill(); killErr != nil {
-					panic(killErr)
+					log.WithError(killErr).Panicln("error when killing ffmpeg")
 				}
 				continueStream = false
 				return
 			}()
 			if _, copyErr := io.Copy(w, ffmpegout); copyErr != nil {
-				log.WithError(copyErr).Errorln("Error when copying data")
+				log.WithError(copyErr).Errorln("error when streaming from ffmpeg to http")
 				continueStream = false
 				return false
 			}
 			return continueStream
-		})
+		}
+
+		c.Stream(streamVideo)
 
 		return
 
-		c.AbortWithError(http.StatusNotFound, fmt.Errorf("unknown channel number %d", channelID))
+		c.AbortWithError(http.StatusNotFound, fmt.Errorf("unknown channel number %d", channel.ChannelNumber))
 	}
 }
 

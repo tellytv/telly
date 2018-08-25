@@ -27,3 +27,29 @@ func addLineupChannel(lineup *models.SQLLineup, cc *context.CContext, c *gin.Con
 		c.JSON(http.StatusOK, newChannel)
 	}
 }
+
+func updateLineupChannels(lineup *models.SQLLineup, cc *context.CContext, c *gin.Context) {
+	newChannels := make([]models.LineupChannel, 0)
+	if c.BindJSON(&newChannels) == nil {
+		for idx, channel := range newChannels {
+			channel.LineupID = lineup.ID
+			channel.GuideChannel = nil
+			channel.HDHR = nil
+			channel.VideoTrack = nil
+			log.Infof("GOT CHANNEL %+v", channel)
+			newChannel, lineupErr := cc.API.LineupChannel.UpsertLineupChannel(channel)
+			if lineupErr != nil {
+				c.AbortWithError(http.StatusInternalServerError, lineupErr)
+				return
+			}
+			newChannel.Fill(cc.API)
+			newChannels[idx] = *newChannel
+		}
+
+		lineup.Channels = newChannels
+
+		RestartTuner(cc, lineup)
+
+		c.JSON(http.StatusOK, lineup)
+	}
+}
