@@ -7,7 +7,9 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pressly/goose"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"github.com/tellytv/telly/models"
 )
 
@@ -45,15 +47,36 @@ func NewCContext() (*CContext, error) {
 			FullTimestamp: true,
 		},
 		Hooks: make(logrus.LevelHooks),
+		Level: logrus.InfoLevel,
+	}
+
+	gooseLog := &logrus.Logger{
+		Out: os.Stderr,
+		Formatter: &logrus.TextFormatter{
+			FullTimestamp: true,
+		},
+		Hooks: make(logrus.LevelHooks),
 		Level: logrus.DebugLevel,
 	}
 
-	sql, dbErr := sqlx.Open("sqlite3", "./telly.db")
+	sql, dbErr := sqlx.Open("sqlite3", viper.GetString("database.file"))
 	if dbErr != nil {
 		log.WithError(dbErr).Panicln("Unable to open database")
 	}
 
 	sql.Exec(`PRAGMA foreign_keys = ON;`)
+
+	log.Debugln("Checking migrations status and running any required migrations...")
+
+	goose.SetLogger(gooseLog)
+
+	if dialectErr := goose.SetDialect("sqlite3"); dialectErr != nil {
+		log.WithError(dialectErr).Panicln("error setting migrations dialect")
+	}
+
+	if statusErr := goose.Status(sql.DB, "./migrations"); statusErr != nil {
+		log.WithError(statusErr).Panicln("error getting migrations status")
+	}
 
 	api := models.NewAPICollection(theCtx, sql)
 
