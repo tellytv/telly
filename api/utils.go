@@ -111,7 +111,7 @@ func newGin() *gin.Engine {
 	router.Use(cors.Default())
 	router.Use(gin.Recovery())
 
-	if viper.GetBool("log.logrequests") {
+	if viper.GetBool("log.requests") {
 		router.Use(ginrus())
 	}
 

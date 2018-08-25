@@ -53,7 +53,7 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.SQLLineup
 
 	baseAddr := fmt.Sprintf("%s:%d", lineup.ListenAddress, lineup.Port)
 
-	if viper.GetBool("discovery.ssdp") {
+	if lineup.SSDP {
 		if _, ssdpErr := setupSSDP(baseAddr, lineup.Name, lineup.DeviceUUID); ssdpErr != nil {
 			log.WithError(ssdpErr).Errorln("telly cannot advertise over ssdp")
 		}
