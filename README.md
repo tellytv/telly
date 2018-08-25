@@ -57,7 +57,7 @@ Here's an example configuration file. **You will need to create this file.**  It
 
 [[Source]]
   Provider = "Custom"
-  M3U = "http://myprovider.com/playlist.m3u"
+  M3U = "http://myprovider.com/playlist.m3u"  # These can be either URLs or fully-qualified paths.
   EPG = "http://myprovider.com/epg.xml"
 ```
 You only need one source; the ones you are not using should be commented out or deleted. The name and filter-related keys can be used with any of the sources.
