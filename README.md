@@ -44,9 +44,9 @@ Here's an example configuration file. **You will need to create this file.**  It
   Username = ""
   Password = ""
   Filter = "Sports|Premium Movies|United States.*|USA"
-  FilterKey = "tvg-name"   # FilterKey normally defaults to whatever the provider file says is best, otherwise you must set this.
-  FilterRaw = false        # FilterRaw will run your regex on the entire line instead of just specific keys.
-  Sort = "group-title"     # Sort will alphabetically sort your channels by the M3U key provided
+  FilterKey = "group-title" # FilterKey normally defaults to whatever the provider file says is best, otherwise you must set this.
+  FilterRaw = false         # FilterRaw will run your regex on the entire line instead of just specific keys.
+  Sort = "group-title"      # Sort will alphabetically sort your channels by the M3U key provided
 
 [[Source]]
   Name = ""
@@ -83,7 +83,7 @@ There are two different docker images available:
 The standard docker image for the dev branch
 
 ## tellytv/telly:dev-ffmpeg
-This docker image has ffmpeg preinstalled.  If you want to use the ffmpeg feature, use this image.  It may be safest to use this image generally, since it is not much larger than the standard image and allows you to turn the ffmpeg deatures on and off without requiring changes to your docker run command.  The examples below use this image.
+This docker image has ffmpeg preinstalled.  If you want to use the ffmpeg feature, use this image.  It may be safest to use this image generally, since it is not much larger than the standard image and allows you to turn the ffmpeg features on and off without requiring changes to your docker run command.  The examples below use this image.
 
 ## `docker run`
 ```
