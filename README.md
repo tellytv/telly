@@ -34,9 +34,9 @@ Here's an example configuration file. **You will need to create this file.**  It
   Base-Address = "0.0.0.0:6077"   # Set this to the IP address of the machine telly runs on
   Listen-Address = "0.0.0.0:6077" # this can stay as-is
 
-[SchedulesDirect]           # If you have a Schedules Direct account, fill in details
-  Username = ""             # This is under construction; Vader is the only provider
-  Password = ""             # that works with it fully at this time
+#[SchedulesDirect]           # If you have a Schedules Direct account, UNCOMMENT THIS SECTION and fill in details
+#  Username = ""             # This is under construction; Vader is the only provider
+#  Password = ""             # that works with it fully at this time
 
 [[Source]]
   Name = ""                 # Name is optional and is used mostly for logging purposes
