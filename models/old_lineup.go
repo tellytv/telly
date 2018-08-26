@@ -1,12 +1,8 @@
 package models
 
 import (
-	"compress/gzip"
 	"encoding/xml"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -18,6 +14,7 @@ import (
 	m3u "github.com/tellytv/telly/internal/m3uplus"
 	"github.com/tellytv/telly/internal/providers"
 	"github.com/tellytv/telly/internal/xmltv"
+	"github.com/tellytv/telly/utils"
 )
 
 // var channelNumberRegex = regexp.MustCompile(`^[0-9]+[[:space:]]?$`).MatchString
@@ -211,20 +208,10 @@ func (l *Lineup) processProvider(provider providers.Provider) (int, error) {
 func (l *Lineup) prepareProvider(provider providers.Provider) (*m3u.Playlist, map[string]xmltv.Channel, map[string][]xmltv.Programme, error) {
 	cacheFiles := provider.Configuration().CacheFiles
 
-	reader, m3uErr := GetM3U(provider.PlaylistURL(), cacheFiles)
+	rawPlaylist, m3uErr := utils.GetM3U(provider.PlaylistURL(), cacheFiles)
 	if m3uErr != nil {
 		log.WithError(m3uErr).Errorln("unable to get m3u file")
 		return nil, nil, nil, m3uErr
-	}
-
-	rawPlaylist, err := m3u.Decode(reader)
-	if err != nil {
-		log.WithError(err).Errorln("unable to parse m3u file")
-		return nil, nil, nil, err
-	}
-
-	if closeM3UErr := reader.Close(); closeM3UErr != nil {
-		log.WithError(closeM3UErr).Panicln("error when closing m3u reader")
 	}
 
 	channelMap, programmeMap, epgErr := l.prepareEPG(provider, cacheFiles)
@@ -267,7 +254,7 @@ func (l *Lineup) FilterTrack(provider providers.Provider, track m3u.Track) bool 
 	}
 
 	if v, ok := track.Tags[config.IncludeOnlyTag]; len(config.IncludeOnly) > 0 && ok {
-		return contains(config.IncludeOnly, v)
+		return utils.Contains(config.IncludeOnly, v)
 	}
 
 	filterRegex, regexErr := regexp.Compile(config.Filter)
@@ -304,7 +291,7 @@ func (l *Lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 	epgProgrammeMap := make(map[string][]xmltv.Programme)
 	if provider.EPGURL() != "" {
 		var epgErr error
-		epg, epgErr = GetXMLTV(provider.EPGURL(), cacheFiles)
+		epg, epgErr = utils.GetXMLTV(provider.EPGURL(), cacheFiles)
 		if epgErr != nil {
 			return epgChannelMap, epgProgrammeMap, epgErr
 		}
@@ -370,7 +357,7 @@ func (l *Lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 
 			artworkMap := make(map[string][]schedulesdirect.ProgramArtwork)
 
-			chunks := chunkStringSlice(tmsIDs, 5000)
+			chunks := utils.ChunkStringSlice(tmsIDs, 5000)
 
 			log.Infof("Making %d requests to Schedules Direct for program information, this might take a while", len(chunks))
 
@@ -394,7 +381,7 @@ func (l *Lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 				}
 			}
 
-			chunks = chunkStringSlice(artworkTMSIDs, 500)
+			chunks = utils.ChunkStringSlice(artworkTMSIDs, 500)
 
 			log.Infof("Making %d requests to Schedules Direct for artwork, this might take a while", len(chunks))
 
@@ -455,96 +442,6 @@ func (l *Lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 	return epgChannelMap, epgProgrammeMap, nil
 }
 
-func GetM3U(path string, cacheFiles bool) (io.ReadCloser, error) {
-	safePath := safeStringsRegex.ReplaceAllStringFunc(path, stringSafer)
-	log.Infof("Loading M3U from %s", safePath)
-
-	file, _, err := GetFile(path, cacheFiles)
-	if err != nil {
-		return nil, err
-	}
-
-	return file, nil
-}
-
-func GetXMLTV(path string, cacheFiles bool) (*xmltv.TV, error) {
-	safePath := safeStringsRegex.ReplaceAllStringFunc(path, stringSafer)
-	log.Infof("Loading XMLTV from %s", safePath)
-	file, _, err := GetFile(path, cacheFiles)
-	if err != nil {
-		return nil, err
-	}
-
-	decoder := xml.NewDecoder(file)
-	tvSetup := new(xmltv.TV)
-	if err := decoder.Decode(tvSetup); err != nil {
-		log.WithError(err).Errorln("Could not decode xmltv programme")
-		return nil, err
-	}
-
-	if closeXMLErr := file.Close(); closeXMLErr != nil {
-		log.WithError(closeXMLErr).Panicln("error when closing xml reader")
-	}
-
-	return tvSetup, nil
-}
-
-func GetFile(path string, cacheFiles bool) (io.ReadCloser, string, error) {
-	transport := "disk"
-
-	if strings.HasPrefix(strings.ToLower(path), "http") {
-
-		transport = "http"
-
-		req, reqErr := http.NewRequest("GET", path, nil)
-		if reqErr != nil {
-			return nil, transport, reqErr
-		}
-
-		// For whatever reason, some providers only allow access from a "real" User-Agent.
-		req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36")
-
-		resp, err := http.Get(path)
-		if err != nil {
-			return nil, transport, err
-		}
-
-		if strings.HasSuffix(strings.ToLower(path), ".gz") || resp.Header.Get("Content-Type") == "application/x-gzip" {
-			log.Infof("File (%s) is gzipp'ed, ungzipping now, this might take a while", path)
-			gz, gzErr := gzip.NewReader(resp.Body)
-			if gzErr != nil {
-				return nil, transport, gzErr
-			}
-
-			if cacheFiles {
-				return writeFile(path, transport, gz)
-			}
-
-			return gz, transport, nil
-		}
-
-		if cacheFiles {
-			return writeFile(path, transport, resp.Body)
-		}
-
-		return resp.Body, transport, nil
-	}
-
-	file, fileErr := os.Open(path)
-	if fileErr != nil {
-		return nil, transport, fileErr
-	}
-
-	return file, transport, nil
-}
-
-func writeFile(path, transport string, reader io.ReadCloser) (io.ReadCloser, string, error) {
-	// buf := new(bytes.Buffer)
-	// buf.ReadFrom(reader)
-	// buf.Bytes()
-	return reader, transport, nil
-}
-
 func containsIcon(s []xmltv.Icon, e string) bool {
 	for _, ss := range s {
 		if e == ss.Source {
@@ -552,21 +449,6 @@ func containsIcon(s []xmltv.Icon, e string) bool {
 		}
 	}
 	return false
-}
-
-func chunkStringSlice(sl []string, chunkSize int) [][]string {
-	var divided [][]string
-
-	for i := 0; i < len(sl); i += chunkSize {
-		end := i + chunkSize
-
-		if end > len(sl) {
-			end = len(sl)
-		}
-
-		divided = append(divided, sl[i:end])
-	}
-	return divided
 }
 
 func MergeSchedulesDirectAndXMLTVProgramme(programme *xmltv.Programme, sdProgram schedulesdirect.ProgramInfo, artworks []schedulesdirect.ProgramArtwork) *xmltv.Programme {
@@ -858,13 +740,4 @@ func countDigits(i int) int {
 		count = count + 1
 	}
 	return count
-}
-
-func contains(s []string, e string) bool {
-	for _, ss := range s {
-		if e == ss {
-			return true
-		}
-	}
-	return false
 }

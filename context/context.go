@@ -10,16 +10,19 @@ import (
 	"github.com/pressly/goose"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"github.com/tellytv/telly/internal/video_providers"
 	"github.com/tellytv/telly/models"
 )
 
 // CContext is a context struct that gets passed around the application.
 type CContext struct {
-	API    *models.APICollection
-	Ctx    ctx.Context
-	Lineup *models.Lineup
-	Log    *logrus.Logger
-	Tuners map[int]chan bool
+	API                  *models.APICollection
+	Ctx                  ctx.Context
+	Lineup               *models.Lineup
+	Log                  *logrus.Logger
+	Tuners               map[int]chan bool
+	GuideSources         map[int]models.GuideSource
+	VideoSourceProviders map[int]video_providers.VideoProvider
 
 	RawSQL *sqlx.DB
 }
@@ -27,12 +30,14 @@ type CContext struct {
 // Copy returns a cloned version of the input CContext minus the User and Device fields.
 func (cc *CContext) Copy() *CContext {
 	return &CContext{
-		API:    cc.API,
-		Ctx:    cc.Ctx,
-		Lineup: cc.Lineup,
-		Log:    cc.Log,
-		Tuners: cc.Tuners,
-		RawSQL: cc.RawSQL,
+		API:                  cc.API,
+		Ctx:                  cc.Ctx,
+		Lineup:               cc.Lineup,
+		Log:                  cc.Log,
+		Tuners:               cc.Tuners,
+		GuideSources:         cc.GuideSources,
+		VideoSourceProviders: cc.VideoSourceProviders,
+		RawSQL:               cc.RawSQL,
 	}
 }
 
@@ -64,7 +69,9 @@ func NewCContext() (*CContext, error) {
 		log.WithError(dbErr).Panicln("Unable to open database")
 	}
 
-	sql.Exec(`PRAGMA foreign_keys = ON;`)
+	if _, execErr := sql.Exec(`PRAGMA foreign_keys = ON;`); execErr != nil {
+		log.WithError(dbErr).Panicln("error enabling foreign keys")
+	}
 
 	log.Debugln("Checking migrations status and running any required migrations...")
 
@@ -78,6 +85,10 @@ func NewCContext() (*CContext, error) {
 		log.WithError(statusErr).Panicln("error getting migrations status")
 	}
 
+	if upErr := goose.Up(sql.DB, "./migrations"); upErr != nil {
+		log.WithError(upErr).Panicln("error migrating up")
+	}
+
 	api := models.NewAPICollection(theCtx, sql)
 
 	// lineup := models.NewLineup()
@@ -88,13 +99,29 @@ func NewCContext() (*CContext, error) {
 
 	tuners := make(map[int]chan bool)
 
+	videoSources, videoSourcesErr := api.VideoSource.GetAllVideoSources(false)
+	if videoSourcesErr != nil {
+		log.WithError(videoSourcesErr).Panicln("error initializing video sources")
+	}
+
+	videoSourceProvidersMap := make(map[int]video_providers.VideoProvider)
+
+	for _, videoSource := range videoSources {
+		providerCfg := videoSource.ProviderConfiguration()
+		provider, providerErr := providerCfg.GetProvider()
+		if providerErr != nil {
+			log.WithError(providerErr).Panicln("error initializing provider")
+		}
+		videoSourceProvidersMap[videoSource.ID] = provider
+	}
+
 	context := &CContext{
-		API: api,
-		Ctx: theCtx,
-		Log: log,
-		// Lineup: lineup,
-		Tuners: tuners,
-		RawSQL: sql,
+		API:                  api,
+		Ctx:                  theCtx,
+		Log:                  log,
+		Tuners:               tuners,
+		VideoSourceProviders: videoSourceProvidersMap,
+		RawSQL:               sql,
 	}
 
 	log.Debugln("Context: Context build complete")

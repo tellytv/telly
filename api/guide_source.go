@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/tellytv/telly/context"
 	"github.com/tellytv/telly/models"
+	"github.com/tellytv/telly/utils"
 )
 
 func addGuide(cc *context.CContext, c *gin.Context) {
@@ -29,7 +30,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 
 		log.Infoln("Detected passed config is for provider", provider.Name())
 
-		xmlTV, xmlErr := models.GetXMLTV(provider.EPGURL(), false)
+		xmlTV, xmlErr := utils.GetXMLTV(provider.EPGURL(), false)
 		if xmlErr != nil {
 			log.WithError(xmlErr).Errorln("unable to get XMLTV file")
 			c.AbortWithError(http.StatusBadRequest, xmlErr)

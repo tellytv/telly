@@ -93,12 +93,3 @@ type Provider interface {
 	RegexKey() string
 	Configuration() Configuration
 }
-
-func contains(s []string, e string) bool {
-	for _, ss := range s {
-		if e == ss {
-			return true
-		}
-	}
-	return false
-}

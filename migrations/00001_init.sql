@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS video_source (
   provider    VARCHAR(64) NULL,
   username    VARCHAR(64) NULL,
   password    VARCHAR(64) NULL,
+  base_url    TEXT,
   m3u_url     TEXT,
   max_streams INTEGER,
   imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -16,10 +17,11 @@ CREATE TABLE IF NOT EXISTS video_source_track (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   video_source_id INTEGER,
   name            TEXT,
-  tags            TEXT,
-  raw_line        TEXT,
-  stream_url      TEXT,
-  hd              BOOLEAN,
+  stream_id       INTEGER,
+  logo            TEXT,
+  type            TEXT,
+  category        TEXT,
+  epg_id          TEXT,
   imported_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY(video_source_id) REFERENCES video_source(id)

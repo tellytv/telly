@@ -162,14 +162,20 @@ func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 
 		log.Infof("Serving channel number %s", channel.ChannelNumber)
 
+		streamUrl, streamUrlErr := cc.VideoSourceProviders[channel.VideoTrack.VideoSourceID].StreamURL(channel.VideoTrack.StreamID, "ts")
+		if streamUrlErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, streamUrlErr)
+			return
+		}
+
 		if !viper.IsSet("iptv.ffmpeg") {
-			c.Redirect(http.StatusMovedPermanently, channel.VideoTrack.StreamURL)
+			c.Redirect(http.StatusMovedPermanently, streamUrl)
 			return
 		}
 
 		log.Infoln("Transcoding stream with ffmpeg")
 
-		run := exec.Command("ffmpeg", "-re", "-i", channel.VideoTrack.StreamURL, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "-progress", "pipe:2", "pipe:1")
+		run := exec.Command("ffmpeg", "-re", "-i", streamUrl, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "-progress", "pipe:2", "pipe:1")
 		ffmpegout, err := run.StdoutPipe()
 		if err != nil {
 			log.WithError(err).Errorln("StdoutPipe Error")

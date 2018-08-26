@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -30,14 +29,15 @@ func (db *VideoSourceTrackDB) tableName() string {
 }
 
 type VideoSourceTrack struct {
-	ID             int             `db:"id"`
-	VideoSourceID  int             `db:"video_source_id"`
-	Name           string          `db:"name"`
-	Tags           json.RawMessage `db:"tags"`
-	RawLine        string          `db:"raw_line"`
-	StreamURL      string          `db:"stream_url"`
-	HighDefinition bool            `db:"hd" json:"HD"`
-	ImportedAt     *time.Time      `db:"imported_at"`
+	ID            int        `db:"id"`
+	VideoSourceID int        `db:"video_source_id"`
+	Name          string     `db:"name"`
+	StreamID      int        `db:"stream_id"`
+	Logo          string     `db:"logo"`
+	Type          string     `db:"type"`
+	Category      string     `db:"category"`
+	EPGID         string     `db:"epg_id"`
+	ImportedAt    *time.Time `db:"imported_at"`
 
 	VideoSource     *VideoSource
 	VideoSourceName string
@@ -57,10 +57,11 @@ SELECT
   T.id,
   T.video_source_id,
   T.name,
-  T.tags,
-  T.raw_line,
-  T.stream_url,
-  T.hd,
+  T.stream_id,
+  T.logo,
+  T.type,
+  T.category,
+  T.epg_id,
   T.imported_at
   FROM video_source_track T`
 
@@ -68,8 +69,8 @@ SELECT
 func (db *VideoSourceTrackDB) InsertVideoSourceTrack(trackStruct VideoSourceTrack) (*VideoSourceTrack, error) {
 	track := VideoSourceTrack{}
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO video_source_track (video_source_id, name, tags, raw_line, stream_url, hd)
-    VALUES (:video_source_id, :name, :tags, :raw_line, :stream_url, :hd);`, trackStruct)
+    INSERT INTO video_source_track (video_source_id, name, stream_id, logo, type, category, epg_id)
+    VALUES (:video_source_id, :name, :stream_id, :logo, :type, :category, :epg_id);`, trackStruct)
 	if err != nil {
 		return &track, err
 	}

@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	m3u "github.com/tellytv/telly/internal/m3uplus"
 	"github.com/tellytv/telly/internal/xmltv"
+	"github.com/tellytv/telly/utils"
 )
 
 // This regex matches and extracts the following URLs.
@@ -111,7 +112,7 @@ func (v *vader) ParseTrack(track m3u.Track, channelMap map[string]xmltv.Channel)
 		return nil, nil
 	}
 
-	pChannel.Favorite = contains(v.BaseConfig.Favorites, track.Tags[favoriteTag])
+	pChannel.Favorite = utils.Contains(v.BaseConfig.Favorites, track.Tags[favoriteTag])
 
 	return pChannel, nil
 }

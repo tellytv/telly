@@ -10,29 +10,23 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/tellytv/telly/context"
-	"github.com/tellytv/telly/internal/m3uplus"
 	"github.com/tellytv/telly/models"
+	"github.com/tellytv/telly/utils"
 )
 
 func scanM3U(c *gin.Context) {
-	reader, m3uErr := models.GetM3U(c.Query("m3u_url"), false)
+	rawPlaylist, m3uErr := utils.GetM3U(c.Query("m3u_url"), false)
 	if m3uErr != nil {
 		log.WithError(m3uErr).Errorln("unable to get m3u file")
 		c.AbortWithError(http.StatusBadRequest, m3uErr)
 		return
 	}
 
-	rawPlaylist, err := m3uplus.Decode(reader)
-	if err != nil {
-		log.WithError(err).Errorln("unable to parse m3u file")
-		c.AbortWithError(http.StatusInternalServerError, err)
-	}
-
 	c.JSON(http.StatusOK, rawPlaylist)
 }
 
 func scanXMLTV(c *gin.Context) {
-	epg, epgErr := models.GetXMLTV(c.Query("epg_url"), false)
+	epg, epgErr := utils.GetXMLTV(c.Query("epg_url"), false)
 	if epgErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, epgErr)
 		return

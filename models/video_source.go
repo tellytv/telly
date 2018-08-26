@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/tellytv/telly/internal/providers"
+	"github.com/tellytv/telly/internal/video_providers"
 )
 
 // VideoSourceDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -35,6 +35,7 @@ type VideoSource struct {
 	Provider   string     `db:"provider"`
 	Username   string     `db:"username"`
 	Password   string     `db:"password"`
+	BaseURL    string     `db:"base_url"`
 	M3UURL     string     `db:"m3u_url"`
 	MaxStreams int        `db:"max_streams"`
 	ImportedAt *time.Time `db:"imported_at"`
@@ -42,13 +43,14 @@ type VideoSource struct {
 	Tracks []VideoSourceTrack `db:"tracks"`
 }
 
-func (v *VideoSource) ProviderConfiguration() *providers.Configuration {
-	return &providers.Configuration{
+func (v *VideoSource) ProviderConfiguration() *video_providers.Configuration {
+	return &video_providers.Configuration{
 		Name:     v.Name,
 		Provider: v.Provider,
 		Username: v.Username,
 		Password: v.Password,
-		M3U:      v.M3UURL,
+		BaseURL:  v.BaseURL,
+		M3UURL:   v.M3UURL,
 	}
 }
 
@@ -68,6 +70,7 @@ SELECT
   V.provider,
   V.username,
   V.password,
+  V.base_url,
   V.m3u_url,
   V.max_streams,
   V.imported_at
@@ -77,8 +80,8 @@ SELECT
 func (db *VideoSourceDB) InsertVideoSource(videoSourceStruct VideoSource) (*VideoSource, error) {
 	videoSource := VideoSource{}
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO video_source (name, provider, username, password, m3u_url, max_streams)
-    VALUES (:name, :provider, :username, :password, :m3u_url, :max_streams);`, videoSourceStruct)
+    INSERT INTO video_source (name, provider, username, password, base_url, m3u_url, max_streams)
+    VALUES (:name, :provider, :username, :password, :base_url, :m3u_url, :max_streams);`, videoSourceStruct)
 	if err != nil {
 		return &videoSource, err
 	}
