@@ -19,8 +19,9 @@ Here's an example configuration file. **You will need to create this file.**  It
   SSDP = true
 
 [IPTV]
-  Streams = 1               # number of simultaneous streams that the telly virtual DVR will be able to provide
-                            # This is often 1, but is set by your iptv provider; for example, Vaders provides 5
+  Streams = 1               # number of simultaneous streams that the telly virtual DVR will provide
+                            # This is often 1, but is set by your iptv provider; for example, 
+                            # Vaders provides 5
   Starting-Channel = 10000  # When telly assigns channel numbers it will start here
   XMLTV-Channels = true     # if true, any channel numbers specified in your M3U file will be used.
   FFMpeg = true             # if true, streams are buffered through ffmpeg; ffmpeg must be on your $PATH
@@ -34,17 +35,19 @@ Here's an example configuration file. **You will need to create this file.**  It
   Base-Address = "0.0.0.0:6077"   # Set this to the IP address of the machine telly runs on
   Listen-Address = "0.0.0.0:6077" # this can stay as-is
 
-#[SchedulesDirect]           # If you have a Schedules Direct account, UNCOMMENT THIS SECTION and fill in details
+#[SchedulesDirect]           # If you have a Schedules Direct account, fill in details and then
+                             # UNCOMMENT THIS SECTION
 #  Username = ""             # This is under construction; Vader is the only provider
 #  Password = ""             # that works with it fully at this time
 
 [[Source]]
   Name = ""                 # Name is optional and is used mostly for logging purposes
   Provider = "Vaders"       # named providers currently supported are "Vaders", "area51", "Iris"
-  Username = ""
-  Password = ""
+  Username = "YOUR_IPTV_USERNAME"
+  Password = "YOUR_IPTV_PASSWORD"
   Filter = "Sports|Premium Movies|United States.*|USA"
-  FilterKey = "group-title" # FilterKey normally defaults to whatever the provider file says is best, otherwise you must set this.
+  FilterKey = "group-title" # FilterKey normally defaults to whatever the provider file says is best, 
+                            # otherwise you must set this.
   FilterRaw = false         # FilterRaw will run your regex on the entire line instead of just specific keys.
   Sort = "group-title"      # Sort will alphabetically sort your channels by the M3U key provided
 
@@ -61,10 +64,6 @@ Here's an example configuration file. **You will need to create this file.**  It
   EPG = "http://myprovider.com/epg.xml"
 ```
 You only need one source; the ones you are not using should be commented out or deleted. The name and filter-related keys can be used with any of the sources.
-
-If you do not have a Schedules Direct account, that section can be removed or left blank.
-
-Set listen- and base-address to the IP address of the machine running telly.
 
 # FFMpeg
 
@@ -112,7 +111,7 @@ telly:
 
 # Troubleshooting
 
-Please free to open an issue if you run into any problems at all, we'll be more than happy to help.
+Please free to [open an issue](https://github.com/tellytv/telly/issues) if you run into any problems at all, we'll be more than happy to help.
 
 # Social
 
