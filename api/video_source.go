@@ -36,6 +36,8 @@ func addVideoSource(cc *context.CContext, c *gin.Context) {
 			return
 		}
 
+		cc.VideoSourceProviders[newProvider.ID] = provider
+
 		log.Infoln("Detected passed config is for provider", provider.Name())
 
 		channels, channelsErr := provider.Channels()
