@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/xml"
 	"fmt"
 	"time"
 
@@ -26,6 +27,19 @@ func newLineupChannelDB(
 
 func (db *LineupChannelDB) tableName() string {
 	return "lineup_channel"
+}
+
+// HDHomeRunLineupItem is a HDHomeRun specification compatible representation of a Track available in the lineup.
+type HDHomeRunLineupItem struct {
+	XMLName     xml.Name           `xml:"Program"    json:"-"`
+	AudioCodec  string             `xml:",omitempty" json:",omitempty"`
+	DRM         ConvertibleBoolean `xml:",omitempty" json:",omitempty"`
+	Favorite    ConvertibleBoolean `xml:",omitempty" json:",omitempty"`
+	GuideName   string             `xml:",omitempty" json:",omitempty"`
+	GuideNumber string             `xml:",omitempty" json:",omitempty"`
+	HD          ConvertibleBoolean `xml:",omitempty" json:",omitempty"`
+	URL         string             `xml:",omitempty" json:",omitempty"`
+	VideoCodec  string             `xml:",omitempty" json:",omitempty"`
 }
 
 type LineupChannel struct {

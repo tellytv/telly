@@ -19,7 +19,6 @@ import (
 type CContext struct {
 	API                  *models.APICollection
 	Ctx                  ctx.Context
-	Lineup               *models.Lineup
 	Log                  *logrus.Logger
 	Tuners               map[int]chan bool
 	GuideSourceProviders map[int]guide_providers.GuideProvider
@@ -33,7 +32,6 @@ func (cc *CContext) Copy() *CContext {
 	return &CContext{
 		API:                  cc.API,
 		Ctx:                  cc.Ctx,
-		Lineup:               cc.Lineup,
 		Log:                  cc.Log,
 		Tuners:               cc.Tuners,
 		GuideSourceProviders: cc.GuideSourceProviders,
@@ -91,12 +89,6 @@ func NewCContext() (*CContext, error) {
 	}
 
 	api := models.NewAPICollection(theCtx, sql)
-
-	// lineup := models.NewLineup()
-
-	// if scanErr := lineup.Scan(); scanErr != nil {
-	// 	log.WithError(scanErr).Panicln("Error scanning lineup!")
-	// }
 
 	tuners := make(map[int]chan bool)
 
