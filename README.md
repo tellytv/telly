@@ -10,6 +10,8 @@ It is under active develepment and things may change quickly and dramatically.  
 
 Here's an example configuration file. **You will need to create this file.**  It should be placed in `/etc/telly/telly.config.toml` or `$HOME/.telly/telly.config.toml` or `telly.config.toml` in the directory that telly is running from.
 
+> ATTENTION Windows users: be sure that there isn’t a hidden extension on the file.  Telly can't read its config file if it's named something like `telly.config.toml.txt`.
+
 ```toml
 # THIS SECTION IS REQUIRED ########################################################################
 [Discovery]                                    # most likely you won't need to change anything here
