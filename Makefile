@@ -45,3 +45,7 @@ promu:
 
 
 .PHONY: all style format build test vet tarball docker promu
+
+
+run: 
+	go run *.go

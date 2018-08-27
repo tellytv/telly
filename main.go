@@ -8,10 +8,12 @@ import (
 	"os"
 
 	"github.com/prometheus/common/version"
+	"github.com/robfig/cron"
 	"github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/tellytv/telly/api"
+	"github.com/tellytv/telly/commands"
 	"github.com/tellytv/telly/context"
 	"github.com/tellytv/telly/utils"
 )
@@ -108,6 +110,11 @@ func main() {
 	for _, lineup := range lineups {
 		api.StartTuner(cc, &lineup)
 	}
+
+	c := cron.New()
+
+	c.AddFunc("@daily", func() { commands.StartFireVideoUpdates(cc) })
+	c.AddFunc("@daily", func() { commands.StartFireGuideUpdates(cc) })
 
 	api.ServeAPI(cc)
 }
