@@ -10,7 +10,7 @@ import (
 )
 
 func addLineup(cc *context.CContext, c *gin.Context) {
-	var payload models.SQLLineup
+	var payload models.Lineup
 	if c.BindJSON(&payload) == nil {
 		newLineup, lineupErr := cc.API.Lineup.InsertLineup(payload)
 		if lineupErr != nil {
@@ -36,7 +36,7 @@ func getLineups(cc *context.CContext, c *gin.Context) {
 	c.JSON(http.StatusOK, allLineups)
 }
 
-func lineupRoute(cc *context.CContext, originalFunc func(*models.SQLLineup, *context.CContext, *gin.Context)) gin.HandlerFunc {
+func lineupRoute(cc *context.CContext, originalFunc func(*models.Lineup, *context.CContext, *gin.Context)) gin.HandlerFunc {
 	return wrapContext(cc, func(cc *context.CContext, c *gin.Context) {
 		lineupID, lineupIDErr := strconv.Atoi(c.Param("lineupId"))
 		if lineupIDErr != nil {

@@ -57,7 +57,7 @@ type LineupChannel struct {
 	GuideChannel *GuideSourceChannel  `json:",omitempty"`
 	HDHR         *HDHomeRunLineupItem `json:",omitempty"`
 
-	lineup *SQLLineup
+	lineup *Lineup
 }
 
 func (l *LineupChannel) String() string {

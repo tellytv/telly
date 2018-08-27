@@ -68,7 +68,7 @@ func (d *DiscoveryData) UPNP() upnp.RootDevice {
 	}
 }
 
-type SQLLineup struct {
+type Lineup struct {
 	ID               int        `db:"id"`
 	Name             string     `db:"name"`
 	SSDP             bool       `db:"ssdp"`
@@ -89,7 +89,7 @@ type SQLLineup struct {
 	Channels []LineupChannel
 }
 
-func (s *SQLLineup) GetDiscoveryData() DiscoveryData {
+func (s *Lineup) GetDiscoveryData() DiscoveryData {
 	baseAddr := fmt.Sprintf("http://%s:%d", s.DiscoveryAddress, s.Port)
 	return DiscoveryData{
 		FriendlyName:    s.Name,
@@ -109,11 +109,11 @@ func (s *SQLLineup) GetDiscoveryData() DiscoveryData {
 
 // LineupAPI contains all methods for the User struct
 type LineupAPI interface {
-	InsertLineup(lineupStruct SQLLineup) (*SQLLineup, error)
-	DeleteLineup(lineupID int) (*SQLLineup, error)
-	UpdateLineup(lineupID int, description string) (*SQLLineup, error)
-	GetLineupByID(id int, withChannels bool) (*SQLLineup, error)
-	GetEnabledLineups(withChannels bool) ([]SQLLineup, error)
+	InsertLineup(lineupStruct Lineup) (*Lineup, error)
+	DeleteLineup(lineupID int) (*Lineup, error)
+	UpdateLineup(lineupID int, description string) (*Lineup, error)
+	GetLineupByID(id int, withChannels bool) (*Lineup, error)
+	GetEnabledLineups(withChannels bool) ([]Lineup, error)
 }
 
 const baseLineupQuery string = `
@@ -137,8 +137,8 @@ SELECT
   FROM lineup L`
 
 // InsertLineup inserts a new Lineup into the database.
-func (db *LineupDB) InsertLineup(lineupStruct SQLLineup) (*SQLLineup, error) {
-	lineup := SQLLineup{}
+func (db *LineupDB) InsertLineup(lineupStruct Lineup) (*Lineup, error) {
+	lineup := Lineup{}
 	res, err := db.SQL.NamedExec(`
     INSERT INTO lineup (name, ssdp, listen_address, discovery_address, port, tuners, manufacturer, model_name, model_number, firmware_name, firmware_version, device_id, device_auth, device_uuid)
     VALUES (:name, :ssdp, :listen_address, :discovery_address, :port, :tuners, :manufacturer, :model_name, :model_number, :firmware_name, :firmware_version, :device_id, :device_auth, :device_uuid)`, lineupStruct)
@@ -154,8 +154,8 @@ func (db *LineupDB) InsertLineup(lineupStruct SQLLineup) (*SQLLineup, error) {
 }
 
 // GetLineupByID returns a single Lineup for the given ID.
-func (db *LineupDB) GetLineupByID(id int, withChannels bool) (*SQLLineup, error) {
-	var lineup SQLLineup
+func (db *LineupDB) GetLineupByID(id int, withChannels bool) (*Lineup, error) {
+	var lineup Lineup
 	err := db.SQL.Get(&lineup, fmt.Sprintf(`%s WHERE L.id = $1`, baseLineupQuery), id)
 	if withChannels {
 		channels, channelsErr := db.Collection.LineupChannel.GetChannelsForLineup(lineup.ID, true)
@@ -168,22 +168,22 @@ func (db *LineupDB) GetLineupByID(id int, withChannels bool) (*SQLLineup, error)
 }
 
 // DeleteLineup marks a lineup with the given ID as deleted.
-func (db *LineupDB) DeleteLineup(lineupID int) (*SQLLineup, error) {
-	lineup := SQLLineup{}
+func (db *LineupDB) DeleteLineup(lineupID int) (*Lineup, error) {
+	lineup := Lineup{}
 	err := db.SQL.Get(&lineup, `DELETE FROM lineup WHERE id = $1`, lineupID)
 	return &lineup, err
 }
 
 // UpdateLineup updates a lineup.
-func (db *LineupDB) UpdateLineup(lineupID int, description string) (*SQLLineup, error) {
-	lineup := SQLLineup{}
+func (db *LineupDB) UpdateLineup(lineupID int, description string) (*Lineup, error) {
+	lineup := Lineup{}
 	err := db.SQL.Get(&lineup, `UPDATE lineup SET description = $2 WHERE id = $1 RETURNING *`, lineupID, description)
 	return &lineup, err
 }
 
 // GetEnabledLineups returns all enabled lineups in the database.
-func (db *LineupDB) GetEnabledLineups(withChannels bool) ([]SQLLineup, error) {
-	lineups := make([]SQLLineup, 0)
+func (db *LineupDB) GetEnabledLineups(withChannels bool) ([]Lineup, error) {
+	lineups := make([]Lineup, 0)
 	err := db.SQL.Select(&lineups, baseLineupQuery)
 	if withChannels {
 		for idx, lineup := range lineups {

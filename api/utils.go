@@ -113,14 +113,14 @@ func newGin() *gin.Engine {
 	return router
 }
 
-func StartTuner(cc *context.CContext, lineup *models.SQLLineup) {
+func StartTuner(cc *context.CContext, lineup *models.Lineup) {
 	tunerChan := make(chan bool)
 	cc.Tuners[lineup.ID] = tunerChan
 	go ServeLineup(cc, tunerChan, lineup)
 	return
 }
 
-func RestartTuner(cc *context.CContext, lineup *models.SQLLineup) {
+func RestartTuner(cc *context.CContext, lineup *models.Lineup) {
 	if tuner, ok := cc.Tuners[lineup.ID]; ok {
 		tuner <- true
 	}

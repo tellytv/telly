@@ -22,7 +22,7 @@ import (
 	"github.com/tellytv/telly/models"
 )
 
-func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.SQLLineup) {
+func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.Lineup) {
 	channels, channelsErr := cc.API.LineupChannel.GetChannelsForLineup(lineup.ID, true)
 	if channelsErr != nil {
 		log.WithError(channelsErr).Errorln("error getting channels in lineup")
@@ -184,7 +184,7 @@ func serveHDHRLineup(hdhrItems []models.HDHomeRunLineupItem) gin.HandlerFunc {
 	}
 }
 
-func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
+func stream(cc *ccontext.CContext, lineup *models.Lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		channel, channelErr := cc.API.LineupChannel.GetLineupChannelByID(lineup.ID, c.Param("channelNumber")[1:])
 		if channelErr != nil {
@@ -269,7 +269,7 @@ func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 	}
 }
 
-func scanChannels(lineup *models.SQLLineup) gin.HandlerFunc {
+func scanChannels(lineup *models.Lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		scanAction := c.Query("scan")
 		if scanAction == "start" {
@@ -287,7 +287,7 @@ func scanChannels(lineup *models.SQLLineup) gin.HandlerFunc {
 	}
 }
 
-func lineupStatus(lineup *models.SQLLineup) gin.HandlerFunc {
+func lineupStatus(lineup *models.Lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		payload := LineupStatus{
 			ScanInProgress: models.ConvertibleBoolean(false),
@@ -295,7 +295,7 @@ func lineupStatus(lineup *models.SQLLineup) gin.HandlerFunc {
 			Source:         "Cable",
 			SourceList:     []string{"Cable"},
 		}
-		// FIXME: Implement a scan param on SQLLineup.
+		// FIXME: Implement a scan param on Lineup.
 		if false {
 			payload = LineupStatus{
 				ScanInProgress: models.ConvertibleBoolean(true),

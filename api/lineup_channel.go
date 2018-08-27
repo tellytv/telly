@@ -8,11 +8,11 @@ import (
 	"github.com/tellytv/telly/models"
 )
 
-func getLineup(lineup *models.SQLLineup, cc *context.CContext, c *gin.Context) {
+func getLineup(lineup *models.Lineup, cc *context.CContext, c *gin.Context) {
 	c.JSON(http.StatusOK, lineup)
 }
 
-func addLineupChannel(lineup *models.SQLLineup, cc *context.CContext, c *gin.Context) {
+func addLineupChannel(lineup *models.Lineup, cc *context.CContext, c *gin.Context) {
 	var payload models.LineupChannel
 	if c.BindJSON(&payload) == nil {
 		payload.LineupID = lineup.ID
@@ -28,7 +28,7 @@ func addLineupChannel(lineup *models.SQLLineup, cc *context.CContext, c *gin.Con
 	}
 }
 
-func updateLineupChannels(lineup *models.SQLLineup, cc *context.CContext, c *gin.Context) {
+func updateLineupChannels(lineup *models.Lineup, cc *context.CContext, c *gin.Context) {
 	newChannels := make([]models.LineupChannel, 0)
 	if c.BindJSON(&newChannels) == nil {
 		for idx, channel := range newChannels {
@@ -36,7 +36,6 @@ func updateLineupChannels(lineup *models.SQLLineup, cc *context.CContext, c *gin
 			channel.GuideChannel = nil
 			channel.HDHR = nil
 			channel.VideoTrack = nil
-			log.Infof("GOT CHANNEL %+v", channel)
 			newChannel, lineupErr := cc.API.LineupChannel.UpsertLineupChannel(channel)
 			if lineupErr != nil {
 				c.AbortWithError(http.StatusInternalServerError, lineupErr)
