@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -31,13 +32,14 @@ func (db *GuideSourceDB) tableName() string {
 
 // GuideSource describes a source of EPG data.
 type GuideSource struct {
-	ID         int        `db:"id"`
-	Name       string     `db:"name"`
-	Provider   string     `db:"provider"`
-	Username   string     `db:"username"`
-	Password   string     `db:"password"`
-	URL        string     `db:"xmltv_url"`
-	ImportedAt *time.Time `db:"imported_at"`
+	ID           int             `db:"id"`
+	Name         string          `db:"name"`
+	Provider     string          `db:"provider"`
+	Username     string          `db:"username"`
+	Password     string          `db:"password"`
+	URL          string          `db:"xmltv_url"`
+	ProviderData json.RawMessage `db:"provider_data"`
+	ImportedAt   *time.Time      `db:"imported_at"`
 
 	Channels []GuideSourceChannel `db:"-"`
 }
@@ -55,7 +57,7 @@ func (g *GuideSource) ProviderConfiguration() *guideproviders.Configuration {
 
 // GuideSourceAPI contains all methods for the User struct
 type GuideSourceAPI interface {
-	InsertGuideSource(guideSourceStruct GuideSource) (*GuideSource, error)
+	InsertGuideSource(guideSourceStruct GuideSource, providerData interface{}) (*GuideSource, error)
 	DeleteGuideSource(guideSourceID int) (*GuideSource, error)
 	UpdateGuideSource(guideSourceID int, description string) (*GuideSource, error)
 	GetGuideSourceByID(id int) (*GuideSource, error)
@@ -71,15 +73,24 @@ SELECT
   G.username,
   G.password,
   G.xmltv_url,
+  G.provider_data,
   G.imported_at
   FROM guide_source G`
 
 // InsertGuideSource inserts a new GuideSource into the database.
-func (db *GuideSourceDB) InsertGuideSource(guideSourceStruct GuideSource) (*GuideSource, error) {
+func (db *GuideSourceDB) InsertGuideSource(guideSourceStruct GuideSource, providerData interface{}) (*GuideSource, error) {
 	guideSource := GuideSource{}
+
+	providerDataJSON, providerDataJSONErr := json.Marshal(providerData)
+	if providerDataJSONErr != nil {
+		return nil, fmt.Errorf("error when marshalling providerData for use in guide_source_programme insert: %s", providerDataJSONErr)
+	}
+
+	guideSourceStruct.ProviderData = providerDataJSON
+
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO guide_source (name, provider, username, password, xmltv_url)
-    VALUES (:name, :provider, :username, :password, :xmltv_url);`, guideSourceStruct)
+    INSERT INTO guide_source (name, provider, username, password, xmltv_url, provider_data)
+    VALUES (:name, :provider, :username, :password, :xmltv_url, :provider_data);`, guideSourceStruct)
 	if err != nil {
 		return &guideSource, err
 	}

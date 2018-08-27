@@ -11,7 +11,7 @@ import (
 func addGuide(cc *context.CContext, c *gin.Context) {
 	var payload models.GuideSource
 	if c.BindJSON(&payload) == nil {
-		newGuide, providerErr := cc.API.GuideSource.InsertGuideSource(payload)
+		newGuide, providerErr := cc.API.GuideSource.InsertGuideSource(payload, nil)
 		if providerErr != nil {
 			c.AbortWithError(http.StatusInternalServerError, providerErr)
 			return
@@ -37,7 +37,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 		}
 
 		for _, channel := range channels {
-			newChannel, newChannelErr := cc.API.GuideSourceChannel.InsertGuideSourceChannel(newGuide.ID, channel)
+			newChannel, newChannelErr := cc.API.GuideSourceChannel.InsertGuideSourceChannel(newGuide.ID, channel, nil)
 			if newChannelErr != nil {
 				log.WithError(newChannelErr).Errorln("Error creating new guide source channel!")
 				c.AbortWithError(http.StatusInternalServerError, newChannelErr)

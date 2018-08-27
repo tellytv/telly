@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"regexp"
 
 	"github.com/prometheus/common/version"
 	"github.com/sirupsen/logrus"
@@ -114,12 +113,6 @@ func main() {
 }
 
 func validateConfig() {
-	if viper.IsSet("filter.regexstr") {
-		if _, regexErr := regexp.Compile(viper.GetString("filter.regex")); regexErr != nil {
-			log.WithError(regexErr).Panicln("Error when compiling regex, is it valid?")
-		}
-	}
-
 	var addrErr error
 	if _, addrErr = net.ResolveTCPAddr("tcp", viper.GetString("web.listenaddress")); addrErr != nil {
 		log.WithError(addrErr).Panic("Error when parsing Listen address, please check the address and try again.")

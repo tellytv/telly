@@ -33,11 +33,12 @@ func (db *GuideSourceChannelDB) tableName() string {
 
 // GuideSourceChannel is a single channel in a guide providers lineup.
 type GuideSourceChannel struct {
-	ID         int             `db:"id"`
-	GuideID    int             `db:"guide_id"`
-	XMLTVID    string          `db:"xmltv_id"`
-	Data       json.RawMessage `db:"data"`
-	ImportedAt *time.Time      `db:"imported_at"`
+	ID           int             `db:"id"`
+	GuideID      int             `db:"guide_id"`
+	XMLTVID      string          `db:"xmltv_id"`
+	ProviderData json.RawMessage `db:"provider_data"`
+	Data         json.RawMessage `db:"data"`
+	ImportedAt   *time.Time      `db:"imported_at"`
 
 	GuideSource     *GuideSource
 	GuideSourceName string
@@ -46,7 +47,7 @@ type GuideSourceChannel struct {
 
 // GuideSourceChannelAPI contains all methods for the User struct
 type GuideSourceChannelAPI interface {
-	InsertGuideSourceChannel(guideID int, channel guideproviders.Channel) (*GuideSourceChannel, error)
+	InsertGuideSourceChannel(guideID int, channel guideproviders.Channel, providerData interface{}) (*GuideSourceChannel, error)
 	DeleteGuideSourceChannel(channelID int) (*GuideSourceChannel, error)
 	UpdateGuideSourceChannel(channelID int, description string) (*GuideSourceChannel, error)
 	GetGuideSourceChannelByID(id int, expanded bool) (*GuideSourceChannel, error)
@@ -58,26 +59,33 @@ SELECT
   G.id,
   G.guide_id,
   G.xmltv_id,
+  G.provider_data,
   G.data,
   G.imported_at
   FROM guide_source_channel G`
 
 // InsertGuideSourceChannel inserts a new GuideSourceChannel into the database.
-func (db *GuideSourceChannelDB) InsertGuideSourceChannel(guideID int, channel guideproviders.Channel) (*GuideSourceChannel, error) {
-	marshalled, marshalErr := json.Marshal(channel)
-	if marshalErr != nil {
-		return nil, marshalErr
+func (db *GuideSourceChannelDB) InsertGuideSourceChannel(guideID int, channel guideproviders.Channel, providerData interface{}) (*GuideSourceChannel, error) {
+	channelJSON, channelJSONErr := json.Marshal(channel)
+	if channelJSONErr != nil {
+		return nil, fmt.Errorf("error when marshalling guideproviders.Channel for use in guide_source_channel insert: %s", channelJSONErr)
+	}
+
+	providerDataJSON, providerDataJSONErr := json.Marshal(providerData)
+	if providerDataJSONErr != nil {
+		return nil, fmt.Errorf("error when marshalling providerData for use in guide_source_programme insert: %s", providerDataJSONErr)
 	}
 
 	insertingChannel := GuideSourceChannel{
-		GuideID: guideID,
-		XMLTVID: channel.ID,
-		Data:    marshalled,
+		GuideID:      guideID,
+		XMLTVID:      channel.ID,
+		Data:         channelJSON,
+		ProviderData: providerDataJSON,
 	}
 
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO guide_source_channel (guide_id, xmltv_id, data)
-    VALUES (:guide_id, :xmltv_id, :data)`, insertingChannel)
+    INSERT INTO guide_source_channel (guide_id, xmltv_id, data, provider_data)
+    VALUES (:guide_id, :xmltv_id, :data, :provider_data)`, insertingChannel)
 	if err != nil {
 		return nil, err
 	}

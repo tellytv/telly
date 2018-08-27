@@ -56,7 +56,7 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.Lineup) {
 			}
 
 			for _, programme := range schedule {
-				_, programmeErr := cc.API.GuideSourceProgramme.InsertGuideSourceProgramme(guideSource.ID, programme)
+				_, programmeErr := cc.API.GuideSourceProgramme.InsertGuideSourceProgramme(guideSource.ID, programme, nil)
 				if programmeErr != nil {
 					log.WithError(programmeErr).Errorln("error while inserting programmes")
 					return

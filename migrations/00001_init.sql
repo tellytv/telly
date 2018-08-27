@@ -28,19 +28,21 @@ CREATE TABLE IF NOT EXISTS video_source_track (
 );
 
 CREATE TABLE IF NOT EXISTS guide_source (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  name        TEXT,
-  provider    VARCHAR(64) NULL,
-  username    VARCHAR(64) NULL,
-  password    VARCHAR(64) NULL,
-  xmltv_url   TEXT,
-  imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  name           TEXT,
+  provider       VARCHAR(64) NULL,
+  username       VARCHAR(64) NULL,
+  password       VARCHAR(64) NULL,
+  xmltv_url      TEXT,
+  provider_data  TEXT,
+  imported_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS guide_source_channel (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   guide_id        INTEGER,
   xmltv_id        TEXT,
+  provider_data   TEXT,
   data            TEXT,
   imported_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -54,6 +56,7 @@ CREATE TABLE IF NOT EXISTS guide_source_programme (
   start           TIMESTAMP,
   end             TIMESTAMP,
   date            DATE,
+  provider_data   TEXT,
   data            TEXT,
   imported_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 

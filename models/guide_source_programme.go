@@ -33,20 +33,21 @@ func (db *GuideSourceProgrammeDB) tableName() string {
 
 // GuideSourceProgramme is a single programme available in a guide providers lineup.
 type GuideSourceProgramme struct {
-	GuideID    int             `db:"guide_id"`
-	Channel    string          `db:"channel"`
-	StartTime  *time.Time      `db:"start"`
-	EndTime    *time.Time      `db:"end"`
-	Date       *time.Time      `db:"date,omitempty"`
-	Data       json.RawMessage `db:"data"`
-	ImportedAt *time.Time      `db:"imported_at"`
+	GuideID      int             `db:"guide_id"`
+	Channel      string          `db:"channel"`
+	ProviderData json.RawMessage `db:"provider_data"`
+	StartTime    *time.Time      `db:"start"`
+	EndTime      *time.Time      `db:"end"`
+	Date         *time.Time      `db:"date,omitempty"`
+	Data         json.RawMessage `db:"data"`
+	ImportedAt   *time.Time      `db:"imported_at"`
 
 	XMLTV *xmltv.Programme `json:"-"`
 }
 
 // GuideSourceProgrammeAPI contains all methods for the User struct
 type GuideSourceProgrammeAPI interface {
-	InsertGuideSourceProgramme(guideID int, programme xmltv.Programme) (*GuideSourceProgramme, error)
+	InsertGuideSourceProgramme(guideID int, programme xmltv.Programme, providerData interface{}) (*GuideSourceProgramme, error)
 	DeleteGuideSourceProgramme(channelID int) (*GuideSourceProgramme, error)
 	UpdateGuideSourceProgramme(channelID int, description string) (*GuideSourceProgramme, error)
 	GetGuideSourceProgrammeByID(id int) (*GuideSourceProgramme, error)
@@ -59,6 +60,7 @@ const baseGuideSourceProgrammeQuery string = `
 SELECT
   G.guide_id,
   G.channel,
+  G.provider_data,
   G.start,
   G.end,
   G.date,
@@ -67,25 +69,31 @@ SELECT
   FROM guide_source_programme G`
 
 // InsertGuideSourceProgramme inserts a new GuideSourceProgramme into the database.
-func (db *GuideSourceProgrammeDB) InsertGuideSourceProgramme(guideID int, programme xmltv.Programme) (*GuideSourceProgramme, error) {
-	marshalled, marshalErr := json.Marshal(programme)
-	if marshalErr != nil {
-		return nil, fmt.Errorf("error when marshalling xmltv.Programme for use in guide_source_programme insert: %s", marshalErr)
+func (db *GuideSourceProgrammeDB) InsertGuideSourceProgramme(guideID int, programme xmltv.Programme, providerData interface{}) (*GuideSourceProgramme, error) {
+	programmeJSON, programmeMarshalErr := json.Marshal(programme)
+	if programmeMarshalErr != nil {
+		return nil, fmt.Errorf("error when marshalling xmltv.Programme for use in guide_source_programme insert: %s", programmeMarshalErr)
+	}
+
+	providerDataJSON, providerDataJSONErr := json.Marshal(programme)
+	if providerDataJSONErr != nil {
+		return nil, fmt.Errorf("error when marshalling providerData for use in guide_source_programme insert: %s", providerDataJSONErr)
 	}
 
 	date := time.Time(programme.Date)
 	insertingProgramme := GuideSourceProgramme{
-		GuideID:   guideID,
-		Channel:   programme.Channel,
-		StartTime: &programme.Start.Time,
-		EndTime:   &programme.Stop.Time,
-		Date:      &date,
-		Data:      marshalled,
+		GuideID:      guideID,
+		Channel:      programme.Channel,
+		ProviderData: providerDataJSON,
+		StartTime:    &programme.Start.Time,
+		EndTime:      &programme.Stop.Time,
+		Date:         &date,
+		Data:         programmeJSON,
 	}
 
 	res, err := db.SQL.NamedExec(`
-    INSERT OR REPLACE INTO guide_source_programme (guide_id, channel, start, end, date, data)
-    VALUES (:guide_id, :channel, :start, :end, :date, :data)`, insertingProgramme)
+    INSERT OR REPLACE INTO guide_source_programme (guide_id, channel, provider_data, start, end, date, data)
+    VALUES (:guide_id, :channel, :provider_data, :start, :end, :date, :data)`, insertingProgramme)
 	if err != nil {
 		return nil, fmt.Errorf("error when inserting guide_source_programme row: %s", err)
 	}
