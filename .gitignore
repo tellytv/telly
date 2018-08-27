@@ -12,3 +12,4 @@ vendor/
 *.tar.gz
 telly.config.*
 *.db
+.gometalinter-*
