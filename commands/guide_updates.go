@@ -5,7 +5,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/tellytv/telly/context"
-	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
 var (
@@ -17,8 +16,6 @@ var (
 		Hooks: make(logrus.LevelHooks),
 		Level: logrus.DebugLevel,
 	}
-
-	prom = ginprometheus.NewPrometheus("http")
 )
 
 // FireGuideUpdatesCommand Command to fire one off video source updates
