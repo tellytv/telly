@@ -39,7 +39,8 @@ func TestDecode(t *testing.T) {
 	}
 
 	ch := Channel{
-		ID: "I10436.labs.zap2it.com",
+		XMLName: xml.Name{Space: "", Local: "channel"},
+		ID:      "I10436.labs.zap2it.com",
 		DisplayNames: []CommonElement{
 			CommonElement{
 				Value: "13 KERA",
@@ -76,6 +77,7 @@ func TestDecode(t *testing.T) {
 	loc := time.FixedZone("", -6*60*60)
 	date := time.Date(2008, 07, 11, 0, 0, 0, 0, time.UTC)
 	pr := Programme{
+		XMLName: xml.Name{Space: "", Local: "programme"},
 		ID:      "someId",
 		Date:    Date(date),
 		Channel: "I10436.labs.zap2it.com",
@@ -125,7 +127,7 @@ func TestDecode(t *testing.T) {
 			Stereo: "stereo",
 		},
 		PreviouslyShown: &PreviouslyShown{
-			Start: "20080711000000",
+			Start: Time{time.Date(2008, 07, 11, 0, 0, 0, 0, time.UTC)},
 		},
 		Subtitles: []Subtitle{
 			Subtitle{

@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/net/html/charset"
@@ -25,7 +26,11 @@ func (t *Time) MarshalXMLAttr(name xml.Name) (xml.Attr, error) {
 
 // UnmarshalXMLAttr is used to unmarshal a time in the XMLTV format to a time.Time.
 func (t *Time) UnmarshalXMLAttr(attr xml.Attr) error {
-	t1, err := time.Parse("20060102150405 -0700", attr.Value)
+	fmtStr := "20060102150405"
+	if strings.Contains(attr.Value, " ") {
+		fmtStr = "20060102150405 -0700"
+	}
+	t1, err := time.Parse(fmtStr, attr.Value)
 	if err != nil {
 		return err
 	}
