@@ -63,7 +63,7 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 		}
 	}
 
-	extendedProgramInfo := make(map[string]sdProgramContainer, 0)
+	extendedProgramInfo := make(map[string]schedulesdirect.ProgramInfo, 0)
 
 	programsWithArtwork := make(map[string]struct{}, 0)
 
@@ -75,9 +75,7 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 		}
 
 		for _, program := range moreInfo {
-			extendedProgramInfo[program.ProgramID] = sdProgramContainer{
-				Info: program,
-			}
+			extendedProgramInfo[program.ProgramID] = program
 			if program.HasArtwork() {
 				programsWithArtwork[program.ProgramID] = struct{}{}
 			}
@@ -125,27 +123,27 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 
 			// Now for the fields that have to be parsed.
 			xmlProgramme.Titles = make([]xmltv.CommonElement, 0)
-			for _, sdTitle := range programInfo.Info.Titles {
+			for _, sdTitle := range programInfo.Titles {
 				xmlProgramme.Titles = append(xmlProgramme.Titles, xmltv.CommonElement{
 					Value: sdTitle.Title120,
 				})
 			}
 
-			if programInfo.Info.EpisodeTitle150 != "" {
+			if programInfo.EpisodeTitle150 != "" {
 				xmlProgramme.SecondaryTitles = []xmltv.CommonElement{xmltv.CommonElement{
-					Value: programInfo.Info.EpisodeTitle150,
+					Value: programInfo.EpisodeTitle150,
 				}}
 			}
 
 			xmlProgramme.Descriptions = make([]xmltv.CommonElement, 0)
-			for _, sdDescription := range programInfo.Info.GetOrderedDescriptions() {
+			for _, sdDescription := range programInfo.GetOrderedDescriptions() {
 				xmlProgramme.Descriptions = append(xmlProgramme.Descriptions, xmltv.CommonElement{
 					Value: sdDescription.Description,
 					Lang:  sdDescription.Language,
 				})
 			}
 
-			for _, sdCast := range append(programInfo.Info.Cast, programInfo.Info.Crew...) {
+			for _, sdCast := range append(programInfo.Cast, programInfo.Crew...) {
 				if xmlProgramme.Credits == nil {
 					xmlProgramme.Credits = &xmltv.Credits{}
 				}
@@ -172,8 +170,8 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 				}
 			}
 
-			if programInfo.Info.Movie.Year != "" {
-				yearInt, yearIntErr := strconv.Atoi(programInfo.Info.Movie.Year)
+			if programInfo.Movie.Year != "" {
+				yearInt, yearIntErr := strconv.Atoi(programInfo.Movie.Year)
 				if yearIntErr == nil { // Date isn't that important of a field, if we hit an error while parsing just don't add date.
 					xmlProgramme.Date = xmltv.Date(time.Date(yearInt, 1, 1, 1, 1, 1, 1, time.UTC))
 				}
@@ -181,7 +179,7 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 
 			xmlProgramme.Categories = make([]xmltv.CommonElement, 0)
 			seenCategories := make(map[string]struct{})
-			for _, sdCategory := range programInfo.Info.Genres {
+			for _, sdCategory := range programInfo.Genres {
 				if _, ok := seenCategories[sdCategory]; !ok {
 					xmlProgramme.Categories = append(xmlProgramme.Categories, xmltv.CommonElement{
 						Value: sdCategory,
@@ -190,9 +188,9 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 				}
 			}
 
-			entityTypeCat := programInfo.Info.EntityType
+			entityTypeCat := programInfo.EntityType
 
-			if programInfo.Info.EntityType == "episode" {
+			if programInfo.EntityType == "episode" {
 				entityTypeCat = "series"
 			}
 
@@ -203,7 +201,7 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 			}
 
 			seenKeywords := make(map[string]struct{})
-			for _, keywords := range programInfo.Info.Keywords {
+			for _, keywords := range programInfo.Keywords {
 				for _, keyword := range keywords {
 					if _, ok := seenKeywords[keyword]; !ok {
 						xmlProgramme.Keywords = append(xmlProgramme.Keywords, xmltv.CommonElement{
@@ -214,11 +212,11 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 				}
 			}
 
-			if programInfo.Info.OfficialURL != "" {
-				xmlProgramme.URLs = []string{programInfo.Info.OfficialURL}
+			if programInfo.OfficialURL != "" {
+				xmlProgramme.URLs = []string{programInfo.OfficialURL}
 			}
 
-			if artworks, ok := allArtwork[programInfo.Info.ProgramID[:10]]; ok {
+			if artworks, ok := allArtwork[programInfo.ProgramID[:10]]; ok {
 				for _, artworkItem := range artworks {
 					if strings.HasPrefix(artworkItem.URI, "assets/") {
 						artworkItem.URI = fmt.Sprint(schedulesdirect.DefaultBaseURL, schedulesdirect.APIVersion, "/image/", artworkItem.URI)
@@ -233,17 +231,17 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 
 			xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{
 				System: "dd_progid",
-				Value:  programInfo.Info.ProgramID,
+				Value:  programInfo.ProgramID,
 			})
 
-			xmltvns := getXMLTVNumber(programInfo.Info.Metadata, airing.ProgramPart)
+			xmltvns := getXMLTVNumber(programInfo.Metadata, airing.ProgramPart)
 			if xmltvns != "" {
 				xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{System: "xmltv_ns", Value: xmltvns})
 			}
 
 			sxxexx := ""
 
-			for _, metadata := range programInfo.Info.Metadata {
+			for _, metadata := range programInfo.Metadata {
 				for _, mdProvider := range metadata {
 					if mdProvider.Season > 0 && mdProvider.Episode > 0 {
 						sxxexx = fmt.Sprintf("S%sE%s", utils.PadNumberWithZeros(mdProvider.Season, 2), utils.PadNumberWithZeros(mdProvider.Episode, 2))
@@ -294,13 +292,13 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 				xmlProgramme.Subtitles = append(xmlProgramme.Subtitles, xmltv.Subtitle{Type: "deaf-signed"})
 			}
 
-			if !time.Time(programInfo.Info.OriginalAirDate).IsZero() {
+			if !time.Time(programInfo.OriginalAirDate).IsZero() {
 				if !airing.New {
 					xmlProgramme.PreviouslyShown = &xmltv.PreviouslyShown{
-						Start: xmltv.Time{time.Time(programInfo.Info.OriginalAirDate)},
+						Start: xmltv.Time{time.Time(programInfo.OriginalAirDate)},
 					}
 				}
-				timeToUse := time.Time(programInfo.Info.OriginalAirDate)
+				timeToUse := time.Time(programInfo.OriginalAirDate)
 				if airing.New {
 					timeToUse = airing.AirDateTime
 				}
@@ -315,7 +313,7 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 			}
 
 			seenRatings := make(map[string]string)
-			for _, rating := range append(programInfo.Info.ContentRating, airing.Ratings...) {
+			for _, rating := range append(programInfo.ContentRating, airing.Ratings...) {
 				if _, ok := seenRatings[rating.Body]; !ok {
 					xmlProgramme.Ratings = append(xmlProgramme.Ratings, xmltv.Rating{
 						Value:  rating.Code,
@@ -325,8 +323,8 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 				}
 			}
 
-			for _, starRating := range programInfo.Info.Movie.QualityRating {
-				xmlProgramme.Ratings = append(xmlProgramme.Ratings, xmltv.Rating{
+			for _, starRating := range programInfo.Movie.QualityRating {
+				xmlProgramme.StarRatings = append(xmlProgramme.StarRatings, xmltv.Rating{
 					Value:  fmt.Sprintf("%s/%s", starRating.Rating, starRating.MaxRating),
 					System: starRating.RatingsBody,
 				})
@@ -472,11 +470,6 @@ func (s *SchedulesDirect) Configuration() Configuration {
 type sdStationContainer struct {
 	Station    schedulesdirect.Station
 	ChannelMap schedulesdirect.ChannelMap
-}
-
-type sdProgramContainer struct {
-	Info    schedulesdirect.ProgramInfo
-	Artwork []schedulesdirect.ProgramArtwork
 }
 
 func getXMLTVNumber(mdata []map[string]schedulesdirect.Metadata, multipartInfo schedulesdirect.Part) string {
