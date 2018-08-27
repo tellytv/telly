@@ -11,6 +11,7 @@ It is under active develepment and things may change quickly and dramatically.  
 Here's an example configuration file. **You will need to create this file.**  It should be placed in `/etc/telly/telly.config.toml` or `$HOME/.telly/telly.config.toml` or `telly.config.toml` in the directory that telly is running from.
 
 ```toml
+# THIS SECTION IS REQUIRED ########################################################################
 [Discovery]                                    # most likely you won't need to change anything here
   Device-Auth = "telly123"                     # These settings are all related to how telly identifies
   Device-ID = 12345678                         # itself to Plex.
@@ -22,6 +23,7 @@ Here's an example configuration file. **You will need to create this file.**  It
   Device-Model-Number = "HDTC-2US"
   SSDP = true
 
+# THIS SECTION IS REQUIRED ########################################################################
 [IPTV]
   Streams = 1               # number of simultaneous streams that the telly virtual DVR will provide
                             # This is often 1, but is set by your iptv provider; for example, 
@@ -31,24 +33,30 @@ Here's an example configuration file. **You will need to create this file.**  It
   FFMpeg = true             # if true, streams are buffered through ffmpeg; ffmpeg must be on your $PATH
                             # if you want to use this with Docker, be sure you use the correct docker image
   
+# THIS SECTION IS REQUIRED ########################################################################
 [Log]
   Level = "info"            # Only log messages at or above the given level. [debug, info, warn, error, fatal]
   Requests = true           # Log HTTP requests made to telly
 
+# THIS SECTION IS REQUIRED ########################################################################
 [Web]
   Base-Address = "0.0.0.0:6077"   # Set this to the IP address of the machine telly runs on
   Listen-Address = "0.0.0.0:6077" # this can stay as-is
 
+# THIS SECTION IS OPTIONAL ========================================================================
 #[SchedulesDirect]           # If you have a Schedules Direct account, fill in details and then
                              # UNCOMMENT THIS SECTION
 #  Username = ""             # This is under construction; Vader is the only provider
 #  Password = ""             # that works with it fully at this time
 
+# AT LEAST ONE SOURCE IS REQUIRED #################################################################
 [[Source]]
   Name = ""                 # Name is optional and is used mostly for logging purposes
   Provider = "Vaders"       # named providers currently supported are "Vaders", "area51", "Iris"
+# IF YOUR PROVIDER IS NOT ONE OF THE ABOVE, CONFIGURE IT AS A "Custom" PROVIDER; SEE BELOW
   Username = "YOUR_IPTV_USERNAME"
   Password = "YOUR_IPTV_PASSWORD"
+  # THE FOLLOWING KEYS ARE OPTIONAL IN THEORY, REQUIRED IN PRACTICE
   Filter = "Sports|Premium Movies|United States.*|USA"
   FilterKey = "group-title" # FilterKey normally defaults to whatever the provider file says is best, 
                             # otherwise you must set this.
@@ -60,12 +68,24 @@ Here's an example configuration file. **You will need to create this file.**  It
   Provider = "IPTV-EPG"
   Username = "M3U-Identifier"  # From http://iptv-epg.com/[M3U-Identifier].m3u
   Password = "XML-Identifier"  # From http://iptv-epg.com/[XML-Identifier].xml
-
+  # THE FOLLOWING KEYS ARE OPTIONAL HERE; IF YOU"RE USING IPTV-EPG YOU'FE PROBABLY DONE YOUR
+  # FILTERING THERE ALREADY
+  # Filter = ""
+  # FilterKey = ""
+  # FilterRaw = false
+  # Sort = ""
 
 [[Source]]
   Provider = "Custom"
   M3U = "http://myprovider.com/playlist.m3u"  # These can be either URLs or fully-qualified paths.
   EPG = "http://myprovider.com/epg.xml"
+  # THE FOLLOWING KEYS ARE OPTIONAL IN THEORY, REQUIRED IN PRACTICE
+  Filter = "Sports|Premium Movies|United States.*|USA"
+  FilterKey = "group-title" # FilterKey normally defaults to whatever the provider file says is best, 
+                            # otherwise you must set this.
+  FilterRaw = false         # FilterRaw will run your regex on the entire line instead of just specific keys.
+  Sort = "group-title"      # Sort will alphabetically sort your channels by the M3U key provided
+# END TELLY CONFIG  ###############################################################################
 ```
 You only need one source; the ones you are not using should be commented out or deleted. The name and filter-related keys can be used with any of the sources.
 
