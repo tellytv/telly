@@ -2,7 +2,7 @@
 
 IPTV proxy for Plex Live written in Golang
 
-## ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) THIS IS A PRERELEASE BETA ![#f03c15](https://placehold.it/15/f03c15/000000?text=+)
+## ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) THIS IS A DEVELOPMENT BRANCH ![#f03c15](https://placehold.it/15/f03c15/000000?text=+)
 
 It is under active develepment and things may change quickly and dramatically.  Please join the discord server if you use this branch and be prepared for some tinkering and breakage.
 
