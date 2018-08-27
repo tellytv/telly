@@ -122,6 +122,10 @@ func (m *M3U) Refresh() error {
 			}
 		}
 
+		if m.channels == nil {
+			m.channels = make(map[int]Channel)
+		}
+
 		m.channels[channelID] = Channel{
 			Name:     nameVal,
 			StreamID: channelID,
