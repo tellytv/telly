@@ -69,8 +69,9 @@ SELECT
 func (db *GuideSourceProgrammeDB) InsertGuideSourceProgramme(guideID int, programme xmltv.Programme) (*GuideSourceProgramme, error) {
 	marshalled, marshalErr := json.Marshal(programme)
 	if marshalErr != nil {
-		return nil, marshalErr
+		return nil, fmt.Errorf("error when marshalling xmltv.Programme for use in guide_source_programme insert: %s", marshalErr)
 	}
+
 	date := time.Time(programme.Date)
 	insertingProgramme := GuideSourceProgramme{
 		GuideID:   guideID,
@@ -82,23 +83,23 @@ func (db *GuideSourceProgrammeDB) InsertGuideSourceProgramme(guideID int, progra
 	}
 
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO guide_source_programme (guide_id, channel, start, end, date, data)
+    INSERT OR REPLACE INTO guide_source_programme (guide_id, channel, start, end, date, data)
     VALUES (:guide_id, :channel, :start, :end, :date, :data)`, insertingProgramme)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error when inserting guide_source_programme row: %s", err)
 	}
 	rowID, rowIDErr := res.LastInsertId()
 	if rowIDErr != nil {
-		return nil, rowIDErr
+		return nil, fmt.Errorf("error when getting last inserted row id during guide_source_programme insert: %s", rowIDErr)
 	}
 	outputProgramme := GuideSourceProgramme{}
 	if getErr := db.SQL.Get(&outputProgramme, "SELECT * FROM guide_source_programme WHERE rowid = $1", rowID); getErr != nil {
-		return nil, getErr
+		return nil, fmt.Errorf("error when selecting newly inserted row during guide_source_programme insert: %s", getErr)
 	}
 	if unmarshalErr := json.Unmarshal(outputProgramme.Data, &outputProgramme.XMLTV); unmarshalErr != nil {
-		return nil, unmarshalErr
+		return nil, fmt.Errorf("error when unmarshalling json.RawMessage to xmltv.Programme during guide_source_programme insert: %s", unmarshalErr)
 	}
-	return &outputProgramme, err
+	return &outputProgramme, nil
 }
 
 // GetGuideSourceProgrammeByID returns a single GuideSourceProgramme for the given ID.
@@ -128,7 +129,7 @@ func (db *GuideSourceProgrammeDB) UpdateGuideSourceProgramme(programmeID int, de
 // GetProgrammesForActiveChannels returns a slice of GuideSourceProgrammes for actively assigned channels.
 func (db *GuideSourceProgrammeDB) GetProgrammesForActiveChannels() ([]GuideSourceProgramme, error) {
 	programmes := make([]GuideSourceProgramme, 0)
-	err := db.SQL.Select(&programmes, fmt.Sprintf(`%s WHERE G.channel = (SELECT xmltv_id FROM guide_source_channel WHERE id IN (SELECT guide_channel_id FROM lineup_channel)) AND G.start >= datetime('now')`, baseGuideSourceProgrammeQuery))
+	err := db.SQL.Select(&programmes, fmt.Sprintf(`%s WHERE G.channel IN (SELECT xmltv_id FROM guide_source_channel WHERE id IN (SELECT guide_channel_id FROM lineup_channel)) ORDER BY start ASC`, baseGuideSourceProgrammeQuery))
 	if err != nil {
 		return nil, err
 	}

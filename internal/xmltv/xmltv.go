@@ -110,6 +110,7 @@ func (t *TV) LoadXML(f *os.File) error {
 
 // Channel details of a channel
 type Channel struct {
+	XMLName      xml.Name        `xml:"channel"        json:"-"               db:"-"`
 	DisplayNames []CommonElement `xml:"display-name"   json:"displayNames"    db:"display_names"`
 	Icons        []Icon          `xml:"icon,omitempty" json:"icons,omitempty" db:"icons,omitempty"`
 	URLs         []string        `xml:"url,omitempty"  json:"urls,omitempty"  db:"urls,omitempty"`
@@ -119,6 +120,7 @@ type Channel struct {
 
 // Programme details of a single programme transmission
 type Programme struct {
+	XMLName         xml.Name         `xml:"programme"                  json:"-"                          db:"-"`
 	ID              string           `xml:"id,attr,omitempty"          json:"id,omitempty"               db:"id,omitempty"` // not defined by standard, but often present
 	Titles          []CommonElement  `xml:"title"                      json:"titles"                     db:"titles"`
 	SecondaryTitles []CommonElement  `xml:"sub-title,omitempty"        json:"secondaryTitles,omitempty"  db:"secondary_titles,omitempty"`
@@ -236,7 +238,7 @@ type Audio struct {
 
 // PreviouslyShown When and where the programme was last shown, if known.
 type PreviouslyShown struct {
-	Start   string `xml:"start,attr,omitempty"   json:"start,omitempty"   db:"start,omitempty"`
+	Start   Time   `xml:"start,attr,omitempty"   json:"start,omitempty"   db:"start,omitempty"`
 	Channel string `xml:"channel,attr,omitempty" json:"channel,omitempty" db:"channel,omitempty"`
 }
 

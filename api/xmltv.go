@@ -1,19 +1,22 @@
 package api
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"net/http"
-	"sort"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tellytv/telly/context"
+	"github.com/tellytv/telly/internal/guide_providers"
 	"github.com/tellytv/telly/internal/xmltv"
 )
 
 func xmlTV(cc *context.CContext, c *gin.Context) {
 	epg := &xmltv.TV{
+		Date:              time.Now().Format("2006-01-02"),
 		GeneratorInfoName: "telly",
 		GeneratorInfoURL:  "https://github.com/tellytv/telly",
 	}
@@ -35,9 +38,23 @@ func xmlTV(cc *context.CContext, c *gin.Context) {
 	for _, lineup := range lineups {
 		for _, channel := range lineup.Channels {
 			epgMatchMap[channel.GuideChannel.XMLTVID] = channel.ID
+
+			var guideChannel guide_providers.Channel
+
+			if jsonErr := json.Unmarshal(channel.GuideChannel.Data, &guideChannel); jsonErr != nil {
+				c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error while unmarshalling lineupchannel to guide_providers.channel: %s", jsonErr))
+				return
+			}
+
+			xChannel := guideChannel.XMLTV()
+
+			displayNames := []xmltv.CommonElement{xmltv.CommonElement{Value: channel.Title}}
+			displayNames = append(displayNames, xChannel.DisplayNames...)
+
 			epg.Channels = append(epg.Channels, xmltv.Channel{
 				ID:           strconv.Itoa(channel.ID),
-				DisplayNames: []xmltv.CommonElement{xmltv.CommonElement{Value: channel.Title}},
+				DisplayNames: displayNames,
+				Icons:        xChannel.Icons,
 				LCN:          channel.ChannelNumber,
 			})
 		}
@@ -47,10 +64,6 @@ func xmlTV(cc *context.CContext, c *gin.Context) {
 		programme.XMLTV.Channel = strconv.Itoa(epgMatchMap[programme.Channel])
 		epg.Programmes = append(epg.Programmes, *programme.XMLTV)
 	}
-
-	sort.Slice(epg.Channels, func(i, j int) bool {
-		return epg.Channels[i].LCN < epg.Channels[j].LCN
-	})
 
 	buf, marshallErr := xml.MarshalIndent(epg, "", "\t")
 	if marshallErr != nil {

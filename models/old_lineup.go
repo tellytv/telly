@@ -320,7 +320,7 @@ func (l *Lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 							log.WithError(extractErr).Errorln("error extracting dd_progid")
 							continue
 						}
-						cleanID := fmt.Sprintf("%s%s%s", idType, padNumberWithZero(uniqID, 8), padNumberWithZero(epID, 4))
+						cleanID := fmt.Sprintf("%s%s%s", idType, utils.PadNumberWithZeros(uniqID, 8), utils.PadNumberWithZeros(epID, 4))
 						if len(cleanID) < 14 {
 							log.Warnf("found an invalid TMS ID/dd_progid, expected length of exactly 14, got %d: %s\n", len(cleanID), cleanID)
 							continue
@@ -343,7 +343,7 @@ func (l *Lineup) prepareEPG(provider providers.Provider, cacheFiles bool) (map[s
 					log.WithError(extractErr).Errorln("error extracting dd_progid")
 					continue
 				}
-				cleanID := fmt.Sprintf("%s%s%s", idType, padNumberWithZero(uniqID, 8), padNumberWithZero(epID, 4))
+				cleanID := fmt.Sprintf("%s%s%s", idType, utils.PadNumberWithZeros(uniqID, 8), utils.PadNumberWithZeros(epID, 4))
 				if len(cleanID) < 14 {
 					log.Warnf("found an invalid TMS ID/dd_progid, expected length of exactly 14, got %d: %s\n", len(cleanID), cleanID)
 					continue
@@ -492,11 +492,8 @@ func MergeSchedulesDirectAndXMLTVProgramme(programme *xmltv.Programme, sdProgram
 
 	for _, descriptions := range sdProgram.Descriptions {
 		for _, description := range descriptions {
-			if description.Description100 != "" {
-				allDescriptions = append(allDescriptions, description.Description100)
-			}
-			if description.Description1000 != "" {
-				allDescriptions = append(allDescriptions, description.Description1000)
+			if description.Description != "" {
+				allDescriptions = append(allDescriptions, description.Description)
 			}
 		}
 	}
@@ -539,10 +536,10 @@ func MergeSchedulesDirectAndXMLTVProgramme(programme *xmltv.Programme, sdProgram
 	}
 
 	if !hasXMLTVNS {
-		seasonNumber := int64(0)
-		episodeNumber := int64(0)
-		totalSeasons := int64(0)
-		totalEpisodes := int64(0)
+		seasonNumber := 0
+		episodeNumber := 0
+		totalSeasons := 0
+		totalEpisodes := 0
 		numbersFilled := false
 
 		for _, meta := range sdProgram.Metadata {
@@ -719,25 +716,4 @@ func getImageURL(imageURI string) string {
 		return imageURI
 	}
 	return fmt.Sprint(schedulesdirect.DefaultBaseURL, schedulesdirect.APIVersion, "/image/", imageURI)
-}
-
-func padNumberWithZero(value int, expectedLength int) string {
-	padded := fmt.Sprintf("%02d", value)
-	valLength := countDigits(value)
-	if valLength != expectedLength {
-		return fmt.Sprintf("%s%d", strings.Repeat("0", expectedLength-valLength), value)
-	}
-	return padded
-}
-
-func countDigits(i int) int {
-	count := 0
-	if i == 0 {
-		count = 1
-	}
-	for i != 0 {
-		i /= 10
-		count = count + 1
-	}
-	return count
 }

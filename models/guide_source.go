@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/tellytv/telly/internal/providers"
+	"github.com/tellytv/telly/internal/guide_providers"
 )
 
 // GuideSourceDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -41,13 +41,13 @@ type GuideSource struct {
 	Channels []GuideSourceChannel `db:"-"`
 }
 
-func (g *GuideSource) ProviderConfiguration() *providers.Configuration {
-	return &providers.Configuration{
+func (g *GuideSource) ProviderConfiguration() *guide_providers.Configuration {
+	return &guide_providers.Configuration{
 		Name:     g.Name,
 		Provider: g.Provider,
 		Username: g.Username,
 		Password: g.Password,
-		EPG:      g.URL,
+		XMLTVURL: g.URL,
 	}
 }
 
@@ -58,6 +58,7 @@ type GuideSourceAPI interface {
 	UpdateGuideSource(guideSourceID int, description string) (*GuideSource, error)
 	GetGuideSourceByID(id int) (*GuideSource, error)
 	GetAllGuideSources(includeChannels bool) ([]GuideSource, error)
+	GetGuideSourcesForLineup(lineupID int) ([]GuideSource, error)
 }
 
 const baseGuideSourceQuery string = `
@@ -126,4 +127,11 @@ func (db *GuideSourceDB) GetAllGuideSources(includeChannels bool) ([]GuideSource
 		return newSources, nil
 	}
 	return sources, err
+}
+
+// GetGuideSourcesForLineup returns a slice of GuideSource for the given lineup ID.
+func (db *GuideSourceDB) GetGuideSourcesForLineup(lineupID int) ([]GuideSource, error) {
+	providers := make([]GuideSource, 0)
+	err := db.SQL.Select(&providers, `SELECT * FROM guide_source WHERE id IN (SELECT guide_id FROM guide_source_channel WHERE id IN (SELECT id FROM lineup_channel WHERE lineup_id = $1))`, lineupID)
+	return providers, err
 }

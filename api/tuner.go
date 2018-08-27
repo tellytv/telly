@@ -29,9 +29,41 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.SQLLineup
 		return
 	}
 
+	guideSources, guideSourceErr := cc.API.GuideSource.GetGuideSourcesForLineup(lineup.ID)
+	if guideSourceErr != nil {
+		log.WithError(guideSourceErr).Errorln("error getting guide sources for lineup")
+		return
+	}
+
+	guideSourceUpdateMap := make(map[int][]string)
+
 	hdhrItems := make([]models.HDHomeRunLineupItem, 0)
 	for _, channel := range channels {
 		hdhrItems = append(hdhrItems, *channel.HDHR)
+
+		guideSourceUpdateMap[channel.GuideChannel.GuideSource.ID] = append(guideSourceUpdateMap[channel.GuideChannel.GuideSource.ID], channel.GuideChannel.XMLTVID)
+	}
+
+	for _, guideSource := range guideSources {
+		if channelsToGet, ok := guideSourceUpdateMap[guideSource.ID]; ok {
+			log.Infof("Beginning import of guide data from provider %s, getting channels %s", guideSource.Name, strings.Join(channelsToGet, ", "))
+			schedule, scheduleErr := cc.GuideSourceProviders[guideSource.ID].Schedule(channelsToGet)
+			if scheduleErr != nil {
+				log.WithError(scheduleErr).Errorf("error when updating schedule for provider %s", guideSource.Name)
+				return
+			}
+
+			for _, programme := range schedule {
+				_, programmeErr := cc.API.GuideSourceProgramme.InsertGuideSourceProgramme(guideSource.ID, programme)
+				if programmeErr != nil {
+					log.WithError(programmeErr).Errorln("error while inserting programmes")
+					return
+				}
+			}
+
+			log.Infof("Completed import of %d programs", len(schedule))
+
+		}
 	}
 
 	metrics.ExposedChannels.WithLabelValues(lineup.Name).Set(float64(len(channels)))

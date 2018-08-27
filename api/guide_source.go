@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/tellytv/telly/context"
 	"github.com/tellytv/telly/models"
-	"github.com/tellytv/telly/utils"
 )
 
 func addGuide(cc *context.CContext, c *gin.Context) {
@@ -20,8 +19,6 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 
 		providerCfg := newGuide.ProviderConfiguration()
 
-		log.Infof("providerCfg %+v", providerCfg)
-
 		provider, providerErr := providerCfg.GetProvider()
 		if providerErr != nil {
 			c.AbortWithError(http.StatusInternalServerError, providerErr)
@@ -30,14 +27,14 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 
 		log.Infoln("Detected passed config is for provider", provider.Name())
 
-		xmlTV, xmlErr := utils.GetXMLTV(provider.EPGURL(), false)
-		if xmlErr != nil {
-			log.WithError(xmlErr).Errorln("unable to get XMLTV file")
-			c.AbortWithError(http.StatusBadRequest, xmlErr)
+		channels, channelsErr := provider.Channels()
+		if channelsErr != nil {
+			log.WithError(channelsErr).Errorln("unable to get channels from provider")
+			c.AbortWithError(http.StatusBadRequest, channelsErr)
 			return
 		}
 
-		for _, channel := range xmlTV.Channels {
+		for _, channel := range channels {
 			newChannel, newChannelErr := cc.API.GuideSourceChannel.InsertGuideSourceChannel(newGuide.ID, channel)
 			if newChannelErr != nil {
 				log.WithError(newChannelErr).Errorln("Error creating new guide source channel!")
@@ -46,16 +43,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 			}
 			newGuide.Channels = append(newGuide.Channels, *newChannel)
 		}
-		// FIXME: Instead of importing _every_ programme when we add a new guide source, we should only import programmes for channels in a lineup.
-		// Otherwise, SQLite DB gets a lot bigger and harder to manage.
-		for _, programme := range xmlTV.Programmes {
-			_, programmeErr := cc.API.GuideSourceProgramme.InsertGuideSourceProgramme(newGuide.ID, programme)
-			if programmeErr != nil {
-				log.WithError(programmeErr).Errorln("Error creating new guide source channel during programme import!")
-				c.AbortWithError(http.StatusInternalServerError, programmeErr)
-				return
-			}
-		}
+
 		c.JSON(http.StatusOK, newGuide)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/pressly/goose"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"github.com/tellytv/telly/internal/guide_providers"
 	"github.com/tellytv/telly/internal/video_providers"
 	"github.com/tellytv/telly/models"
 )
@@ -21,7 +22,7 @@ type CContext struct {
 	Lineup               *models.Lineup
 	Log                  *logrus.Logger
 	Tuners               map[int]chan bool
-	GuideSources         map[int]models.GuideSource
+	GuideSourceProviders map[int]guide_providers.GuideProvider
 	VideoSourceProviders map[int]video_providers.VideoProvider
 
 	RawSQL *sqlx.DB
@@ -35,7 +36,7 @@ func (cc *CContext) Copy() *CContext {
 		Lineup:               cc.Lineup,
 		Log:                  cc.Log,
 		Tuners:               cc.Tuners,
-		GuideSources:         cc.GuideSources,
+		GuideSourceProviders: cc.GuideSourceProviders,
 		VideoSourceProviders: cc.VideoSourceProviders,
 		RawSQL:               cc.RawSQL,
 	}
@@ -99,6 +100,22 @@ func NewCContext() (*CContext, error) {
 
 	tuners := make(map[int]chan bool)
 
+	guideSources, guideSourcesErr := api.GuideSource.GetAllGuideSources(false)
+	if guideSourcesErr != nil {
+		log.WithError(guideSourcesErr).Panicln("error initializing video sources")
+	}
+
+	guideSourceProvidersMap := make(map[int]guide_providers.GuideProvider)
+
+	for _, guideSource := range guideSources {
+		providerCfg := guideSource.ProviderConfiguration()
+		provider, providerErr := providerCfg.GetProvider()
+		if providerErr != nil {
+			log.WithError(providerErr).Panicln("error initializing provider")
+		}
+		guideSourceProvidersMap[guideSource.ID] = provider
+	}
+
 	videoSources, videoSourcesErr := api.VideoSource.GetAllVideoSources(false)
 	if videoSourcesErr != nil {
 		log.WithError(videoSourcesErr).Panicln("error initializing video sources")
@@ -120,6 +137,7 @@ func NewCContext() (*CContext, error) {
 		Ctx:                  theCtx,
 		Log:                  log,
 		Tuners:               tuners,
+		GuideSourceProviders: guideSourceProvidersMap,
 		VideoSourceProviders: videoSourceProvidersMap,
 		RawSQL:               sql,
 	}

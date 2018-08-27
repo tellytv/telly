@@ -29,8 +29,6 @@ func addVideoSource(cc *context.CContext, c *gin.Context) {
 
 		providerCfg := newProvider.ProviderConfiguration()
 
-		log.Infof("providerCfg %+v", providerCfg)
-
 		provider, providerErr := providerCfg.GetProvider()
 		if providerErr != nil {
 			log.WithError(providerErr).Errorln("error getting provider")
