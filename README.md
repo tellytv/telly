@@ -28,7 +28,7 @@ IPTV proxy for Plex Live written in Golang
 
 1) Once `telly` is running, you can add it to Plex. **Plex Live requires Plex Pass at the time of writing**
 2) Navigate to `app.plex.tv` and make sure you're logged in. Go to Settings -> Server -> Live TV & DVR
-3) Click 'Setup' or 'Add'. Plex won't find your device, so press the text to add it manually - input `localhost:6077` (or whatever port you're using - you can change it using the `-listen` commandline argument, i.e. `-listen localhost:12345`)
+3) Click 'Setup' or 'Add'. The Telly virtual DVR should show up automatically.  If it doesn't, press the text to add it manually - input `THE_IP_WHERE_TELLY_IS:6077` (or whatever port you're using - you can change it using the `-listen` commandline argument, i.e. `-listen THE_IP_WHERE_TELLY_IS:12345`)
 4) Plex will find your device (in some cases it continues to load but the continue button becomes orange, i.e. clickable. Click it) - select the country in the bottom left and ensure Plex has found the channels. Proceed.
 5) Once you get to the channel listing, `telly` currently __doesn't__ have any idea of EPG data so it __starts the channel numbers at 10000 to avoid complications__ with selecting channels at this stage. EPG APIs will come in the future, but for now you'll have to manually match up what `telly` is telling Plex to the actual channel numbers. For UK folk, `Sky HD` is the best option I've found.
 6) Once you've matched up all the channels, hit next and Plex will start downloading necessary EPG data.
