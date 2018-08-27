@@ -4,6 +4,8 @@ IPTV proxy for Plex Live written in Golang
 
 # Setup
 
+> **If you are looking for information about the new config-file based ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) PRERELEASE BETA ![#f03c15](https://placehold.it/15/f03c15/000000?text=+), go to the [dev branch](https://github.com/tellytv/telly/tree/dev)**
+
 > **See end of setup section for an important note about channel filtering**
 
 1) Go to the releases page and download the correct version for your Operating System
