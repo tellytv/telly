@@ -39,8 +39,10 @@ func (t *Time) UnmarshalXMLAttr(attr xml.Attr) error {
 	return nil
 }
 
+// Date is the XMLTV specific formatting of a date (YYYYMMDD/20060102)
 type Date time.Time
 
+// MarshalXML is used to marshal a Go time.Time into the XMLTV Date Format.
 func (p Date) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	t := time.Time(p)
 	if t.IsZero() {
@@ -49,6 +51,7 @@ func (p Date) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	return e.EncodeElement(t.Format("20060102"), start)
 }
 
+// UnmarshalXML is used to unmarshal a time in the XMLTV Date format to a time.Time.
 func (p *Date) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
 	var content string
 	if e := d.DecodeElement(&content, &start); e != nil {
@@ -61,14 +64,15 @@ func (p *Date) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) 
 		dateFormat = "2006"
 	}
 
-	if v, e := time.Parse(dateFormat, content); e != nil {
+	v, e := time.Parse(dateFormat, content)
+	if e != nil {
 		return fmt.Errorf("the type Date field of %s is not a time, value is: %s", start.Name.Local, content)
-	} else {
-		*p = Date(v)
 	}
+	*p = Date(v)
 	return nil
 }
 
+// MarshalJSON is used to marshal a Go time.Time into the XMLTV Date Format.
 func (p Date) MarshalJSON() ([]byte, error) {
 	t := time.Time(p)
 	str := "\"" + t.Format("20060102") + "\""
@@ -76,14 +80,15 @@ func (p Date) MarshalJSON() ([]byte, error) {
 	return []byte(str), nil
 }
 
+// UnmarshalJSON is used to unmarshal a time in the XMLTV Date format to a time.Time.
 func (p *Date) UnmarshalJSON(text []byte) (err error) {
 	strDate := string(text[1 : 8+1])
 
-	if v, e := time.Parse("20060102", strDate); e != nil {
+	v, e := time.Parse("20060102", strDate)
+	if e != nil {
 		return fmt.Errorf("Date should be a time, error value is: %s", strDate)
-	} else {
-		*p = Date(v)
 	}
+	*p = Date(v)
 	return nil
 }
 

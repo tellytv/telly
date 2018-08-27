@@ -42,6 +42,7 @@ type HDHomeRunLineupItem struct {
 	VideoCodec  string             `xml:",omitempty" json:",omitempty"`
 }
 
+// LineupChannel is a single channel available in a Lineup.
 type LineupChannel struct {
 	ID             int        `db:"id"`
 	LineupID       int        `db:"lineup_id"`
@@ -64,6 +65,7 @@ func (l *LineupChannel) String() string {
 	return fmt.Sprintf("channel: %s (ch#: %s, video source name: %s, video source provider type: %s)", l.Title, l.ChannelNumber, l.VideoTrack.VideoSource.Name, l.VideoTrack.VideoSource.Provider)
 }
 
+// Fill will insert Lineup, GuideChannel and VideoTrack into the LineupChannel.
 func (l *LineupChannel) Fill(api *APICollection) {
 	if l.lineup == nil {
 		// Need to get the address and port number to properly fill
@@ -91,6 +93,7 @@ func (l *LineupChannel) Fill(api *APICollection) {
 	l.HDHR = l.HDHomeRunLineupItem()
 }
 
+// HDHomeRunLineupItem returns a HDHomeRunLineupItem for the LineupChannel.
 func (l *LineupChannel) HDHomeRunLineupItem() *HDHomeRunLineupItem {
 	return &HDHomeRunLineupItem{
 		DRM:         ConvertibleBoolean(false),

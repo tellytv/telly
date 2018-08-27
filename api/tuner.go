@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -22,6 +23,7 @@ import (
 	"github.com/tellytv/telly/models"
 )
 
+// ServeLineup starts up a server dedicated to a single Lineup.
 func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.Lineup) {
 	channels, channelsErr := cc.API.LineupChannel.GetChannelsForLineup(lineup.ID, true)
 	if channelsErr != nil {
@@ -188,26 +190,30 @@ func stream(cc *ccontext.CContext, lineup *models.Lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		channel, channelErr := cc.API.LineupChannel.GetLineupChannelByID(lineup.ID, c.Param("channelNumber")[1:])
 		if channelErr != nil {
+			if channelErr == sql.ErrNoRows {
+				c.AbortWithError(http.StatusNotFound, fmt.Errorf("unknown channel number %s", channel.ChannelNumber))
+				return
+			}
 			c.AbortWithError(http.StatusInternalServerError, channelErr)
 			return
 		}
 
 		log.Infoln("Serving", channel)
 
-		streamUrl, streamUrlErr := cc.VideoSourceProviders[channel.VideoTrack.VideoSourceID].StreamURL(channel.VideoTrack.StreamID, "ts")
-		if streamUrlErr != nil {
-			c.AbortWithError(http.StatusInternalServerError, streamUrlErr)
+		streamURL, streamURLErr := cc.VideoSourceProviders[channel.VideoTrack.VideoSourceID].StreamURL(channel.VideoTrack.StreamID, "ts")
+		if streamURLErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, streamURLErr)
 			return
 		}
 
 		if !viper.IsSet("iptv.ffmpeg") {
-			c.Redirect(http.StatusMovedPermanently, streamUrl)
+			c.Redirect(http.StatusMovedPermanently, streamURL)
 			return
 		}
 
 		log.Infoln("Transcoding stream with ffmpeg")
 
-		run := exec.Command("ffmpeg", "-re", "-i", streamUrl, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "-progress", "pipe:2", "pipe:1")
+		run := exec.Command("ffmpeg", "-re", "-i", streamURL, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "-progress", "pipe:2", "pipe:1")
 		ffmpegout, err := run.StdoutPipe()
 		if err != nil {
 			log.WithError(err).Errorln("StdoutPipe Error")
@@ -262,10 +268,6 @@ func stream(cc *ccontext.CContext, lineup *models.Lineup) gin.HandlerFunc {
 		}
 
 		c.Stream(streamVideo)
-
-		return
-
-		c.AbortWithError(http.StatusNotFound, fmt.Errorf("unknown channel number %d", channel.ChannelNumber))
 	}
 }
 
@@ -328,7 +330,7 @@ func split(data []byte, atEOF bool) (advance int, token []byte, spliterror error
 	return 0, nil, nil
 }
 
-type FFMPEGStatus struct {
+type ffMPEGStatus struct {
 	FramesProcessed string
 	CurrentTime     string
 	CurrentBitrate  string
@@ -336,8 +338,8 @@ type FFMPEGStatus struct {
 	Speed           string
 }
 
-func processFFMPEGStatus(line string) *FFMPEGStatus {
-	status := new(FFMPEGStatus)
+func processFFMPEGStatus(line string) *ffMPEGStatus {
+	status := new(ffMPEGStatus)
 	if strings.Contains(line, "frame=") && strings.Contains(line, "time=") && strings.Contains(line, "bitrate=") {
 		var re = regexp.MustCompile(`=\s+`)
 		st := re.ReplaceAllString(line, `=`)

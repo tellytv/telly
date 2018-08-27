@@ -1,4 +1,4 @@
-package video_providers
+package videoproviders
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"github.com/tellytv/telly/utils"
 )
 
+// M3U is a VideoProvider supporting M3U files.
 type M3U struct {
 	BaseConfig Configuration
 
@@ -28,18 +29,22 @@ func newM3U(config *Configuration) (VideoProvider, error) {
 	return m3u, nil
 }
 
+// Name returns the name of the VideoProvider.
 func (m *M3U) Name() string {
 	return "M3U"
 }
 
+// Categories returns a slice of Category that the provider has available.
 func (m *M3U) Categories() ([]Category, error) {
 	return m.categories, nil
 }
 
+// Formats returns a slice of strings containing the valid video formats.
 func (m *M3U) Formats() ([]string, error) {
 	return m.seenFormats, nil
 }
 
+// Channels returns a slice of Channel that the provider has available.
 func (m *M3U) Channels() ([]Channel, error) {
 	outputChannels := make([]Channel, 0)
 	for _, channel := range m.channels {
@@ -48,13 +53,15 @@ func (m *M3U) Channels() ([]Channel, error) {
 	return outputChannels, nil
 }
 
+// StreamURL returns a fully formed URL to a video stream for the given streamID and wantedFormat.
 func (m *M3U) StreamURL(streamID int, wantedFormat string) (string, error) {
 	if val, ok := m.channels[streamID]; ok {
-		return val.streamUrl, nil
+		return val.streamURL, nil
 	}
 	return "", fmt.Errorf("that channel id (%d) does not exist in the video source lineup", streamID)
 }
 
+// Refresh causes the provider to request the latest information.
 func (m *M3U) Refresh() error {
 	playlist, m3uErr := utils.GetM3U(m.BaseConfig.M3UURL, false)
 	if m3uErr != nil {
@@ -123,13 +130,14 @@ func (m *M3U) Refresh() error {
 			Category: categoryVal,
 			EPGID:    epgIDVal,
 
-			streamUrl: track.URI,
+			streamURL: track.URI,
 		}
 	}
 
 	return nil
 }
 
+// Configuration returns the base configuration backing the provider
 func (m *M3U) Configuration() Configuration {
 	return m.BaseConfig
 }

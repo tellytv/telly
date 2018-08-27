@@ -1,4 +1,4 @@
-package guide_providers
+package guideproviders
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"github.com/tellytv/telly/utils"
 )
 
+// XMLTV is a GuideProvider supporting XMLTV files.
 type XMLTV struct {
 	BaseConfig Configuration
 
@@ -24,14 +25,17 @@ func newXMLTV(config *Configuration) (GuideProvider, error) {
 	return provider, nil
 }
 
+// Name returns the name of the GuideProvider.
 func (x *XMLTV) Name() string {
 	return "XMLTV"
 }
 
+// Channels returns a slice of Channel that the provider has available.
 func (x *XMLTV) Channels() ([]Channel, error) {
 	return x.channels, nil
 }
 
+// Schedule returns a slice of xmltv.Programme for the given channelIDs.
 func (x *XMLTV) Schedule(channelIDs []string) ([]xmltv.Programme, error) {
 	channelIDMap := make(map[string]struct{})
 	for _, chanID := range channelIDs {
@@ -49,6 +53,7 @@ func (x *XMLTV) Schedule(channelIDs []string) ([]xmltv.Programme, error) {
 	return filteredProgrammes, nil
 }
 
+// Refresh causes the provider to request the latest information.
 func (x *XMLTV) Refresh() error {
 	xTV, xTVErr := utils.GetXMLTV(x.BaseConfig.XMLTVURL, false)
 	if xTVErr != nil {
@@ -80,6 +85,7 @@ func (x *XMLTV) Refresh() error {
 	return nil
 }
 
+// Configuration returns the base configuration backing the provider
 func (x *XMLTV) Configuration() Configuration {
 	return x.BaseConfig
 }

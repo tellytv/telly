@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/tellytv/telly/internal/guide_providers"
+	"github.com/tellytv/telly/internal/guideproviders"
 	"github.com/tellytv/telly/internal/xmltv"
 )
 
@@ -31,6 +31,7 @@ func (db *GuideSourceChannelDB) tableName() string {
 	return "guide_source_channel"
 }
 
+// GuideSourceChannel is a single channel in a guide providers lineup.
 type GuideSourceChannel struct {
 	ID         int             `db:"id"`
 	GuideID    int             `db:"guide_id"`
@@ -45,7 +46,7 @@ type GuideSourceChannel struct {
 
 // GuideSourceChannelAPI contains all methods for the User struct
 type GuideSourceChannelAPI interface {
-	InsertGuideSourceChannel(guideID int, channel guide_providers.Channel) (*GuideSourceChannel, error)
+	InsertGuideSourceChannel(guideID int, channel guideproviders.Channel) (*GuideSourceChannel, error)
 	DeleteGuideSourceChannel(channelID int) (*GuideSourceChannel, error)
 	UpdateGuideSourceChannel(channelID int, description string) (*GuideSourceChannel, error)
 	GetGuideSourceChannelByID(id int, expanded bool) (*GuideSourceChannel, error)
@@ -62,7 +63,7 @@ SELECT
   FROM guide_source_channel G`
 
 // InsertGuideSourceChannel inserts a new GuideSourceChannel into the database.
-func (db *GuideSourceChannelDB) InsertGuideSourceChannel(guideID int, channel guide_providers.Channel) (*GuideSourceChannel, error) {
+func (db *GuideSourceChannelDB) InsertGuideSourceChannel(guideID int, channel guideproviders.Channel) (*GuideSourceChannel, error) {
 	marshalled, marshalErr := json.Marshal(channel)
 	if marshalErr != nil {
 		return nil, marshalErr

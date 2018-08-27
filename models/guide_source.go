@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/tellytv/telly/internal/guide_providers"
+	"github.com/tellytv/telly/internal/guideproviders"
 )
 
 // GuideSourceDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -29,6 +29,7 @@ func (db *GuideSourceDB) tableName() string {
 	return "guide_source"
 }
 
+// GuideSource describes a source of EPG data.
 type GuideSource struct {
 	ID         int        `db:"id"`
 	Name       string     `db:"name"`
@@ -41,8 +42,9 @@ type GuideSource struct {
 	Channels []GuideSourceChannel `db:"-"`
 }
 
-func (g *GuideSource) ProviderConfiguration() *guide_providers.Configuration {
-	return &guide_providers.Configuration{
+// ProviderConfiguration returns a guideproviders.Configurator for the GuideSource.
+func (g *GuideSource) ProviderConfiguration() *guideproviders.Configuration {
+	return &guideproviders.Configuration{
 		Name:     g.Name,
 		Provider: g.Provider,
 		Username: g.Username,

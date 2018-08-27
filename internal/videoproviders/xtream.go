@@ -1,4 +1,4 @@
-package video_providers
+package videoproviders
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	xc "github.com/tellytv/go.xtream-codes"
 )
 
+// XtreamCodes is a VideoProvider supporting Xtream-Codes IPTV servers.
 type XtreamCodes struct {
 	BaseConfig Configuration
 
@@ -24,10 +25,12 @@ func newXtreamCodes(config *Configuration) (VideoProvider, error) {
 	return xc, nil
 }
 
+// Name returns the name of the VideoProvider.
 func (x *XtreamCodes) Name() string {
 	return "Xtream Codes Server"
 }
 
+// Categories returns a slice of Category that the provider has available.
 func (x *XtreamCodes) Categories() ([]Category, error) {
 	outputCats := make([]Category, 0)
 	for _, cat := range x.categories {
@@ -39,18 +42,24 @@ func (x *XtreamCodes) Categories() ([]Category, error) {
 	return outputCats, nil
 }
 
+// Formats returns a slice of strings containing the valid video formats.
 func (x *XtreamCodes) Formats() ([]string, error) {
 	return x.client.UserInfo.AllowedOutputFormats, nil
 }
 
+// Channels returns a slice of Channel that the provider has available.
 func (x *XtreamCodes) Channels() ([]Channel, error) {
 	return x.channels, nil
 }
 
+// StreamURL returns a fully formed URL to a video stream for the given streamID and wantedFormat.
+// Refresh causes the provider to request the latest information.
+// Configuration returns the base configuration backing the provider
 func (x *XtreamCodes) StreamURL(streamID int, wantedFormat string) (string, error) {
 	return x.client.GetStreamURL(streamID, wantedFormat)
 }
 
+// Refresh causes the provider to request the latest information.
 func (x *XtreamCodes) Refresh() error {
 	client, clientErr := xc.NewClient(x.BaseConfig.Username, x.BaseConfig.Password, x.BaseConfig.BaseURL)
 	if clientErr != nil {
@@ -102,6 +111,7 @@ func (x *XtreamCodes) Refresh() error {
 	return nil
 }
 
+// Configuration returns the base configuration backing the provider
 func (x *XtreamCodes) Configuration() Configuration {
 	return x.BaseConfig
 }

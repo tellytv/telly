@@ -24,6 +24,7 @@ var (
 	prom = ginprometheus.NewPrometheus("http")
 )
 
+// ServeAPI starts up the telly frontend + REST API.
 func ServeAPI(cc *context.CContext) {
 	log.Debugln("creating webserver routes")
 

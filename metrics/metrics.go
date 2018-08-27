@@ -17,6 +17,7 @@ var (
 		},
 		[]string{"lineup_name"},
 	)
+	// ActiveStreams tracks the realtime number of active streams.
 	ActiveStreams = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "telly",
@@ -26,6 +27,7 @@ var (
 		},
 		[]string{"lineup_name"},
 	)
+	// StreamTime reports the total amount of time streamed since startup.
 	StreamTime = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "telly",

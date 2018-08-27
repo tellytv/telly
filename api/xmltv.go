@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/tellytv/telly/context"
-	"github.com/tellytv/telly/internal/guide_providers"
+	"github.com/tellytv/telly/internal/guideproviders"
 	"github.com/tellytv/telly/internal/xmltv"
 )
 
@@ -39,10 +39,10 @@ func xmlTV(cc *context.CContext, c *gin.Context) {
 		for _, channel := range lineup.Channels {
 			epgMatchMap[channel.GuideChannel.XMLTVID] = channel.ID
 
-			var guideChannel guide_providers.Channel
+			var guideChannel guideproviders.Channel
 
 			if jsonErr := json.Unmarshal(channel.GuideChannel.Data, &guideChannel); jsonErr != nil {
-				c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error while unmarshalling lineupchannel to guide_providers.channel: %s", jsonErr))
+				c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error while unmarshalling lineupchannel to guideproviders.channel: %s", jsonErr))
 				return
 			}
 

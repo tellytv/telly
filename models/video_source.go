@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/tellytv/telly/internal/video_providers"
+	"github.com/tellytv/telly/internal/videoproviders"
 )
 
 // VideoSourceDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -29,6 +29,7 @@ func (db *VideoSourceDB) tableName() string {
 	return "video_source"
 }
 
+// VideoSource is a source of video streams.
 type VideoSource struct {
 	ID         int        `db:"id"`
 	Name       string     `db:"name"`
@@ -43,8 +44,9 @@ type VideoSource struct {
 	Tracks []VideoSourceTrack `db:"tracks"`
 }
 
-func (v *VideoSource) ProviderConfiguration() *video_providers.Configuration {
-	return &video_providers.Configuration{
+// ProviderConfiguration returns an initialized videoproviders.Configuration for the VideoSource.
+func (v *VideoSource) ProviderConfiguration() *videoproviders.Configuration {
+	return &videoproviders.Configuration{
 		Name:     v.Name,
 		Provider: v.Provider,
 		Username: v.Username,

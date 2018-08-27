@@ -1,4 +1,4 @@
-package guide_providers
+package guideproviders
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 	"github.com/tellytv/telly/utils"
 )
 
+// SchedulesDirect is a GuideProvider supporting the Schedules Direct JSON service.
 type SchedulesDirect struct {
 	BaseConfig Configuration
 
@@ -29,14 +30,17 @@ func newSchedulesDirect(config *Configuration) (GuideProvider, error) {
 	return provider, nil
 }
 
+// Name returns the name of the GuideProvider.
 func (s *SchedulesDirect) Name() string {
 	return "Schedules Direct"
 }
 
+// Channels returns a slice of Channel that the provider has available.
 func (s *SchedulesDirect) Channels() ([]Channel, error) {
 	return s.channels, nil
 }
 
+// Schedule returns a slice of xmltv.Programme for the given channelIDs.
 func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, error) {
 	// First, convert the string slice of channelIDs into a slice of schedule requests.
 	reqs := make([]schedulesdirect.StationScheduleRequest, 0)
@@ -117,8 +121,8 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 					Lang:  station.Station.BroadcastLanguage[0],
 				}},
 				Length: &length,
-				Start:  &xmltv.Time{airing.AirDateTime},
-				Stop:   &xmltv.Time{endTime},
+				Start:  &xmltv.Time{Time: airing.AirDateTime},
+				Stop:   &xmltv.Time{Time: endTime},
 			}
 
 			// Now for the fields that have to be parsed.
@@ -295,7 +299,7 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 			if !time.Time(programInfo.OriginalAirDate).IsZero() {
 				if !airing.New {
 					xmlProgramme.PreviouslyShown = &xmltv.PreviouslyShown{
-						Start: xmltv.Time{time.Time(programInfo.OriginalAirDate)},
+						Start: xmltv.Time{Time: time.Time(programInfo.OriginalAirDate)},
 					}
 				}
 				timeToUse := time.Time(programInfo.OriginalAirDate)
@@ -355,6 +359,7 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 	return programmes, nil
 }
 
+// Refresh causes the provider to request the latest information.
 func (s *SchedulesDirect) Refresh() error {
 	if s.client == nil {
 		sdClient, sdClientErr := schedulesdirect.NewClient(s.BaseConfig.Username, s.BaseConfig.Password)
@@ -463,6 +468,7 @@ func (s *SchedulesDirect) Refresh() error {
 	return nil
 }
 
+// Configuration returns the base configuration backing the provider.
 func (s *SchedulesDirect) Configuration() Configuration {
 	return s.BaseConfig
 }

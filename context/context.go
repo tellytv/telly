@@ -6,12 +6,12 @@ import (
 	"os"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
+	// _ "github.com/mattn/go-sqlite3" // the SQLite driver
 	"github.com/pressly/goose"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"github.com/tellytv/telly/internal/guide_providers"
-	"github.com/tellytv/telly/internal/video_providers"
+	"github.com/tellytv/telly/internal/guideproviders"
+	"github.com/tellytv/telly/internal/videoproviders"
 	"github.com/tellytv/telly/models"
 )
 
@@ -21,8 +21,8 @@ type CContext struct {
 	Ctx                  ctx.Context
 	Log                  *logrus.Logger
 	Tuners               map[int]chan bool
-	GuideSourceProviders map[int]guide_providers.GuideProvider
-	VideoSourceProviders map[int]video_providers.VideoProvider
+	GuideSourceProviders map[int]guideproviders.GuideProvider
+	VideoSourceProviders map[int]videoproviders.VideoProvider
 
 	RawSQL *sqlx.DB
 }
@@ -97,7 +97,7 @@ func NewCContext() (*CContext, error) {
 		log.WithError(guideSourcesErr).Panicln("error initializing video sources")
 	}
 
-	guideSourceProvidersMap := make(map[int]guide_providers.GuideProvider)
+	guideSourceProvidersMap := make(map[int]guideproviders.GuideProvider)
 
 	for _, guideSource := range guideSources {
 		providerCfg := guideSource.ProviderConfiguration()
@@ -113,7 +113,7 @@ func NewCContext() (*CContext, error) {
 		log.WithError(videoSourcesErr).Panicln("error initializing video sources")
 	}
 
-	videoSourceProvidersMap := make(map[int]video_providers.VideoProvider)
+	videoSourceProvidersMap := make(map[int]videoproviders.VideoProvider)
 
 	for _, videoSource := range videoSources {
 		providerCfg := videoSource.ProviderConfiguration()

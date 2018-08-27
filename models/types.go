@@ -6,8 +6,10 @@ import (
 	"fmt"
 )
 
+// ConvertibleBoolean is a helper type to allow JSON documents using 0/1 or "true" and "false" be converted to bool.
 type ConvertibleBoolean bool
 
+// MarshalJSON returns a 0 or 1 depending on bool state.
 func (bit *ConvertibleBoolean) MarshalJSON() ([]byte, error) {
 	var bitSetVar int8
 	if *bit {
@@ -17,6 +19,7 @@ func (bit *ConvertibleBoolean) MarshalJSON() ([]byte, error) {
 	return json.Marshal(bitSetVar)
 }
 
+// UnmarshalJSON converts a 0, 1, true or false into a bool
 func (bit *ConvertibleBoolean) UnmarshalJSON(data []byte) error {
 	asString := string(data)
 	if asString == "1" || asString == "true" {

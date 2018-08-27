@@ -113,6 +113,7 @@ func newGin() *gin.Engine {
 	return router
 }
 
+// StartTuner will start a new tuner server for the given lineup.
 func StartTuner(cc *context.CContext, lineup *models.Lineup) {
 	tunerChan := make(chan bool)
 	cc.Tuners[lineup.ID] = tunerChan
@@ -120,6 +121,7 @@ func StartTuner(cc *context.CContext, lineup *models.Lineup) {
 	return
 }
 
+// RestartTuner will trigger a restart of the tuner server for the given lineup.
 func RestartTuner(cc *context.CContext, lineup *models.Lineup) {
 	if tuner, ok := cc.Tuners[lineup.ID]; ok {
 		tuner <- true

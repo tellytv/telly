@@ -68,6 +68,7 @@ func (d *DiscoveryData) UPNP() upnp.RootDevice {
 	}
 }
 
+// Lineup describes a collection of channels exposed to the world with associated configuration.
 type Lineup struct {
 	ID               int        `db:"id"`
 	Name             string     `db:"name"`
@@ -89,6 +90,7 @@ type Lineup struct {
 	Channels []LineupChannel
 }
 
+// GetDiscoveryData returns DiscoveryData for the Lineup.
 func (s *Lineup) GetDiscoveryData() DiscoveryData {
 	baseAddr := fmt.Sprintf("http://%s:%d", s.DiscoveryAddress, s.Port)
 	return DiscoveryData{

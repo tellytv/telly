@@ -1,9 +1,9 @@
-package video_providers
+// Package videoproviders is a telly internal package to provide video stream information.
+package videoproviders
 
 import (
 	"regexp"
 	"strings"
-	"time"
 )
 
 var streamNumberRegex = regexp.MustCompile(`/(\d+).(ts|.*.m3u8)`).FindAllStringSubmatch
@@ -11,6 +11,7 @@ var channelNumberRegex = regexp.MustCompile(`^[0-9]+[[:space:]]?$`).MatchString
 var callSignRegex = regexp.MustCompile(`^[A-Z0-9]+$`).MatchString
 var hdRegex = regexp.MustCompile(`hd|4k`)
 
+// Configuration is the basic configuration struct for videoproviders with generic values for specific providers.
 type Configuration struct {
 	Name     string `json:"-"`
 	Provider string
@@ -28,6 +29,7 @@ type Configuration struct {
 	EPGIDKey    string
 }
 
+// GetProvider returns an initialized VideoProvider for the Configuration.
 func (i *Configuration) GetProvider() (VideoProvider, error) {
 	switch strings.ToLower(i.Provider) {
 	case "xtream", "xstream":
@@ -35,13 +37,6 @@ func (i *Configuration) GetProvider() (VideoProvider, error) {
 	default:
 		return newM3U(i)
 	}
-}
-
-type AccountInfo struct {
-	MaximumConnections int
-	ActiveConnections  int
-	ExpirationDate     time.Time
-	Status             string
 }
 
 // Category describes a grouping of streams.
@@ -72,7 +67,7 @@ type Channel struct {
 	EPGID    string
 
 	// Only needed for M3U provider
-	streamUrl string
+	streamURL string
 }
 
 // VideoProvider describes a IPTV provider configuration.

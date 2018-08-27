@@ -31,6 +31,7 @@ func (db *GuideSourceProgrammeDB) tableName() string {
 	return "guide_source_programme"
 }
 
+// GuideSourceProgramme is a single programme available in a guide providers lineup.
 type GuideSourceProgramme struct {
 	GuideID    int             `db:"guide_id"`
 	Channel    string          `db:"channel"`

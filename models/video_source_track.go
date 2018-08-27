@@ -28,6 +28,7 @@ func (db *VideoSourceTrackDB) tableName() string {
 	return "video_source_track"
 }
 
+// VideoSourceTrack is a single stream available from a video source.
 type VideoSourceTrack struct {
 	ID            int        `db:"id"`
 	VideoSourceID int        `db:"video_source_id"`

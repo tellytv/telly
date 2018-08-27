@@ -1,6 +1,6 @@
-// Package guide_providers is a telly internal package to provide electronic program guide (EPG) data.
+// Package guideproviders is a telly internal package to provide electronic program guide (EPG) data.
 // It is generally modeled after the XMLTV standard with slight deviations to accomodate other providers.
-package guide_providers
+package guideproviders
 
 import (
 	"strings"
@@ -8,6 +8,7 @@ import (
 	"github.com/tellytv/telly/internal/xmltv"
 )
 
+// Configuration is the basic configuration struct for guideproviders with generic values for specific providers.
 type Configuration struct {
 	Name     string `json:"-"`
 	Provider string
@@ -21,6 +22,7 @@ type Configuration struct {
 	XMLTVURL string
 }
 
+// GetProvider returns an initialized GuideProvider for the Configuration.
 func (i *Configuration) GetProvider() (GuideProvider, error) {
 	switch strings.ToLower(i.Provider) {
 	case "schedulesdirect", "schedules-direct", "sd":
@@ -44,6 +46,7 @@ type Channel struct {
 	Lineup   string
 }
 
+// XMLTV returns the xmltv.Channel representation of the Channel.
 func (c *Channel) XMLTV() xmltv.Channel {
 	ch := xmltv.Channel{
 		ID:   c.ID,

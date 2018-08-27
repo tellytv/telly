@@ -17,9 +17,11 @@ import (
 )
 
 var (
-	safeStringsRegex = regexp.MustCompile(`(?m)(username|password|token)=[\w=]+(&?)`)
+	// SafeStringsRegex will match any usernames, passwords or tokens in a string.
+	SafeStringsRegex = regexp.MustCompile(`(?m)(username|password|token)=[\w=]+(&?)`)
 
-	stringSafer = func(input string) string {
+	// StringSafer will replace sensitive values (username, password and token) with safed values.
+	StringSafer = func(input string) string {
 		ret := input
 		if strings.HasPrefix(input, "username=") {
 			ret = "username=REDACTED"
@@ -35,6 +37,7 @@ var (
 	}
 )
 
+// GetTCPAddr attempts to convert a string found via viper to a net.TCPAddr. Will panic on error.
 func GetTCPAddr(key string) *net.TCPAddr {
 	addr, addrErr := net.ResolveTCPAddr("tcp", viper.GetString(key))
 	if addrErr != nil {
@@ -43,8 +46,9 @@ func GetTCPAddr(key string) *net.TCPAddr {
 	return addr
 }
 
+// GetM3U is a helper function to download/open and parse a M3U Plus file.
 func GetM3U(path string, cacheFiles bool) (*m3uplus.Playlist, error) {
-	// safePath := safeStringsRegex.ReplaceAllStringFunc(path, stringSafer)
+	// safePath := SafeStringsRegex.ReplaceAllStringFunc(path, StringSafer)
 
 	file, _, err := GetFile(path, cacheFiles)
 	if err != nil {
@@ -63,8 +67,9 @@ func GetM3U(path string, cacheFiles bool) (*m3uplus.Playlist, error) {
 	return rawPlaylist, nil
 }
 
+// GetXMLTV is a helper function to download/open and parse a XMLTV file.
 func GetXMLTV(path string, cacheFiles bool) (*xmltv.TV, error) {
-	// safePath := safeStringsRegex.ReplaceAllStringFunc(path, stringSafer)
+	// safePath := SafeStringsRegex.ReplaceAllStringFunc(path, StringSafer)
 
 	file, _, err := GetFile(path, cacheFiles)
 	if err != nil {
@@ -78,12 +83,13 @@ func GetXMLTV(path string, cacheFiles bool) (*xmltv.TV, error) {
 	}
 
 	if closeXMLErr := file.Close(); closeXMLErr != nil {
-		return nil, fmt.Errorf("error when closing xml reader", closeXMLErr)
+		return nil, fmt.Errorf("error when closing xml reader: %s", closeXMLErr)
 	}
 
 	return tvSetup, nil
 }
 
+// GetFile is a helper function to download/open and parse a file.
 func GetFile(path string, cacheFiles bool) (io.ReadCloser, string, error) {
 	transport := "disk"
 
@@ -133,6 +139,7 @@ func GetFile(path string, cacheFiles bool) (io.ReadCloser, string, error) {
 	return file, transport, nil
 }
 
+// ChunkStringSlice will return a slice of slice of strings for the given chunkSize.
 func ChunkStringSlice(sl []string, chunkSize int) [][]string {
 	var divided [][]string
 
@@ -155,6 +162,7 @@ func writeFile(path, transport string, reader io.ReadCloser) (io.ReadCloser, str
 	return reader, transport, nil
 }
 
+// Contains returns true if the given element "e" is found inside the slice of strings "s".
 func Contains(s []string, e string) bool {
 	for _, ss := range s {
 		if e == ss {
@@ -164,6 +172,7 @@ func Contains(s []string, e string) bool {
 	return false
 }
 
+// GetStringMapKeys returns a slice of strings for the keys of a map.
 func GetStringMapKeys(s map[string]struct{}) []string {
 	keys := make([]string, 0)
 	for key := range s {
@@ -259,6 +268,7 @@ func lowerDelimiterCase(s string, delimiter rune) string {
 	return string(buffer)
 }
 
+// PadNumberWithZeros will pad the given value integer with 0's until expectedLength is met.
 func PadNumberWithZeros(value int, expectedLength int) string {
 	padded := fmt.Sprintf("%02d", value)
 	valLength := CountDigits(value)
@@ -268,6 +278,7 @@ func PadNumberWithZeros(value int, expectedLength int) string {
 	return padded
 }
 
+// CountDigits will count the number of digits in an integer.
 func CountDigits(i int) int {
 	count := 0
 	if i == 0 {
