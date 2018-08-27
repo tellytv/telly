@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/jmoiron/sqlx"
-	// _ "github.com/mattn/go-sqlite3" // the SQLite driver
+	_ "github.com/mattn/go-sqlite3" // the SQLite driver
 	"github.com/pressly/goose"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
