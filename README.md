@@ -50,6 +50,8 @@ Here's an example configuration file. **You will need to create this file.**  It
 #  Password = ""             # that works with it fully at this time
 
 # AT LEAST ONE SOURCE IS REQUIRED #################################################################
+# DELETE OR COMMENT OUT SOURCES THAT YOU ARE NOT USING ############################################
+# NONE OF THESE EXAMPLES WORK AS-IS; IF YOU DON'T CHANGE IT, DELETE IT ############################
 [[Source]]
   Name = ""                 # Name is optional and is used mostly for logging purposes
   Provider = "Vaders"       # named providers currently supported are "Vaders", "area51", "Iris"
@@ -87,7 +89,7 @@ Here's an example configuration file. **You will need to create this file.**  It
   Sort = "group-title"      # Sort will alphabetically sort your channels by the M3U key provided
 # END TELLY CONFIG  ###############################################################################
 ```
-You only need one source; the ones you are not using should be commented out or deleted. The name and filter-related keys can be used with any of the sources.
+![#f03c15](https://placehold.it/15/f03c15/000000?text=+) You only need one source; the ones you are not using should be commented out or deleted.![#f03c15](https://placehold.it/15/f03c15/000000?text=+)  The name and filter-related keys can be used with any of the sources.
 
 # FFMpeg
 
