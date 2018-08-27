@@ -185,6 +185,14 @@
   version = "v0.8.0"
 
 [[projects]]
+  digest = "1:65c6401efaeb147041aed03d5b18862ce666a54e4ce754ea6ddbfa5ddaa24b07"
+  name = "github.com/pressly/goose"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "95600eb369b1f657efd54a401ab85d0647a1db80"
+  version = "v2.3.0"
+
+[[projects]]
   digest = "1:d14a5f4bfecf017cb780bdde1b6483e5deb87e12c332544d2c430eda58734bcb"
   name = "github.com/prometheus/client_golang"
   packages = [
@@ -286,7 +294,15 @@
   name = "github.com/tellytv/go.schedulesdirect"
   packages = ["."]
   pruneopts = "UT"
-  revision = "3d6704d3b108deaffd476ad2f27003dc38bf775d"
+  revision = "e76717848560ef3975a9d20b559b1b1639383e00"
+
+[[projects]]
+  branch = "master"
+  digest = "1:9076b1a43fe4ebebafe54ec06e7f61591fc64912e434a3d3c667ec7740662638"
+  name = "github.com/tellytv/go.xtream-codes"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "33a6daa3da5246cf599b2af0a3e2c19555ed560a"
 
 [[projects]]
   digest = "1:c268acaa4a4d94a467980e5e91452eb61c460145765293dc0aed48e5e9919cc6"
@@ -395,12 +411,14 @@
     "github.com/kr/pretty",
     "github.com/mattn/go-sqlite3",
     "github.com/mitchellh/mapstructure",
+    "github.com/pressly/goose",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/common/version",
     "github.com/sirupsen/logrus",
     "github.com/spf13/pflag",
     "github.com/spf13/viper",
     "github.com/tellytv/go.schedulesdirect",
+    "github.com/tellytv/go.xtream-codes",
     "github.com/zsais/go-gin-prometheus",
     "golang.org/x/net/html/charset",
   ]
