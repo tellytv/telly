@@ -46,6 +46,10 @@ type LineupChannel struct {
 	lineup *SQLLineup
 }
 
+func (l *LineupChannel) String() string {
+	return fmt.Sprintf("channel: %s (ch#: %s, video source name: %s, video source provider type: %s)", l.Title, l.ChannelNumber, l.VideoTrack.VideoSource.Name, l.VideoTrack.VideoSource.Provider)
+}
+
 func (l *LineupChannel) Fill(api *APICollection) {
 	if l.lineup == nil {
 		// Need to get the address and port number to properly fill

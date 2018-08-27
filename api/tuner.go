@@ -192,7 +192,7 @@ func stream(cc *ccontext.CContext, lineup *models.SQLLineup) gin.HandlerFunc {
 			return
 		}
 
-		log.Infof("Serving channel number %s", channel.ChannelNumber)
+		log.Infoln("Serving", channel)
 
 		streamUrl, streamUrlErr := cc.VideoSourceProviders[channel.VideoTrack.VideoSourceID].StreamURL(channel.VideoTrack.StreamID, "ts")
 		if streamUrlErr != nil {
