@@ -25,6 +25,8 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 			return
 		}
 
+		cc.GuideSourceProviders[newGuide.ID] = provider
+
 		log.Infoln("Detected passed config is for provider", provider.Name())
 
 		channels, channelsErr := provider.Channels()
