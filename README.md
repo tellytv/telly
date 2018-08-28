@@ -32,8 +32,10 @@ Here's an example configuration file. **You will need to create this file.**  It
                             # Vaders provides 5
   Starting-Channel = 10000  # When telly assigns channel numbers it will start here
   XMLTV-Channels = true     # if true, any channel numbers specified in your M3U file will be used.
-  FFMpeg = true             # if true, streams are buffered through ffmpeg; ffmpeg must be on your $PATH
+# FFMpeg = true             # if this is uncommented, streams are buffered through ffmpeg; 
+                            # ffmpeg must be installed and on your $PATH
                             # if you want to use this with Docker, be sure you use the correct docker image
+# if you DO NOT WANT TO USE FFMPEG leave this uncommented; DO NOT SET IT TO FALSE
   
 # THIS SECTION IS REQUIRED ########################################################################
 [Log]
