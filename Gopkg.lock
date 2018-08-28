@@ -253,7 +253,7 @@
   name = "github.com/tellytv/go.schedulesdirect"
   packages = ["."]
   pruneopts = "UT"
-  revision = "3d6704d3b108deaffd476ad2f27003dc38bf775d"
+  revision = "34412a2eb0519d921a72e24a3e17e8a335dcdab9"
 
 [[projects]]
   digest = "1:c268acaa4a4d94a467980e5e91452eb61c460145765293dc0aed48e5e9919cc6"

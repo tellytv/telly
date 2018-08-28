@@ -657,10 +657,10 @@ func MergeSchedulesDirectAndXMLTVProgramme(programme *xmltv.Programme, sdProgram
 	}
 
 	if !hasXMLTVNS {
-		seasonNumber := int64(0)
-		episodeNumber := int64(0)
-		totalSeasons := int64(0)
-		totalEpisodes := int64(0)
+		seasonNumber := 0
+		episodeNumber := 0
+		totalSeasons := 0
+		totalEpisodes := 0
 		numbersFilled := false
 
 		for _, meta := range sdProgram.Metadata {
