@@ -35,7 +35,7 @@ Here's an example configuration file. **You will need to create this file.**  It
 # FFMpeg = true             # if this is uncommented, streams are buffered through ffmpeg; 
                             # ffmpeg must be installed and on your $PATH
                             # if you want to use this with Docker, be sure you use the correct docker image
-# if you DO NOT WANT TO USE FFMPEG leave this uncommented; DO NOT SET IT TO FALSE
+# if you DO NOT WANT TO USE FFMPEG leave this commented; DO NOT SET IT TO FALSE
   
 # THIS SECTION IS REQUIRED ########################################################################
 [Log]
