@@ -189,7 +189,7 @@ func stream(lineup *lineup) gin.HandlerFunc {
 
 			log.Infoln("Transcoding stream with ffmpeg")
 
-			run := exec.Command("ffmpeg", "-re", "-i", channel.providerChannel.Track.URI, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "pipe:1")
+			run := exec.Command("ffmpeg", "-re", "-i", channel.providerChannel.Track.URI, "-codec", "copy", "-f", "mpegts", "-tune", "zerolatency", "pipe:1")
 			ffmpegout, err := run.StdoutPipe()
 			if err != nil {
 				log.WithError(err).Errorln("StdoutPipe Error")
