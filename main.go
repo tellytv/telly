@@ -102,19 +102,34 @@ func main() {
 		log.WithError(err).Panicln("Couldn't create context")
 	}
 
-	lineups, lineupsErr := cc.API.Lineup.GetEnabledLineups(false)
+	lineups, lineupsErr := cc.API.Lineup.GetEnabledLineups(true)
 	if lineupsErr != nil {
 		log.WithError(lineupsErr).Panicln("Error getting all enabled lineups")
 	}
 
-	for _, lineup := range lineups {
-		api.StartTuner(cc, &lineup)
-	}
-
 	c := cron.New()
 
-	c.AddFunc("@daily", func() { commands.StartFireVideoUpdates(cc) })
-	c.AddFunc("@daily", func() { commands.StartFireGuideUpdates(cc) })
+	for _, lineup := range lineups {
+		api.StartTuner(cc, &lineup)
+
+		// videoProviders := make(map[int]string)
+		guideProviders := make(map[int]string)
+		for _, channel := range lineup.Channels {
+			// videoProviders[channel.VideoTrack.VideoSource.ID] = channel.VideoTrack.VideoSource.UpdateFrequency
+			guideProviders[channel.GuideChannel.GuideSource.ID] = channel.GuideChannel.GuideSource.UpdateFrequency
+		}
+
+		// for videoProviderID, updateFrequencey := range videoProviders {
+		// 	c.AddFunc(updateFrequencey, func() { commands.StartFireVideoUpdates(cc, videoProviderID) })
+		// }
+
+		for guideProviderID, updateFrequencey := range guideProviders {
+			c.AddFunc(updateFrequencey, func() { commands.StartFireGuideUpdates(cc, guideProviderID) })
+		}
+	}
+
+	c.Start()
+	log.Infof("CRON ENTRIES %+v", c.Entries())
 
 	api.ServeAPI(cc)
 }

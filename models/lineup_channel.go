@@ -113,6 +113,8 @@ type LineupChannelAPI interface {
 	UpdateLineupChannel(channelStruct LineupChannel) (*LineupChannel, error)
 	GetLineupChannelByID(lineupID int, channelNumber string) (*LineupChannel, error)
 	GetChannelsForLineup(lineupID int, expanded bool) ([]LineupChannel, error)
+	GetEnabledChannelsForGuideProvider(providerID int) ([]LineupChannel, error)
+	GetEnabledChannelsForVideoProvider(providerID int) ([]LineupChannel, error)
 }
 
 const baseLineupChannelQuery string = `
@@ -204,4 +206,44 @@ func (db *LineupChannelDB) GetChannelsForLineup(lineupID int, expanded bool) ([]
 		}
 	}
 	return channels, nil
+}
+
+// GetEnabledChannelsForGuideProvider returns a slice of LineupChannels for the given guide provider ID.
+func (db *LineupChannelDB) GetEnabledChannelsForGuideProvider(providerID int) ([]LineupChannel, error) {
+	channels := make([]LineupChannel, 0)
+	err := db.SQL.Select(&channels, fmt.Sprintf(`%s WHERE C.guide_channel_id IN (SELECT id FROM guide_source_channel WHERE guide_id = $1)`, baseLineupChannelQuery), providerID)
+	if err != nil {
+		return nil, err
+	}
+	// Need to get the address and port number to properly fill
+	lineup, lineupErr := db.Collection.Lineup.GetLineupByID(channels[0].LineupID, false)
+	if lineupErr != nil {
+		return nil, lineupErr
+	}
+	for idx, channel := range channels {
+		channel.lineup = lineup
+		channel.Fill(db.Collection)
+		channels[idx] = channel
+	}
+	return channels, err
+}
+
+// GetEnabledChannelsForVideoProvider returns a slice of LineupChannels for the given video provider ID.
+func (db *LineupChannelDB) GetEnabledChannelsForVideoProvider(providerID int) ([]LineupChannel, error) {
+	channels := make([]LineupChannel, 0)
+	err := db.SQL.Select(&channels, fmt.Sprintf(`%s WHERE C.video_track_id IN (SELECT id FROM video_source_track WHERE video_source_id = $1)`, baseLineupChannelQuery), providerID)
+	if err != nil {
+		return nil, err
+	}
+	// Need to get the address and port number to properly fill
+	lineup, lineupErr := db.Collection.Lineup.GetLineupByID(channels[0].LineupID, false)
+	if lineupErr != nil {
+		return nil, lineupErr
+	}
+	for idx, channel := range channels {
+		channel.lineup = lineup
+		channel.Fill(db.Collection)
+		channels[idx] = channel
+	}
+	return channels, err
 }

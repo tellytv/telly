@@ -2,15 +2,16 @@
 -- SQL in this section is executed when the migration is applied.
 
 CREATE TABLE IF NOT EXISTS video_source (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  name        TEXT,
-  provider    VARCHAR(64) NULL,
-  username    VARCHAR(64) NULL,
-  password    VARCHAR(64) NULL,
-  base_url    TEXT,
-  m3u_url     TEXT,
-  max_streams INTEGER,
-  imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  name             TEXT,
+  provider         VARCHAR(64) NULL,
+  username         VARCHAR(64) NULL,
+  password         VARCHAR(64) NULL,
+  base_url         TEXT,
+  m3u_url          TEXT,
+  max_streams      INTEGER,
+  update_frequency TEXT,
+  imported_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS video_source_track (
@@ -28,14 +29,15 @@ CREATE TABLE IF NOT EXISTS video_source_track (
 );
 
 CREATE TABLE IF NOT EXISTS guide_source (
-  id             INTEGER PRIMARY KEY AUTOINCREMENT,
-  name           TEXT,
-  provider       VARCHAR(64) NULL,
-  username       VARCHAR(64) NULL,
-  password       VARCHAR(64) NULL,
-  xmltv_url      TEXT,
-  provider_data  TEXT,
-  imported_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  name             TEXT,
+  provider         VARCHAR(64) NULL,
+  username         VARCHAR(64) NULL,
+  password         VARCHAR(64) NULL,
+  xmltv_url        TEXT,
+  provider_data    TEXT,
+  update_frequency TEXT,
+  imported_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS guide_source_channel (

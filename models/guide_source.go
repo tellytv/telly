@@ -32,14 +32,15 @@ func (db *GuideSourceDB) tableName() string {
 
 // GuideSource describes a source of EPG data.
 type GuideSource struct {
-	ID           int             `db:"id"`
-	Name         string          `db:"name"`
-	Provider     string          `db:"provider"`
-	Username     string          `db:"username"`
-	Password     string          `db:"password"`
-	URL          string          `db:"xmltv_url"`
-	ProviderData json.RawMessage `db:"provider_data"`
-	ImportedAt   *time.Time      `db:"imported_at"`
+	ID              int             `db:"id"`
+	Name            string          `db:"name"`
+	Provider        string          `db:"provider"`
+	Username        string          `db:"username"`
+	Password        string          `db:"password"`
+	URL             string          `db:"xmltv_url"`
+	ProviderData    json.RawMessage `db:"provider_data"`
+	UpdateFrequency string          `db:"update_frequency"`
+	ImportedAt      *time.Time      `db:"imported_at"`
 
 	Channels []GuideSourceChannel `db:"-"`
 }
@@ -74,6 +75,7 @@ SELECT
   G.password,
   G.xmltv_url,
   G.provider_data,
+  G.update_frequency,
   G.imported_at
   FROM guide_source G`
 
@@ -89,8 +91,8 @@ func (db *GuideSourceDB) InsertGuideSource(guideSourceStruct GuideSource, provid
 	guideSourceStruct.ProviderData = providerDataJSON
 
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO guide_source (name, provider, username, password, xmltv_url, provider_data)
-    VALUES (:name, :provider, :username, :password, :xmltv_url, :provider_data);`, guideSourceStruct)
+    INSERT INTO guide_source (name, provider, username, password, xmltv_url, provider_data, update_frequency)
+    VALUES (:name, :provider, :username, :password, :xmltv_url, :provider_data, :update_frequency);`, guideSourceStruct)
 	if err != nil {
 		return &guideSource, err
 	}
