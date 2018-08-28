@@ -443,10 +443,19 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 	}
 
 	xmlProgramme.Descriptions = make([]xmltv.CommonElement, 0)
-	for _, sdDescription := range programInfo.GetOrderedDescriptions() {
+	if d1000, ok := programInfo.Descriptions["description1000"]; ok && len(d1000) > 0 {
+		// TODO: This doesn't account for if the program has descriptions in different languages.
+		// It will always just use the first description.
 		xmlProgramme.Descriptions = append(xmlProgramme.Descriptions, xmltv.CommonElement{
-			Value: sdDescription.Description,
-			Lang:  sdDescription.Language,
+			Value: d1000[0].Description,
+			Lang:  d1000[0].Language,
+		})
+	}
+
+	if d100, ok := programInfo.Descriptions["description100"]; ok && len(d100) > 0 {
+		xmlProgramme.Descriptions = append(xmlProgramme.Descriptions, xmltv.CommonElement{
+			Value: d100[0].Description,
+			Lang:  d100[0].Language,
 		})
 	}
 
