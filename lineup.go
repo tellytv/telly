@@ -610,11 +610,11 @@ func MergeSchedulesDirectAndXMLTVProgramme(programme *xmltv.Programme, sdProgram
 
 	for _, descriptions := range sdProgram.Descriptions {
 		for _, description := range descriptions {
-			if description.Description100 != "" {
-				allDescriptions = append(allDescriptions, description.Description100)
+			if description.Description != "" {
+				allDescriptions = append(allDescriptions, description.Description)
 			}
-			if description.Description1000 != "" {
-				allDescriptions = append(allDescriptions, description.Description1000)
+			if description.Description != "" {
+				allDescriptions = append(allDescriptions, description.Description)
 			}
 		}
 	}
