@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +30,17 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 
 		log.Infoln("Detected passed config is for provider", provider.Name())
 
+		lineupMetadata, reloadErr := provider.Refresh(nil)
+		if reloadErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error while initializing guide data provider: %s", reloadErr))
+			return
+		}
+
+		if updateErr := cc.API.GuideSource.UpdateGuideSource(newGuide.ID, lineupMetadata); updateErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error while updating guide source with provider state: %s", updateErr))
+			return
+		}
+
 		channels, channelsErr := provider.Channels()
 		if channelsErr != nil {
 			log.WithError(channelsErr).Errorln("unable to get channels from provider")
@@ -39,7 +51,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 		for _, channel := range channels {
 			newChannel, newChannelErr := cc.API.GuideSourceChannel.InsertGuideSourceChannel(newGuide.ID, channel, nil)
 			if newChannelErr != nil {
-				log.WithError(newChannelErr).Errorln("Error creating new guide source channel!")
+				log.WithError(newChannelErr).Errorf("Error creating new guide source channel %s!", channel.ID)
 				c.AbortWithError(http.StatusInternalServerError, newChannelErr)
 				return
 			}

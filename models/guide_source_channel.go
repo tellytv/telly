@@ -49,7 +49,7 @@ type GuideSourceChannel struct {
 type GuideSourceChannelAPI interface {
 	InsertGuideSourceChannel(guideID int, channel guideproviders.Channel, providerData interface{}) (*GuideSourceChannel, error)
 	DeleteGuideSourceChannel(channelID int) (*GuideSourceChannel, error)
-	UpdateGuideSourceChannel(channelID int, description string) (*GuideSourceChannel, error)
+	UpdateGuideSourceChannel(XMLTVID string, providerData interface{}) error
 	GetGuideSourceChannelByID(id int, expanded bool) (*GuideSourceChannel, error)
 	GetChannelsForGuideSource(guideSourceID int) ([]GuideSourceChannel, error)
 }
@@ -128,10 +128,9 @@ func (db *GuideSourceChannelDB) DeleteGuideSourceChannel(channelID int) (*GuideS
 }
 
 // UpdateGuideSourceChannel updates a channel.
-func (db *GuideSourceChannelDB) UpdateGuideSourceChannel(channelID int, description string) (*GuideSourceChannel, error) {
-	channel := GuideSourceChannel{}
-	err := db.SQL.Get(&channel, `UPDATE guide_source_channel SET description = $2 WHERE id = $1 RETURNING *`, channelID, description)
-	return &channel, err
+func (db *GuideSourceChannelDB) UpdateGuideSourceChannel(XMLTVID string, providerData interface{}) error {
+	_, err := db.SQL.Exec(`UPDATE guide_source_channel SET provider_data = ? WHERE xmltv_id = ?`, providerData, XMLTVID)
+	return err
 }
 
 // GetChannelsForGuideSource returns a slice of GuideSourceChannels for the given video source ID.

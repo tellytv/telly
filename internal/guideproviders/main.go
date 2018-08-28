@@ -44,6 +44,8 @@ type Channel struct {
 	CallSign string
 	URLs     []string
 	Lineup   string
+
+	ProviderData interface{}
 }
 
 // XMLTV returns the xmltv.Channel representation of the Channel.
@@ -88,12 +90,19 @@ type Logo struct {
 	Width  int    `json:"width"`
 }
 
+// ProgrammeContainer contains information about a single provider in the XMLTV format
+// as well as provider specific data.
+type ProgrammeContainer struct {
+	Programme    xmltv.Programme
+	ProviderData interface{}
+}
+
 // GuideProvider describes a IPTV provider configuration.
 type GuideProvider interface {
 	Name() string
 	Channels() ([]Channel, error)
-	Schedule(channelIDs []string) ([]xmltv.Programme, error)
+	Schedule(inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error)
 
-	Refresh() error
+	Refresh(lineupStateJSON []byte) ([]byte, error)
 	Configuration() Configuration
 }

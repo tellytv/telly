@@ -15,6 +15,7 @@ import (
 	"github.com/tellytv/telly/api"
 	"github.com/tellytv/telly/commands"
 	"github.com/tellytv/telly/context"
+	"github.com/tellytv/telly/models"
 	"github.com/tellytv/telly/utils"
 )
 
@@ -113,18 +114,19 @@ func main() {
 		api.StartTuner(cc, &lineup)
 
 		// videoProviders := make(map[int]string)
-		guideProviders := make(map[int]string)
+		guideProviders := make(map[int]*models.GuideSource)
 		for _, channel := range lineup.Channels {
 			// videoProviders[channel.VideoTrack.VideoSource.ID] = channel.VideoTrack.VideoSource.UpdateFrequency
-			guideProviders[channel.GuideChannel.GuideSource.ID] = channel.GuideChannel.GuideSource.UpdateFrequency
+			guideProviders[channel.GuideChannel.GuideSource.ID] = channel.GuideChannel.GuideSource
 		}
 
 		// for videoProviderID, updateFrequencey := range videoProviders {
 		// 	c.AddFunc(updateFrequencey, func() { commands.StartFireVideoUpdates(cc, videoProviderID) })
 		// }
 
-		for guideProviderID, updateFrequencey := range guideProviders {
-			c.AddFunc(updateFrequencey, func() { commands.StartFireGuideUpdates(cc, guideProviderID) })
+		for _, guideSource := range guideProviders {
+			commands.StartFireGuideUpdates(cc, guideSource)
+			// c.AddFunc(updateFrequencey, func() { commands.StartFireGuideUpdates(cc, guideProviderID) })
 		}
 	}
 

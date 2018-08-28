@@ -60,7 +60,7 @@ func (g *GuideSource) ProviderConfiguration() *guideproviders.Configuration {
 type GuideSourceAPI interface {
 	InsertGuideSource(guideSourceStruct GuideSource, providerData interface{}) (*GuideSource, error)
 	DeleteGuideSource(guideSourceID int) (*GuideSource, error)
-	UpdateGuideSource(guideSourceID int, description string) (*GuideSource, error)
+	UpdateGuideSource(guideSourceID int, providerData interface{}) error
 	GetGuideSourceByID(id int) (*GuideSource, error)
 	GetAllGuideSources(includeChannels bool) ([]GuideSource, error)
 	GetGuideSourcesForLineup(lineupID int) ([]GuideSource, error)
@@ -119,10 +119,9 @@ func (db *GuideSourceDB) DeleteGuideSource(guideSourceID int) (*GuideSource, err
 }
 
 // UpdateGuideSource updates a guideSource.
-func (db *GuideSourceDB) UpdateGuideSource(guideSourceID int, description string) (*GuideSource, error) {
-	guideSource := GuideSource{}
-	err := db.SQL.Get(&guideSource, `UPDATE guide_source SET description = $2 WHERE id = $1 RETURNING *`, guideSourceID, description)
-	return &guideSource, err
+func (db *GuideSourceDB) UpdateGuideSource(guideSourceID int, providerData interface{}) error {
+	_, err := db.SQL.Exec(`UPDATE guide_source SET provider_data = ? WHERE id = ?`, providerData, guideSourceID)
+	return err
 }
 
 // GetAllGuideSources returns all video sources in the database.

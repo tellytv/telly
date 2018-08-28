@@ -72,7 +72,7 @@ func decode(playlist *Playlist, buf *bytes.Buffer) error {
 		}
 
 		if lineNum == 1 && !strings.HasPrefix(strings.TrimSpace(line), "#EXTM3U") {
-			return fmt.Errorf("malformed M3U provided")
+			return fmt.Errorf("malformed M3U provided, got: %s", buf.String())
 		}
 
 		if err = decodeLine(playlist, line, lineNum); err != nil {

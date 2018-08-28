@@ -1,7 +1,9 @@
 package guideproviders
 
 import (
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -21,13 +23,7 @@ type SchedulesDirect struct {
 }
 
 func newSchedulesDirect(config *Configuration) (GuideProvider, error) {
-	provider := &SchedulesDirect{BaseConfig: *config}
-
-	if loadErr := provider.Refresh(); loadErr != nil {
-		return nil, fmt.Errorf("error when refreshing provider data: %s", loadErr)
-	}
-
-	return provider, nil
+	return &SchedulesDirect{BaseConfig: *config}, nil
 }
 
 // Name returns the name of the GuideProvider.
@@ -41,24 +37,111 @@ func (s *SchedulesDirect) Channels() ([]Channel, error) {
 }
 
 // Schedule returns a slice of xmltv.Programme for the given channelIDs.
-func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, error) {
-	// First, convert the string slice of channelIDs into a slice of schedule requests.
+func (s *SchedulesDirect) Schedule(inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error) {
+	// First, convert the slice of channelIDs into a slice of schedule requests.
 	reqs := make([]schedulesdirect.StationScheduleRequest, 0)
-	for _, channelID := range channelIDs {
-		splitID := strings.Split(channelID, ".")[1]
+	channelsCache := make(map[string]map[string]schedulesdirect.LastModifiedEntry)
+	requestingDates := getDaysBetweenTimes(time.Now(), time.Now().AddDate(0, 0, 7))
+	channelShortToLongIDMap := make(map[string]string)
+	for _, inputChannel := range inputChannels {
+		splitID := strings.Split(inputChannel.ID, ".")[1]
+
+		channelShortToLongIDMap[splitID] = inputChannel.ID
+
+		if len(inputChannel.ProviderData.(json.RawMessage)) > 0 {
+			channelCache := make(map[string]schedulesdirect.LastModifiedEntry)
+			if unmarshalErr := json.Unmarshal(inputChannel.ProviderData.(json.RawMessage), &channelCache); unmarshalErr != nil {
+				return nil, nil, unmarshalErr
+			}
+
+			if len(channelCache) > 0 {
+				fmt.Printf("Channel %s exists in cache already with %d days of schedule available\n", inputChannel.ID, len(channelCache))
+				channelsCache[splitID] = channelCache
+			}
+		}
+
 		reqs = append(reqs, schedulesdirect.StationScheduleRequest{
 			StationID: splitID,
-			Dates:     []string{time.Now().Format("2006-01-02"), time.Now().AddDate(0, 0, 7).Format("2006-01-02")},
+			Dates:     requestingDates,
 		})
 	}
 
-	// Next, get the results
-	schedules, schedulesErr := s.client.GetSchedules(reqs)
-	if schedulesErr != nil {
-		return nil, fmt.Errorf("error getting schedules from schedules direct: %s", schedulesErr)
+	// Next, we get all modified parts of the schedule for any channels.
+	lastModifieds, lastModifiedsErr := s.client.GetLastModified(reqs)
+	if lastModifiedsErr != nil {
+		return nil, nil, fmt.Errorf("error getting lastModifieds from lastModifieds direct: %s", lastModifiedsErr)
 	}
 
-	// Then, we need to bundle up all the program IDs and request detailed information about them.
+	channelsNeedingUpdate := make(map[string][]string)
+
+	for stationID, dates := range lastModifieds {
+		longStationID := channelShortToLongIDMap[stationID]
+		if channelsNeedingUpdate[stationID] == nil {
+			channelsNeedingUpdate[stationID] = make([]string, 0)
+		}
+		for date, lastMod := range dates {
+			needsData := false
+			if cachedDate, ok := channelsCache[stationID][date]; ok {
+				fmt.Printf("For date %s: checking cached MD5 %s against server MD5 %s for %s\n", date, cachedDate.MD5, lastMod.MD5, longStationID)
+				if cachedDate.MD5 != lastMod.MD5 {
+					fmt.Printf("Station %s needs updated data for %s\n", longStationID, date)
+					needsData = true
+					channelsNeedingUpdate[stationID] = append(channelsNeedingUpdate[stationID], date)
+				}
+			} else {
+				fmt.Printf("Station %s needs data for %s\n", longStationID, date)
+				needsData = true
+				channelsNeedingUpdate[stationID] = append(channelsNeedingUpdate[stationID], date)
+			}
+			if needsData {
+				if channelsCache[stationID] == nil {
+					channelsCache[stationID] = make(map[string]schedulesdirect.LastModifiedEntry)
+				}
+				channelsCache[stationID][date] = lastMod
+			}
+		}
+		if _, ok := channelsCache[stationID]; !ok {
+			fmt.Printf("Station %s needs initial data\n", longStationID)
+			channelsNeedingUpdate[stationID] = requestingDates
+			continue
+		}
+	}
+
+	fullScheduleReqs := make([]schedulesdirect.StationScheduleRequest, 0)
+	// Next, using the channelsNeedingUpdate, build new schedule requests for station(s) missing data for date(s).
+	// Let's also add all these values to channelsCache to use that for the return.
+	for stationID, dates := range channelsNeedingUpdate {
+		if len(dates) > 0 {
+			fmt.Printf("Requesting dates %s for station %s\n", strings.Join(dates, ", "), stationID)
+			fullScheduleReqs = append(fullScheduleReqs, schedulesdirect.StationScheduleRequest{
+				StationID: stationID,
+				Dates:     dates,
+			})
+		}
+	}
+
+	outputChannelsMap := make(map[string]interface{}, 0)
+	for shortChannelID, longChannelID := range channelShortToLongIDMap {
+		outputChannelsMap[longChannelID] = channelsCache[shortChannelID]
+	}
+
+	if reflect.DeepEqual(outputChannelsMap, channelsCache) {
+		outputChannelsMap = nil
+	}
+
+	// Great, we don't need to get any new schedule data, let's terminate early.
+	if len(fullScheduleReqs) == 0 {
+		fmt.Println("No updates required, exiting Schedule()")
+		return outputChannelsMap, nil, nil
+	}
+
+	// So we do have some requests to make, let's do that now.
+	schedules, schedulesErr := s.client.GetSchedules(fullScheduleReqs)
+	if schedulesErr != nil {
+		return nil, nil, fmt.Errorf("error getting schedules from schedules direct: %s", schedulesErr)
+	}
+
+	// Next, we need to bundle up all the program IDs and request detailed information about them.
 	neededProgramIDs := make(map[string]struct{}, 0)
 
 	for _, schedule := range schedules {
@@ -75,7 +158,7 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 	for _, chunk := range utils.ChunkStringSlice(utils.GetStringMapKeys(neededProgramIDs), 5000) {
 		moreInfo, moreInfoErr := s.client.GetProgramInfo(chunk)
 		if moreInfoErr != nil {
-			return nil, fmt.Errorf("error when getting more program details from schedules direct: %s", moreInfoErr)
+			return nil, nil, fmt.Errorf("error when getting more program details from schedules direct: %s", moreInfoErr)
 		}
 
 		for _, program := range moreInfo {
@@ -92,7 +175,7 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 	for _, chunk := range utils.ChunkStringSlice(utils.GetStringMapKeys(programsWithArtwork), 500) {
 		artworkResp, artworkErr := s.client.GetArtworkForProgramIDs(chunk)
 		if artworkErr != nil {
-			return nil, fmt.Errorf("error when getting artwork from schedules direct: %s", artworkErr)
+			return nil, nil, fmt.Errorf("error when getting artwork from schedules direct: %s", artworkErr)
 		}
 
 		for _, artworks := range artworkResp {
@@ -101,273 +184,44 @@ func (s *SchedulesDirect) Schedule(channelIDs []string) ([]xmltv.Programme, erro
 	}
 
 	// We finally have all the data, time to convert to the XMLTV format.
-	programmes := make([]xmltv.Programme, 0)
+	programmes := make([]ProgrammeContainer, 0)
 
 	// Iterate over every result, converting to XMLTV format.
 	for _, schedule := range schedules {
 		station := s.stations[schedule.StationID]
-
 		for _, airing := range schedule.Programs {
-			programInfo := extendedProgramInfo[airing.ProgramID]
-			endTime := airing.AirDateTime.Add(time.Duration(airing.Duration) * time.Second)
-			length := xmltv.Length{Units: "seconds", Value: strconv.Itoa(airing.Duration)}
-
-			// First we fill in all the "simple" fields that don't require any extra processing.
-			xmlProgramme := xmltv.Programme{
-				Channel: fmt.Sprintf("I%s.%s.schedulesdirect.org", station.ChannelMap.Channel, station.Station.StationID),
-				ID:      airing.ProgramID,
-				Languages: []xmltv.CommonElement{xmltv.CommonElement{
-					Value: station.Station.BroadcastLanguage[0],
-					Lang:  station.Station.BroadcastLanguage[0],
-				}},
-				Length: &length,
-				Start:  &xmltv.Time{Time: airing.AirDateTime},
-				Stop:   &xmltv.Time{Time: endTime},
+			programme, programmeErr := s.processProgrammeToXMLTV(airing, extendedProgramInfo[airing.ProgramID], allArtwork[airing.ProgramID[:10]], station)
+			if programmeErr != nil {
+				return nil, nil, fmt.Errorf("error while processing schedules direct result to xmltv format: %s", programmeErr)
 			}
-
-			// Now for the fields that have to be parsed.
-			xmlProgramme.Titles = make([]xmltv.CommonElement, 0)
-			for _, sdTitle := range programInfo.Titles {
-				xmlProgramme.Titles = append(xmlProgramme.Titles, xmltv.CommonElement{
-					Value: sdTitle.Title120,
-				})
-			}
-
-			if programInfo.EpisodeTitle150 != "" {
-				xmlProgramme.SecondaryTitles = []xmltv.CommonElement{xmltv.CommonElement{
-					Value: programInfo.EpisodeTitle150,
-				}}
-			}
-
-			xmlProgramme.Descriptions = make([]xmltv.CommonElement, 0)
-			for _, sdDescription := range programInfo.GetOrderedDescriptions() {
-				xmlProgramme.Descriptions = append(xmlProgramme.Descriptions, xmltv.CommonElement{
-					Value: sdDescription.Description,
-					Lang:  sdDescription.Language,
-				})
-			}
-
-			for _, sdCast := range append(programInfo.Cast, programInfo.Crew...) {
-				if xmlProgramme.Credits == nil {
-					xmlProgramme.Credits = &xmltv.Credits{}
-				}
-				lowerRole := strings.ToLower(sdCast.Role)
-				if strings.Contains(lowerRole, "director") {
-					xmlProgramme.Credits.Directors = append(xmlProgramme.Credits.Directors, sdCast.Name)
-				} else if strings.Contains(lowerRole, "actor") || strings.Contains(lowerRole, "voice") {
-					role := ""
-					if sdCast.Role != "Actor" {
-						role = sdCast.Role
-					}
-					xmlProgramme.Credits.Actors = append(xmlProgramme.Credits.Actors, xmltv.Actor{
-						Role:  role,
-						Value: sdCast.Name,
-					})
-				} else if strings.Contains(lowerRole, "writer") {
-					xmlProgramme.Credits.Writers = append(xmlProgramme.Credits.Writers, sdCast.Name)
-				} else if strings.Contains(lowerRole, "producer") {
-					xmlProgramme.Credits.Producers = append(xmlProgramme.Credits.Producers, sdCast.Name)
-				} else if strings.Contains(lowerRole, "host") || strings.Contains(lowerRole, "anchor") {
-					xmlProgramme.Credits.Presenters = append(xmlProgramme.Credits.Presenters, sdCast.Name)
-				} else if strings.Contains(lowerRole, "guest") || strings.Contains(lowerRole, "contestant") {
-					xmlProgramme.Credits.Guests = append(xmlProgramme.Credits.Guests, sdCast.Name)
-				}
-			}
-
-			if programInfo.Movie.Year != "" {
-				yearInt, yearIntErr := strconv.Atoi(programInfo.Movie.Year)
-				if yearIntErr == nil { // Date isn't that important of a field, if we hit an error while parsing just don't add date.
-					xmlProgramme.Date = xmltv.Date(time.Date(yearInt, 1, 1, 1, 1, 1, 1, time.UTC))
-				}
-			}
-
-			xmlProgramme.Categories = make([]xmltv.CommonElement, 0)
-			seenCategories := make(map[string]struct{})
-			for _, sdCategory := range programInfo.Genres {
-				if _, ok := seenCategories[sdCategory]; !ok {
-					xmlProgramme.Categories = append(xmlProgramme.Categories, xmltv.CommonElement{
-						Value: sdCategory,
-					})
-					seenCategories[sdCategory] = struct{}{}
-				}
-			}
-
-			entityTypeCat := programInfo.EntityType
-
-			if programInfo.EntityType == "episode" {
-				entityTypeCat = "series"
-			}
-
-			if _, ok := seenCategories[entityTypeCat]; !ok {
-				xmlProgramme.Categories = append(xmlProgramme.Categories, xmltv.CommonElement{
-					Value: entityTypeCat,
-				})
-			}
-
-			seenKeywords := make(map[string]struct{})
-			for _, keywords := range programInfo.Keywords {
-				for _, keyword := range keywords {
-					if _, ok := seenKeywords[keyword]; !ok {
-						xmlProgramme.Keywords = append(xmlProgramme.Keywords, xmltv.CommonElement{
-							Value: utils.KebabCase(keyword),
-						})
-						seenKeywords[keyword] = struct{}{}
-					}
-				}
-			}
-
-			if programInfo.OfficialURL != "" {
-				xmlProgramme.URLs = []string{programInfo.OfficialURL}
-			}
-
-			if artworks, ok := allArtwork[programInfo.ProgramID[:10]]; ok {
-				for _, artworkItem := range artworks {
-					if strings.HasPrefix(artworkItem.URI, "assets/") {
-						artworkItem.URI = fmt.Sprint(schedulesdirect.DefaultBaseURL, schedulesdirect.APIVersion, "/image/", artworkItem.URI)
-					}
-					xmlProgramme.Icons = append(xmlProgramme.Icons, xmltv.Icon{
-						Source: artworkItem.URI,
-						Width:  artworkItem.Width,
-						Height: artworkItem.Height,
-					})
-				}
-			}
-
-			xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{
-				System: "dd_progid",
-				Value:  programInfo.ProgramID,
-			})
-
-			xmltvns := getXMLTVNumber(programInfo.Metadata, airing.ProgramPart)
-			if xmltvns != "" {
-				xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{System: "xmltv_ns", Value: xmltvns})
-			}
-
-			sxxexx := ""
-
-			for _, metadata := range programInfo.Metadata {
-				for _, mdProvider := range metadata {
-					if mdProvider.Season > 0 && mdProvider.Episode > 0 {
-						sxxexx = fmt.Sprintf("S%sE%s", utils.PadNumberWithZeros(mdProvider.Season, 2), utils.PadNumberWithZeros(mdProvider.Episode, 2))
-					}
-				}
-			}
-
-			if sxxexx != "" {
-				xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{System: "SxxExx", Value: sxxexx})
-			}
-
-			for _, videoProperty := range airing.VideoProperties {
-				if xmlProgramme.Video == nil {
-					xmlProgramme.Video = &xmltv.Video{}
-				}
-				if station.Station.IsRadioStation {
-					continue
-				}
-				xmlProgramme.Video.Present = "yes"
-				if strings.ToLower(videoProperty) == "hdtv" {
-					xmlProgramme.Video.Quality = "HDTV"
-					xmlProgramme.Video.Aspect = "16:9"
-				} else if strings.ToLower(videoProperty) == "uhdtv" {
-					xmlProgramme.Video.Quality = "UHD"
-				} else if strings.ToLower(videoProperty) == "sdtv" {
-					xmlProgramme.Video.Aspect = "4:3"
-				}
-			}
-
-			for _, audioProperty := range airing.AudioProperties {
-				switch strings.ToLower(audioProperty) {
-				case "dd":
-					xmlProgramme.Audio = &xmltv.Audio{Stereo: "dolby digital"}
-				case "dd 5.1", "surround", "atmos":
-					xmlProgramme.Audio = &xmltv.Audio{Stereo: "surround"}
-				case "dolby":
-					xmlProgramme.Audio = &xmltv.Audio{Stereo: "dolby"}
-				case "stereo":
-					xmlProgramme.Audio = &xmltv.Audio{Stereo: "stereo"}
-				case "mono":
-					xmlProgramme.Audio = &xmltv.Audio{Stereo: "mono"}
-				case "cc", "subtitled":
-					xmlProgramme.Subtitles = append(xmlProgramme.Subtitles, xmltv.Subtitle{Type: "teletext"})
-				}
-			}
-
-			if airing.Signed {
-				xmlProgramme.Subtitles = append(xmlProgramme.Subtitles, xmltv.Subtitle{Type: "deaf-signed"})
-			}
-
-			if !time.Time(programInfo.OriginalAirDate).IsZero() {
-				if !airing.New {
-					xmlProgramme.PreviouslyShown = &xmltv.PreviouslyShown{
-						Start: xmltv.Time{Time: time.Time(programInfo.OriginalAirDate)},
-					}
-				}
-				timeToUse := time.Time(programInfo.OriginalAirDate)
-				if airing.New {
-					timeToUse = airing.AirDateTime
-				}
-				xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{
-					System: "original-air-date",
-					Value:  timeToUse.Format("2006-01-02 15:04:05"),
-				})
-			}
-
-			if airing.Repeat && xmlProgramme.PreviouslyShown != nil {
-				xmlProgramme.PreviouslyShown = nil
-			}
-
-			seenRatings := make(map[string]string)
-			for _, rating := range append(programInfo.ContentRating, airing.Ratings...) {
-				if _, ok := seenRatings[rating.Body]; !ok {
-					xmlProgramme.Ratings = append(xmlProgramme.Ratings, xmltv.Rating{
-						Value:  rating.Code,
-						System: rating.Body,
-					})
-					seenRatings[rating.Body] = rating.Code
-				}
-			}
-
-			for _, starRating := range programInfo.Movie.QualityRating {
-				xmlProgramme.StarRatings = append(xmlProgramme.StarRatings, xmltv.Rating{
-					Value:  fmt.Sprintf("%s/%s", starRating.Rating, starRating.MaxRating),
-					System: starRating.RatingsBody,
-				})
-			}
-
-			if airing.IsPremiereOrFinale != "" {
-				xmlProgramme.Premiere = &xmltv.CommonElement{
-					Lang:  "en",
-					Value: string(airing.IsPremiereOrFinale),
-				}
-			}
-
-			if airing.Premiere {
-				xmlProgramme.Premiere = &xmltv.CommonElement{}
-			}
-
-			if airing.New {
-				elm := xmltv.ElementPresent(true)
-				xmlProgramme.New = &elm
-			}
-
-			// Done processing!
-			programmes = append(programmes, xmlProgramme)
-
+			programmes = append(programmes, *programme)
 		}
 	}
 
-	return programmes, nil
+	return outputChannelsMap, programmes, nil
 }
 
 // Refresh causes the provider to request the latest information.
-func (s *SchedulesDirect) Refresh() error {
+func (s *SchedulesDirect) Refresh(lastStatusJSON []byte) ([]byte, error) {
 	if s.client == nil {
 		sdClient, sdClientErr := schedulesdirect.NewClient(s.BaseConfig.Username, s.BaseConfig.Password)
 		if sdClientErr != nil {
-			return fmt.Errorf("error setting up schedules direct client: %s", sdClientErr)
+			return nil, fmt.Errorf("error setting up schedules direct client: %s", sdClientErr)
 		}
 
 		s.client = sdClient
+	}
+
+	lineupsMetadataMap := make(map[string]schedulesdirect.Lineup)
+	var lastStatus schedulesdirect.StatusResponse
+	if len(lastStatusJSON) > 0 {
+		if unmarshalErr := json.Unmarshal(lastStatusJSON, &lastStatus); unmarshalErr != nil {
+			return nil, unmarshalErr
+		}
+
+		for _, lineup := range lastStatus.Lineups {
+			lineupsMetadataMap[lineup.Lineup] = lineup
+		}
 	}
 
 	// First, get the lineups added to the users account.
@@ -375,12 +229,25 @@ func (s *SchedulesDirect) Refresh() error {
 	// NewClient above does that automatically for us.
 	status, statusErr := s.client.GetStatus()
 	if statusErr != nil {
-		return fmt.Errorf("error getting schedules direct status: %s", statusErr)
+		return nil, fmt.Errorf("error getting schedules direct status: %s", statusErr)
 	}
 
+	marshalledLineups, marshalledLineupsErr := json.Marshal(status)
+	if marshalledLineupsErr != nil {
+		return nil, fmt.Errorf("error when marshalling schedules direct lineups to json: %s", marshalledLineupsErr)
+	}
+
+	// If there's anything in this slice we know that channels in the SD lineup are changing.
 	allLineups := make([]string, 0)
 
 	for _, lineup := range status.Lineups {
+		// if existingLineup, ok := lineupsMetadataMap[lineup.Lineup]; ok {
+		// 	// If lineup modified in database is not equal to lineup modified API provided
+		// 	// append lineup ID to allLineups
+		// 	if !existingLineup.Modified.Equal(lineup.Modified) {
+		// 		allLineups = append(allLineups, lineup.Lineup)
+		// 	}
+		// }
 		allLineups = append(allLineups, lineup.Lineup)
 	}
 
@@ -402,13 +269,13 @@ func (s *SchedulesDirect) Refresh() error {
 
 	// Sanity check
 	if len(status.Lineups) == status.Account.MaxLineups && len(neededLineups) > 0 {
-		return fmt.Errorf("attempting to add more than %d lineups to a schedules direct account will fail, exiting prematurely", status.Account.MaxLineups)
+		return marshalledLineups, fmt.Errorf("attempting to add more than %d lineups to a schedules direct account will fail, exiting prematurely", status.Account.MaxLineups)
 	}
 
 	// Add needed lineups
 	for _, neededLineupName := range neededLineups {
 		if _, err := s.client.AddLineup(neededLineupName); err != nil {
-			return fmt.Errorf("error when adding lineup %s to schedules direct account: %s", neededLineupName, err)
+			return marshalledLineups, fmt.Errorf("error when adding lineup %s to schedules direct account: %s", neededLineupName, err)
 		}
 		allLineups = append(allLineups, neededLineupName)
 	}
@@ -417,7 +284,7 @@ func (s *SchedulesDirect) Refresh() error {
 	for _, lineupName := range allLineups {
 		channels, channelsErr := s.client.GetChannels(lineupName, true)
 		if channelsErr != nil {
-			return fmt.Errorf("error getting channels from schedules direct for lineup %s: %s", lineupName, channelsErr)
+			return marshalledLineups, fmt.Errorf("error getting channels from schedules direct for lineup %s: %s", lineupName, channelsErr)
 		}
 
 		stationsMap := make(map[string]sdStationContainer)
@@ -465,7 +332,7 @@ func (s *SchedulesDirect) Refresh() error {
 
 	// We're done!
 
-	return nil
+	return marshalledLineups, nil
 }
 
 // Configuration returns the base configuration backing the provider.
@@ -531,4 +398,273 @@ func getXMLTVNumber(mdata []map[string]schedulesdirect.Metadata, multipartInfo s
 	}
 
 	return ""
+}
+
+type sdProgrammeData struct {
+	Airing      schedulesdirect.Program
+	ProgramInfo schedulesdirect.ProgramInfo
+	AllArtwork  []schedulesdirect.ProgramArtwork
+	Station     sdStationContainer
+}
+
+func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program, programInfo schedulesdirect.ProgramInfo, allArtwork []schedulesdirect.ProgramArtwork, station sdStationContainer) (*ProgrammeContainer, error) {
+	stationID := fmt.Sprintf("I%s.%s.schedulesdirect.org", station.ChannelMap.Channel, station.Station.StationID)
+	endTime := airing.AirDateTime.Add(time.Duration(airing.Duration) * time.Second)
+	length := xmltv.Length{Units: "seconds", Value: strconv.Itoa(airing.Duration)}
+
+	// First we fill in all the "simple" fields that don't require any extra processing.
+	xmlProgramme := xmltv.Programme{
+		Channel: stationID,
+		ID:      airing.ProgramID,
+		Length:  &length,
+		Start:   &xmltv.Time{Time: airing.AirDateTime},
+		Stop:    &xmltv.Time{Time: endTime},
+	}
+
+	// Now for the fields that have to be parsed.
+	for _, broadcastLang := range station.Station.BroadcastLanguage {
+		xmlProgramme.Languages = []xmltv.CommonElement{xmltv.CommonElement{
+			Value: broadcastLang,
+			Lang:  broadcastLang,
+		}}
+	}
+
+	xmlProgramme.Titles = make([]xmltv.CommonElement, 0)
+	for _, sdTitle := range programInfo.Titles {
+		xmlProgramme.Titles = append(xmlProgramme.Titles, xmltv.CommonElement{
+			Value: sdTitle.Title120,
+		})
+	}
+
+	if programInfo.EpisodeTitle150 != "" {
+		xmlProgramme.SecondaryTitles = []xmltv.CommonElement{xmltv.CommonElement{
+			Value: programInfo.EpisodeTitle150,
+		}}
+	}
+
+	xmlProgramme.Descriptions = make([]xmltv.CommonElement, 0)
+	for _, sdDescription := range programInfo.GetOrderedDescriptions() {
+		xmlProgramme.Descriptions = append(xmlProgramme.Descriptions, xmltv.CommonElement{
+			Value: sdDescription.Description,
+			Lang:  sdDescription.Language,
+		})
+	}
+
+	for _, sdCast := range append(programInfo.Cast, programInfo.Crew...) {
+		if xmlProgramme.Credits == nil {
+			xmlProgramme.Credits = &xmltv.Credits{}
+		}
+		lowerRole := strings.ToLower(sdCast.Role)
+		if strings.Contains(lowerRole, "director") {
+			xmlProgramme.Credits.Directors = append(xmlProgramme.Credits.Directors, sdCast.Name)
+		} else if strings.Contains(lowerRole, "actor") || strings.Contains(lowerRole, "voice") {
+			role := ""
+			if sdCast.Role != "Actor" {
+				role = sdCast.Role
+			}
+			xmlProgramme.Credits.Actors = append(xmlProgramme.Credits.Actors, xmltv.Actor{
+				Role:  role,
+				Value: sdCast.Name,
+			})
+		} else if strings.Contains(lowerRole, "writer") {
+			xmlProgramme.Credits.Writers = append(xmlProgramme.Credits.Writers, sdCast.Name)
+		} else if strings.Contains(lowerRole, "producer") {
+			xmlProgramme.Credits.Producers = append(xmlProgramme.Credits.Producers, sdCast.Name)
+		} else if strings.Contains(lowerRole, "host") || strings.Contains(lowerRole, "anchor") {
+			xmlProgramme.Credits.Presenters = append(xmlProgramme.Credits.Presenters, sdCast.Name)
+		} else if strings.Contains(lowerRole, "guest") || strings.Contains(lowerRole, "contestant") {
+			xmlProgramme.Credits.Guests = append(xmlProgramme.Credits.Guests, sdCast.Name)
+		}
+	}
+
+	if !programInfo.Movie.Year.Time.IsZero() {
+		xmlProgramme.Date = xmltv.Date(programInfo.Movie.Year.Time)
+	}
+
+	xmlProgramme.Categories = make([]xmltv.CommonElement, 0)
+	seenCategories := make(map[string]struct{})
+	for _, sdCategory := range programInfo.Genres {
+		if _, ok := seenCategories[sdCategory]; !ok {
+			xmlProgramme.Categories = append(xmlProgramme.Categories, xmltv.CommonElement{
+				Value: sdCategory,
+			})
+			seenCategories[sdCategory] = struct{}{}
+		}
+	}
+
+	entityTypeCat := programInfo.EntityType
+
+	if programInfo.EntityType == "episode" {
+		entityTypeCat = "series"
+	}
+
+	if _, ok := seenCategories[entityTypeCat]; !ok {
+		xmlProgramme.Categories = append(xmlProgramme.Categories, xmltv.CommonElement{
+			Value: entityTypeCat,
+		})
+	}
+
+	seenKeywords := make(map[string]struct{})
+	for _, keywords := range programInfo.Keywords {
+		for _, keyword := range keywords {
+			if _, ok := seenKeywords[keyword]; !ok {
+				xmlProgramme.Keywords = append(xmlProgramme.Keywords, xmltv.CommonElement{
+					Value: utils.KebabCase(keyword),
+				})
+				seenKeywords[keyword] = struct{}{}
+			}
+		}
+	}
+
+	if programInfo.OfficialURL != "" {
+		xmlProgramme.URLs = []string{programInfo.OfficialURL}
+	}
+
+	for _, artworkItem := range allArtwork {
+		if strings.HasPrefix(artworkItem.URI, "assets/") {
+			artworkItem.URI = fmt.Sprint(schedulesdirect.DefaultBaseURL, schedulesdirect.APIVersion, "/image/", artworkItem.URI)
+		}
+		xmlProgramme.Icons = append(xmlProgramme.Icons, xmltv.Icon{
+			Source: artworkItem.URI,
+			Width:  artworkItem.Width,
+			Height: artworkItem.Height,
+		})
+	}
+
+	xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{
+		System: "dd_progid",
+		Value:  programInfo.ProgramID,
+	})
+
+	xmltvns := getXMLTVNumber(programInfo.Metadata, airing.ProgramPart)
+	if xmltvns != "" {
+		xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{System: "xmltv_ns", Value: xmltvns})
+	}
+
+	sxxexx := ""
+
+	for _, metadata := range programInfo.Metadata {
+		for _, mdProvider := range metadata {
+			if mdProvider.Season > 0 && mdProvider.Episode > 0 {
+				sxxexx = fmt.Sprintf("S%sE%s", utils.PadNumberWithZeros(mdProvider.Season, 2), utils.PadNumberWithZeros(mdProvider.Episode, 2))
+			}
+		}
+	}
+
+	if sxxexx != "" {
+		xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{System: "SxxExx", Value: sxxexx})
+	}
+
+	for _, videoProperty := range airing.VideoProperties {
+		if xmlProgramme.Video == nil {
+			xmlProgramme.Video = &xmltv.Video{}
+		}
+		if station.Station.IsRadioStation {
+			continue
+		}
+		xmlProgramme.Video.Present = "yes"
+		if strings.ToLower(videoProperty) == "hdtv" {
+			xmlProgramme.Video.Quality = "HDTV"
+			xmlProgramme.Video.Aspect = "16:9"
+		} else if strings.ToLower(videoProperty) == "uhdtv" {
+			xmlProgramme.Video.Quality = "UHD"
+		} else if strings.ToLower(videoProperty) == "sdtv" {
+			xmlProgramme.Video.Aspect = "4:3"
+		}
+	}
+
+	for _, audioProperty := range airing.AudioProperties {
+		switch strings.ToLower(audioProperty) {
+		case "dd":
+			xmlProgramme.Audio = &xmltv.Audio{Stereo: "dolby digital"}
+		case "dd 5.1", "surround", "atmos":
+			xmlProgramme.Audio = &xmltv.Audio{Stereo: "surround"}
+		case "dolby":
+			xmlProgramme.Audio = &xmltv.Audio{Stereo: "dolby"}
+		case "stereo":
+			xmlProgramme.Audio = &xmltv.Audio{Stereo: "stereo"}
+		case "mono":
+			xmlProgramme.Audio = &xmltv.Audio{Stereo: "mono"}
+		case "cc", "subtitled":
+			xmlProgramme.Subtitles = append(xmlProgramme.Subtitles, xmltv.Subtitle{Type: "teletext"})
+		}
+	}
+
+	if airing.Signed {
+		xmlProgramme.Subtitles = append(xmlProgramme.Subtitles, xmltv.Subtitle{Type: "deaf-signed"})
+	}
+
+	if !programInfo.OriginalAirDate.Time.IsZero() {
+		if !airing.New {
+			xmlProgramme.PreviouslyShown = &xmltv.PreviouslyShown{
+				Start: xmltv.Time{Time: programInfo.OriginalAirDate.Time},
+			}
+		}
+		timeToUse := programInfo.OriginalAirDate.Time
+		if airing.New {
+			timeToUse = airing.AirDateTime
+		}
+		xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{
+			System: "original-air-date",
+			Value:  timeToUse.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	if airing.Repeat && xmlProgramme.PreviouslyShown != nil {
+		xmlProgramme.PreviouslyShown = nil
+	}
+
+	seenRatings := make(map[string]string)
+	for _, rating := range append(programInfo.ContentRating, airing.Ratings...) {
+		if _, ok := seenRatings[rating.Body]; !ok {
+			xmlProgramme.Ratings = append(xmlProgramme.Ratings, xmltv.Rating{
+				Value:  rating.Code,
+				System: rating.Body,
+			})
+			seenRatings[rating.Body] = rating.Code
+		}
+	}
+
+	for _, starRating := range programInfo.Movie.QualityRating {
+		xmlProgramme.StarRatings = append(xmlProgramme.StarRatings, xmltv.Rating{
+			Value:  fmt.Sprintf("%s/%s", starRating.Rating, starRating.MaxRating),
+			System: starRating.RatingsBody,
+		})
+	}
+
+	if airing.IsPremiereOrFinale != "" {
+		xmlProgramme.Premiere = &xmltv.CommonElement{
+			Lang:  "en",
+			Value: string(airing.IsPremiereOrFinale),
+		}
+	}
+
+	if airing.Premiere {
+		xmlProgramme.Premiere = &xmltv.CommonElement{}
+	}
+
+	if airing.New {
+		elm := xmltv.ElementPresent(true)
+		xmlProgramme.New = &elm
+	}
+
+	// Done processing!
+	return &ProgrammeContainer{
+		Programme: xmlProgramme,
+		ProviderData: sdProgrammeData{
+			airing,
+			programInfo,
+			allArtwork,
+			station,
+		},
+	}, nil
+
+}
+
+func getDaysBetweenTimes(start, end time.Time) []string {
+	dates := make([]string, 0)
+	for last := start; last.Before(end); last = last.AddDate(0, 0, 1) {
+		dates = append(dates, last.Format("2006-01-02"))
+	}
+	return dates
 }

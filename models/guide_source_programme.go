@@ -49,7 +49,7 @@ type GuideSourceProgramme struct {
 type GuideSourceProgrammeAPI interface {
 	InsertGuideSourceProgramme(guideID int, programme xmltv.Programme, providerData interface{}) (*GuideSourceProgramme, error)
 	DeleteGuideSourceProgramme(channelID int) (*GuideSourceProgramme, error)
-	UpdateGuideSourceProgramme(channelID int, description string) (*GuideSourceProgramme, error)
+	UpdateGuideSourceProgramme(programmeID string, providerData interface{}) error
 	GetGuideSourceProgrammeByID(id int) (*GuideSourceProgramme, error)
 	GetProgrammesForActiveChannels() ([]GuideSourceProgramme, error)
 	GetProgrammesForChannel(channelID string) ([]GuideSourceProgramme, error)
@@ -75,7 +75,7 @@ func (db *GuideSourceProgrammeDB) InsertGuideSourceProgramme(guideID int, progra
 		return nil, fmt.Errorf("error when marshalling xmltv.Programme for use in guide_source_programme insert: %s", programmeMarshalErr)
 	}
 
-	providerDataJSON, providerDataJSONErr := json.Marshal(programme)
+	providerDataJSON, providerDataJSONErr := json.Marshal(providerData)
 	if providerDataJSONErr != nil {
 		return nil, fmt.Errorf("error when marshalling providerData for use in guide_source_programme insert: %s", providerDataJSONErr)
 	}
@@ -129,10 +129,9 @@ func (db *GuideSourceProgrammeDB) DeleteGuideSourceProgramme(programmeID int) (*
 }
 
 // UpdateGuideSourceProgramme updates a programme.
-func (db *GuideSourceProgrammeDB) UpdateGuideSourceProgramme(programmeID int, description string) (*GuideSourceProgramme, error) {
-	programme := GuideSourceProgramme{}
-	err := db.SQL.Get(&programme, `UPDATE guide_source_programme SET description = $2 WHERE id = $1 RETURNING *`, programmeID, description)
-	return &programme, err
+func (db *GuideSourceProgrammeDB) UpdateGuideSourceProgramme(programmeID string, providerData interface{}) error {
+	_, err := db.SQL.Exec(`UPDATE guide_source_programme SET provider_data = ? WHERE id = ?`, providerData, programmeID)
+	return err
 }
 
 // GetProgrammesForActiveChannels returns a slice of GuideSourceProgrammes for actively assigned channels.

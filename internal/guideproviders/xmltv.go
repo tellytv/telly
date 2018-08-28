@@ -18,7 +18,7 @@ type XMLTV struct {
 func newXMLTV(config *Configuration) (GuideProvider, error) {
 	provider := &XMLTV{BaseConfig: *config}
 
-	if loadErr := provider.Refresh(); loadErr != nil {
+	if _, loadErr := provider.Refresh(nil); loadErr != nil {
 		return nil, loadErr
 	}
 
@@ -36,28 +36,28 @@ func (x *XMLTV) Channels() ([]Channel, error) {
 }
 
 // Schedule returns a slice of xmltv.Programme for the given channelIDs.
-func (x *XMLTV) Schedule(channelIDs []string) ([]xmltv.Programme, error) {
+func (x *XMLTV) Schedule(inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error) {
 	channelIDMap := make(map[string]struct{})
-	for _, chanID := range channelIDs {
-		channelIDMap[chanID] = struct{}{}
+	for _, chanID := range inputChannels {
+		channelIDMap[chanID.ID] = struct{}{}
 	}
 
-	filteredProgrammes := make([]xmltv.Programme, 0)
+	filteredProgrammes := make([]ProgrammeContainer, 0)
 
 	for _, programme := range x.file.Programmes {
 		if _, ok := channelIDMap[programme.Channel]; ok {
-			filteredProgrammes = append(filteredProgrammes, programme)
+			filteredProgrammes = append(filteredProgrammes, ProgrammeContainer{programme, nil})
 		}
 	}
 
-	return filteredProgrammes, nil
+	return nil, filteredProgrammes, nil
 }
 
 // Refresh causes the provider to request the latest information.
-func (x *XMLTV) Refresh() error {
+func (x *XMLTV) Refresh(lineupStateJSON []byte) ([]byte, error) {
 	xTV, xTVErr := utils.GetXMLTV(x.BaseConfig.XMLTVURL, false)
 	if xTVErr != nil {
-		return fmt.Errorf("error when getting XMLTV file: %s", xTVErr)
+		return nil, fmt.Errorf("error when getting XMLTV file: %s", xTVErr)
 	}
 
 	x.file = xTV
@@ -82,7 +82,7 @@ func (x *XMLTV) Refresh() error {
 		})
 	}
 
-	return nil
+	return nil, nil
 }
 
 // Configuration returns the base configuration backing the provider
