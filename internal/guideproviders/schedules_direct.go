@@ -216,7 +216,7 @@ func (s *SchedulesDirect) Refresh(lastStatusJSON []byte) ([]byte, error) {
 	var lastStatus schedulesdirect.StatusResponse
 	if len(lastStatusJSON) > 0 {
 		if unmarshalErr := json.Unmarshal(lastStatusJSON, &lastStatus); unmarshalErr != nil {
-			return nil, unmarshalErr
+			return nil, fmt.Errorf("error unmarshalling cached status JSON: %s", unmarshalErr)
 		}
 
 		for _, lineup := range lastStatus.Lineups {
@@ -417,7 +417,7 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 		Channel: stationID,
 		ID:      airing.ProgramID,
 		Length:  &length,
-		Start:   &xmltv.Time{Time: airing.AirDateTime},
+		Start:   &xmltv.Time{Time: *airing.AirDateTime},
 		Stop:    &xmltv.Time{Time: endTime},
 	}
 
@@ -486,8 +486,8 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 		}
 	}
 
-	if !programInfo.Movie.Year.Time.IsZero() {
-		xmlProgramme.Date = xmltv.Date(programInfo.Movie.Year.Time)
+	if programInfo.Movie.Year != nil && !programInfo.Movie.Year.Time.IsZero() {
+		xmlProgramme.Date = xmltv.Date(*programInfo.Movie.Year.Time)
 	}
 
 	xmlProgramme.Categories = make([]xmltv.CommonElement, 0)
@@ -545,7 +545,7 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 		Value:  programInfo.ProgramID,
 	})
 
-	xmltvns := getXMLTVNumber(programInfo.Metadata, airing.ProgramPart)
+	xmltvns := getXMLTVNumber(programInfo.Metadata, *airing.ProgramPart)
 	if xmltvns != "" {
 		xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{System: "xmltv_ns", Value: xmltvns})
 	}
@@ -606,7 +606,7 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 	if !programInfo.OriginalAirDate.Time.IsZero() {
 		if !airing.New {
 			xmlProgramme.PreviouslyShown = &xmltv.PreviouslyShown{
-				Start: xmltv.Time{Time: programInfo.OriginalAirDate.Time},
+				Start: xmltv.Time{Time: *programInfo.OriginalAirDate.Time},
 			}
 		}
 		timeToUse := programInfo.OriginalAirDate.Time
@@ -641,10 +641,10 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 		})
 	}
 
-	if airing.IsPremiereOrFinale != "" {
+	if airing.IsPremiereOrFinale != nil && *airing.IsPremiereOrFinale != "" {
 		xmlProgramme.Premiere = &xmltv.CommonElement{
 			Lang:  "en",
-			Value: string(airing.IsPremiereOrFinale),
+			Value: string(*airing.IsPremiereOrFinale),
 		}
 	}
 

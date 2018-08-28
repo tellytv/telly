@@ -307,11 +307,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:189ca3d42cf31e7ae31a31e17f4a860c8c9f1f164e28b242b3434658d2f6e41c"
+  digest = "1:9ae6456cbbd0aca86266e34fad46fcdb27ce7492d7668a8c5d84e5ac0da7aa1d"
   name = "github.com/tellytv/go.schedulesdirect"
   packages = ["."]
   pruneopts = "UT"
-  revision = "34412a2eb0519d921a72e24a3e17e8a335dcdab9"
+  revision = "49735fc3ed7740fa11ebaafbdeb8ed466fc9e239"
 
 [[projects]]
   branch = "master"
