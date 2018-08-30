@@ -108,21 +108,22 @@ func NewCContext() (*CContext, error) {
 		guideSourceProvidersMap[guideSource.ID] = provider
 	}
 
-	videoSources, videoSourcesErr := api.VideoSource.GetAllVideoSources(false)
-	if videoSourcesErr != nil {
-		log.WithError(videoSourcesErr).Panicln("error initializing video sources")
-	}
+	// videoSources, videoSourcesErr := api.VideoSource.GetAllVideoSources(false)
+	// if videoSourcesErr != nil {
+	// 	log.WithError(videoSourcesErr).Panicln("error initializing video sources")
+	// }
 
 	videoSourceProvidersMap := make(map[int]videoproviders.VideoProvider)
 
-	for _, videoSource := range videoSources {
-		providerCfg := videoSource.ProviderConfiguration()
-		provider, providerErr := providerCfg.GetProvider()
-		if providerErr != nil {
-			log.WithError(providerErr).Panicln("error initializing provider")
-		}
-		videoSourceProvidersMap[videoSource.ID] = provider
-	}
+	// for _, videoSource := range videoSources {
+	// 	log.Infof("Initializing video source %s (%s)", videoSource.Name, videoSource.Provider)
+	// 	providerCfg := videoSource.ProviderConfiguration()
+	// 	provider, providerErr := providerCfg.GetProvider()
+	// 	if providerErr != nil {
+	// 		log.WithError(providerErr).Panicln("error initializing provider")
+	// 	}
+	// 	videoSourceProvidersMap[videoSource.ID] = provider
+	// }
 
 	context := &CContext{
 		API:                  api,

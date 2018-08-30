@@ -84,7 +84,7 @@ func (db *GuideSourceChannelDB) InsertGuideSourceChannel(guideID int, channel gu
 	}
 
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO guide_source_channel (guide_id, xmltv_id, data, provider_data)
+    INSERT OR REPLACE INTO guide_source_channel (guide_id, xmltv_id, data, provider_data)
     VALUES (:guide_id, :xmltv_id, :data, :provider_data)`, insertingChannel)
 	if err != nil {
 		return nil, err

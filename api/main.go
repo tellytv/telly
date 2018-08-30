@@ -49,12 +49,19 @@ func ServeAPI(cc *context.CContext) {
 	apiGroup.GET("/lineups/:lineupId", lineupRoute(cc, getLineup))
 	apiGroup.PUT("/lineups/:lineupId/channels", lineupRoute(cc, updateLineupChannels))
 	apiGroup.POST("/lineups/:lineupId/channels", lineupRoute(cc, addLineupChannel))
+	apiGroup.PUT("/lineups/:lineupId/refresh", lineupRoute(cc, refreshLineup))
 	apiGroup.GET("/lineup/scan", scanM3U)
 
 	apiGroup.GET("/guide_sources", wrapContext(cc, getGuideSources))
 	apiGroup.POST("/guide_sources", wrapContext(cc, addGuide))
 	apiGroup.GET("/guide_sources/channels", wrapContext(cc, getAllChannels))
 	apiGroup.GET("/guide_sources/programmes", wrapContext(cc, getAllProgrammes))
+
+	apiGroup.GET("/guide_source/:guideSourceId/coverage", guideSourceLineupRoute(cc, getLineupCoverage))
+	apiGroup.GET("/guide_source/:guideSourceId/lineups", guideSourceLineupRoute(cc, getAvailableLineups))
+	apiGroup.PUT("/guide_source/:guideSourceId/lineups/:lineupId", guideSourceLineupRoute(cc, subscribeToLineup))
+	apiGroup.DELETE("/guide_source/:guideSourceId/lineups/:lineupId", guideSourceLineupRoute(cc, unsubscribeFromLineup))
+	apiGroup.GET("/guide_source/:guideSourceId/lineups/:lineupId/channels", guideSourceLineupRoute(cc, previewLineupChannels))
 
 	apiGroup.GET("/video_sources", wrapContext(cc, getVideoSources))
 	apiGroup.POST("/video_sources", wrapContext(cc, addVideoSource))

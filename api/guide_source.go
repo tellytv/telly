@@ -3,9 +3,11 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tellytv/telly/context"
+	"github.com/tellytv/telly/internal/guideproviders"
 	"github.com/tellytv/telly/models"
 )
 
@@ -97,4 +99,91 @@ func getAllProgrammes(cc *context.CContext, c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, programmes)
+}
+
+func getLineupCoverage(provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+	coverage, coverageErr := provider.LineupCoverage()
+	if coverageErr != nil {
+		c.AbortWithError(http.StatusInternalServerError, coverageErr)
+		return
+	}
+	c.JSON(http.StatusOK, coverage)
+}
+
+func getAvailableLineups(provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+	countryCode := c.Query("countryCode")
+	postalCode := c.Query("postalCode")
+	lineups, lineupsErr := provider.AvailableLineups(countryCode, postalCode)
+	if lineupsErr != nil {
+		c.AbortWithError(http.StatusInternalServerError, lineupsErr)
+		return
+	}
+	c.JSON(http.StatusOK, lineups)
+}
+
+func previewLineupChannels(provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+	lineupId := c.Param("lineupId")
+	channels, channelsErr := provider.PreviewLineupChannels(lineupId)
+	if channelsErr != nil {
+		c.AbortWithError(http.StatusInternalServerError, channelsErr)
+		return
+	}
+	c.JSON(http.StatusOK, channels)
+}
+
+func subscribeToLineup(provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+	lineupId := c.Param("lineupId")
+	if subscribeErr := provider.SubscribeToLineup(lineupId); subscribeErr != nil {
+		c.AbortWithError(http.StatusInternalServerError, subscribeErr)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "okay"})
+}
+
+func unsubscribeFromLineup(provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+	lineupId := c.Param("lineupId")
+	if unsubscribeErr := provider.UnsubscribeFromLineup(lineupId); unsubscribeErr != nil {
+		c.AbortWithError(http.StatusInternalServerError, unsubscribeErr)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "okay"})
+}
+
+func guideSourceRoute(cc *context.CContext, originalFunc func(*models.GuideSource, *context.CContext, *gin.Context)) gin.HandlerFunc {
+	return wrapContext(cc, func(cc *context.CContext, c *gin.Context) {
+		guideSourceID, guideSourceIDErr := strconv.Atoi(c.Param("guideSourceId"))
+		if guideSourceIDErr != nil {
+			c.AbortWithError(http.StatusBadRequest, guideSourceIDErr)
+			return
+		}
+		guideSource, guideSourceErr := cc.API.GuideSource.GetGuideSourceByID(guideSourceID)
+		if guideSourceErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, guideSourceErr)
+			return
+		}
+		originalFunc(guideSource, cc, c)
+	})
+}
+
+func guideSourceLineupRoute(cc *context.CContext, originalFunc func(guideproviders.GuideProvider, *context.CContext, *gin.Context)) gin.HandlerFunc {
+	return wrapContext(cc, func(cc *context.CContext, c *gin.Context) {
+		guideSourceID, guideSourceIDErr := strconv.Atoi(c.Param("guideSourceId"))
+		if guideSourceIDErr != nil {
+			c.AbortWithError(http.StatusBadRequest, guideSourceIDErr)
+			return
+		}
+
+		provider, ok := cc.GuideSourceProviders[guideSourceID]
+		if !ok {
+			c.AbortWithError(http.StatusNotFound, fmt.Errorf("%d is not a valid guide source provider", guideSourceID))
+			return
+		}
+
+		if !provider.SupportsLineups() {
+			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("Provider %s does not support lineups", guideSourceID))
+			return
+		}
+
+		originalFunc(provider, cc, c)
+	})
 }

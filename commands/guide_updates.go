@@ -79,23 +79,23 @@ func fireGuideUpdates(cc *context.CContext, provider *models.GuideSource) error 
 	}
 
 	// Get all programmes in DB to pass into the Schedule function.
-	programmes, programmesErr := cc.API.GuideSourceProgramme.GetProgrammesForActiveChannels()
-	if programmesErr != nil {
-		return fmt.Errorf("error getting all programmes in database: %s", programmesErr)
+	existingProgrammes, existingProgrammesErr := cc.API.GuideSourceProgramme.GetProgrammesForActiveChannels()
+	if existingProgrammesErr != nil {
+		return fmt.Errorf("error getting all programmes in database: %s", existingProgrammesErr)
 	}
 
-	containers := make([]guideproviders.ProgrammeContainer, 0)
-	for _, programme := range programmes {
-		containers = append(containers, guideproviders.ProgrammeContainer{
+	programmeContainers := make([]guideproviders.ProgrammeContainer, 0)
+	for _, programme := range existingProgrammes {
+		programmeContainers = append(programmeContainers, guideproviders.ProgrammeContainer{
 			Programme:    *programme.XMLTV,
 			ProviderData: programme.ProviderData,
 		})
 	}
 
 	log.Infof("Beginning import of guide data from provider %d, getting %d channels: %s", provider.ID, len(channelsToGet), strings.Join(channelIDs, ", "))
-	channelProviderData, schedule, scheduleErr := cc.GuideSourceProviders[provider.ID].Schedule(existingChannels, containers)
+	channelProviderData, newProgrammes, scheduleErr := cc.GuideSourceProviders[provider.ID].Schedule(14, existingChannels, programmeContainers)
 	if scheduleErr != nil {
-		return fmt.Errorf("error when updating schedule for provider %s: %s", provider.ID, scheduleErr)
+		return fmt.Errorf("error when updating schedule for provider %d: %s", provider.ID, scheduleErr)
 	}
 
 	for channelID, providerData := range channelProviderData {
@@ -109,14 +109,14 @@ func fireGuideUpdates(cc *context.CContext, provider *models.GuideSource) error 
 		}
 	}
 
-	for _, programme := range schedule {
+	for _, programme := range newProgrammes {
 		_, programmeErr := cc.API.GuideSourceProgramme.InsertGuideSourceProgramme(provider.ID, programme.Programme, programme.ProviderData)
 		if programmeErr != nil {
-			return fmt.Errorf("error while inserting programmes: %s", programmeErr)
+			return fmt.Errorf("error while inserting new programmes: %s", programmeErr)
 		}
 	}
 
-	log.Infof("Completed import of %d programs", len(schedule))
+	log.Infof("Completed import of %d programs", len(newProgrammes))
 
 	return nil
 }

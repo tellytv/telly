@@ -113,25 +113,25 @@ func main() {
 	for _, lineup := range lineups {
 		api.StartTuner(cc, &lineup)
 
-		// videoProviders := make(map[int]string)
+		videoProviders := make(map[int]*models.VideoSource)
 		guideProviders := make(map[int]*models.GuideSource)
 		for _, channel := range lineup.Channels {
-			// videoProviders[channel.VideoTrack.VideoSource.ID] = channel.VideoTrack.VideoSource.UpdateFrequency
+			videoProviders[channel.VideoTrack.VideoSource.ID] = channel.VideoTrack.VideoSource
 			guideProviders[channel.GuideChannel.GuideSource.ID] = channel.GuideChannel.GuideSource
 		}
 
-		// for videoProviderID, updateFrequencey := range videoProviders {
-		// 	c.AddFunc(updateFrequencey, func() { commands.StartFireVideoUpdates(cc, videoProviderID) })
-		// }
+		for _, videoSource := range videoProviders {
+			commands.StartFireVideoUpdates(cc, videoSource)
+			c.AddFunc(videoSource.UpdateFrequency, func() { commands.StartFireVideoUpdates(cc, videoSource) })
+		}
 
 		for _, guideSource := range guideProviders {
 			commands.StartFireGuideUpdates(cc, guideSource)
-			// c.AddFunc(updateFrequencey, func() { commands.StartFireGuideUpdates(cc, guideProviderID) })
+			c.AddFunc(guideSource.UpdateFrequency, func() { commands.StartFireGuideUpdates(cc, guideSource) })
 		}
 	}
 
 	c.Start()
-	log.Infof("CRON ENTRIES %+v", c.Entries())
 
 	api.ServeAPI(cc)
 }

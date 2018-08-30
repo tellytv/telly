@@ -31,17 +31,109 @@ func (s *SchedulesDirect) Name() string {
 	return "Schedules Direct"
 }
 
+// SupportsLineups returns true if the provider supports the concept of subscribing to lineups.
+func (s *SchedulesDirect) SupportsLineups() bool {
+	return true
+}
+
+// LineupCoverage returns a map of regions and countries the provider has support for.
+func (s *SchedulesDirect) LineupCoverage() ([]CoverageArea, error) {
+	coverage, coverageErr := s.client.GetAvailableCountries()
+	if coverageErr != nil {
+		return nil, fmt.Errorf("error while getting coverage from provider %s: %s", s.Name(), coverageErr)
+	}
+
+	outputCoverage := make([]CoverageArea, 0)
+
+	for region, countries := range coverage {
+		for _, country := range countries {
+			outputCoverage = append(outputCoverage, CoverageArea{
+				RegionName:        region,
+				FullName:          country.FullName,
+				PostalCode:        country.PostalCode,
+				PostalCodeExample: country.PostalCodeExample,
+				ShortName:         country.ShortName,
+				OnePostalCode:     country.OnePostalCode,
+			})
+		}
+	}
+
+	return outputCoverage, nil
+}
+
+// AvailableLineups will return a slice of AvailableLineup for the given countryCode and postalCode.
+func (s *SchedulesDirect) AvailableLineups(countryCode, postalCode string) ([]AvailableLineup, error) {
+	headends, headendsErr := s.client.GetHeadends(countryCode, postalCode)
+	if headendsErr != nil {
+		return nil, fmt.Errorf("error while getting available lineups from provider %s: %s", s.Name(), headendsErr)
+	}
+
+	lineups := make([]AvailableLineup, 0)
+	for _, headend := range headends {
+		for _, lineup := range headend.Lineups {
+			lineups = append(lineups, AvailableLineup{
+				Location:   headend.Location,
+				Transport:  headend.Transport,
+				Name:       lineup.Name,
+				ProviderID: lineup.Lineup,
+			})
+		}
+	}
+
+	return lineups, nil
+}
+
+// PreviewLineupChannels will return a slice of Channels for the given provider specific lineupID.
+func (s *SchedulesDirect) PreviewLineupChannels(lineupID string) ([]Channel, error) {
+	channels, channelsErr := s.client.PreviewLineup(lineupID)
+	if channelsErr != nil {
+		return nil, fmt.Errorf("error while previewing channels in lineup from provider %s: %s", s.Name(), channelsErr)
+	}
+
+	outputChannels := make([]Channel, 0)
+
+	for _, channel := range channels {
+		outputChannels = append(outputChannels, Channel{
+			Name:      channel.Name,
+			Number:    channel.Channel,
+			CallSign:  channel.CallSign,
+			Affiliate: channel.Affiliate,
+			Lineup:    lineupID,
+		})
+	}
+
+	return outputChannels, nil
+}
+
+// SubscribeToLineup will subscribe the user to a lineup.
+func (s *SchedulesDirect) SubscribeToLineup(lineupID string) error {
+	_, addLineupErr := s.client.AddLineup(lineupID)
+	if addLineupErr != nil {
+		return fmt.Errorf("error while subscribing to lineup from provider %s: %s", s.Name(), addLineupErr)
+	}
+	return nil
+}
+
+// UnsubscribeFromLineup will remove a lineup from the provider account.
+func (s *SchedulesDirect) UnsubscribeFromLineup(lineupID string) error {
+	_, deleteLineupErr := s.client.AddLineup(lineupID)
+	if deleteLineupErr != nil {
+		return fmt.Errorf("error while deleting lineup from provider %s: %s", s.Name(), deleteLineupErr)
+	}
+	return nil
+}
+
 // Channels returns a slice of Channel that the provider has available.
 func (s *SchedulesDirect) Channels() ([]Channel, error) {
 	return s.channels, nil
 }
 
 // Schedule returns a slice of xmltv.Programme for the given channelIDs.
-func (s *SchedulesDirect) Schedule(inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error) {
+func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error) {
 	// First, convert the slice of channelIDs into a slice of schedule requests.
 	reqs := make([]schedulesdirect.StationScheduleRequest, 0)
 	channelsCache := make(map[string]map[string]schedulesdirect.LastModifiedEntry)
-	requestingDates := getDaysBetweenTimes(time.Now(), time.Now().AddDate(0, 0, 7))
+	requestingDates := getDaysBetweenTimes(time.Now(), time.Now().AddDate(0, 0, daysToGet))
 	channelShortToLongIDMap := make(map[string]string)
 	for _, inputChannel := range inputChannels {
 		splitID := strings.Split(inputChannel.ID, ".")[1]
@@ -345,7 +437,7 @@ type sdStationContainer struct {
 	ChannelMap schedulesdirect.ChannelMap
 }
 
-func getXMLTVNumber(mdata []map[string]schedulesdirect.Metadata, multipartInfo schedulesdirect.Part) string {
+func getXMLTVNumber(mdata []map[string]schedulesdirect.Metadata, multipartInfo *schedulesdirect.Part) string {
 	seasonNumber := 0
 	episodeNumber := 0
 	totalSeasons := 0
@@ -383,10 +475,16 @@ func getXMLTVNumber(mdata []map[string]schedulesdirect.Metadata, multipartInfo s
 			episodeNumberStr = fmt.Sprintf("%d/%d", episodeNumber, totalEpisodes)
 		}
 
-		partNumber := multipartInfo.PartNumber
-		totalParts := multipartInfo.TotalParts
-
 		partStr := "0"
+
+		partNumber := 0
+		totalParts := 0
+
+		if multipartInfo != nil {
+			partNumber = multipartInfo.PartNumber
+			totalParts = multipartInfo.TotalParts
+		}
+
 		if partNumber > 0 {
 			partStr = fmt.Sprintf("%d", partNumber)
 			if totalParts > 0 {
@@ -486,7 +584,7 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 		}
 	}
 
-	if programInfo.Movie.Year != nil && !programInfo.Movie.Year.Time.IsZero() {
+	if programInfo.Movie != nil && programInfo.Movie.Year != nil && !programInfo.Movie.Year.Time.IsZero() {
 		xmlProgramme.Date = xmltv.Date(*programInfo.Movie.Year.Time)
 	}
 
@@ -545,7 +643,7 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 		Value:  programInfo.ProgramID,
 	})
 
-	xmltvns := getXMLTVNumber(programInfo.Metadata, *airing.ProgramPart)
+	xmltvns := getXMLTVNumber(programInfo.Metadata, airing.ProgramPart)
 	if xmltvns != "" {
 		xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{System: "xmltv_ns", Value: xmltvns})
 	}
@@ -603,16 +701,18 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 		xmlProgramme.Subtitles = append(xmlProgramme.Subtitles, xmltv.Subtitle{Type: "deaf-signed"})
 	}
 
-	if !programInfo.OriginalAirDate.Time.IsZero() {
+	if programInfo.OriginalAirDate != nil && !programInfo.OriginalAirDate.Time.IsZero() {
 		if !airing.New {
 			xmlProgramme.PreviouslyShown = &xmltv.PreviouslyShown{
 				Start: xmltv.Time{Time: *programInfo.OriginalAirDate.Time},
 			}
 		}
+
 		timeToUse := programInfo.OriginalAirDate.Time
 		if airing.New {
 			timeToUse = airing.AirDateTime
 		}
+
 		xmlProgramme.EpisodeNums = append(xmlProgramme.EpisodeNums, xmltv.EpisodeNum{
 			System: "original-air-date",
 			Value:  timeToUse.Format("2006-01-02 15:04:05"),
@@ -634,11 +734,13 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 		}
 	}
 
-	for _, starRating := range programInfo.Movie.QualityRating {
-		xmlProgramme.StarRatings = append(xmlProgramme.StarRatings, xmltv.Rating{
-			Value:  fmt.Sprintf("%s/%s", starRating.Rating, starRating.MaxRating),
-			System: starRating.RatingsBody,
-		})
+	if programInfo.Movie != nil {
+		for _, starRating := range programInfo.Movie.QualityRating {
+			xmlProgramme.StarRatings = append(xmlProgramme.StarRatings, xmltv.Rating{
+				Value:  fmt.Sprintf("%s/%s", starRating.Rating, starRating.MaxRating),
+				System: starRating.RatingsBody,
+			})
+		}
 	}
 
 	if airing.IsPremiereOrFinale != nil && *airing.IsPremiereOrFinale != "" {

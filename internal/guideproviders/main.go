@@ -35,17 +35,18 @@ func (i *Configuration) GetProvider() (GuideProvider, error) {
 // Channel describes a channel available in the providers lineup with necessary pieces parsed into fields.
 type Channel struct {
 	// Required Fields
-	ID     string
-	Name   string
-	Logos  []Logo
-	Number string
+	ID     string `json:",omitempty"`
+	Name   string `json:",omitempty"`
+	Logos  []Logo `json:",omitempty"`
+	Number string `json:",omitempty"`
 
 	// Optional fields
-	CallSign string
-	URLs     []string
-	Lineup   string
+	CallSign  string   `json:",omitempty"`
+	URLs      []string `json:",omitempty"`
+	Lineup    string   `json:",omitempty"`
+	Affiliate string   `json:",omitempty"`
 
-	ProviderData interface{}
+	ProviderData interface{} `json:",omitempty"`
 }
 
 // XMLTV returns the xmltv.Channel representation of the Channel.
@@ -97,12 +98,38 @@ type ProgrammeContainer struct {
 	ProviderData interface{}
 }
 
+// AvailableLineup is a lineup that a user can subscribe to.
+type AvailableLineup struct {
+	Location   string
+	Transport  string
+	Name       string
+	ProviderID string
+}
+
+// CoverageArea describes a region that a provider supports.
+type CoverageArea struct {
+	RegionName        string `json:",omitempty"`
+	FullName          string `json:",omitempty"`
+	PostalCode        string `json:",omitempty"`
+	PostalCodeExample string `json:",omitempty"`
+	ShortName         string `json:",omitempty"`
+	OnePostalCode     bool   `json:",omitempty"`
+}
+
 // GuideProvider describes a IPTV provider configuration.
 type GuideProvider interface {
 	Name() string
 	Channels() ([]Channel, error)
-	Schedule(inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error)
+	Schedule(daysToGet int, inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error)
 
 	Refresh(lineupStateJSON []byte) ([]byte, error)
 	Configuration() Configuration
+
+	// Schedules Direct specific functions that others might someday use.
+	SupportsLineups() bool
+	LineupCoverage() ([]CoverageArea, error)
+	AvailableLineups(countryCode, postalCode string) ([]AvailableLineup, error)
+	PreviewLineupChannels(lineupID string) ([]Channel, error)
+	SubscribeToLineup(providerID string) error
+	UnsubscribeFromLineup(providerID string) error
 }

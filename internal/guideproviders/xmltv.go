@@ -30,13 +30,43 @@ func (x *XMLTV) Name() string {
 	return "XMLTV"
 }
 
+// SupportsLineups returns true if the provider supports the concept of subscribing to lineups.
+func (x *XMLTV) SupportsLineups() bool {
+	return false
+}
+
+// LineupCoverage returns a map of regions and countries the provider has support for.
+func (x *XMLTV) LineupCoverage() ([]CoverageArea, error) {
+	return nil, nil
+}
+
+// AvailableLineups will return a slice of AvailableLineup for the given countryCode and postalCode.
+func (x *XMLTV) AvailableLineups(countryCode, postalCode string) ([]AvailableLineup, error) {
+	return nil, nil
+}
+
+// PreviewLineupChannels will return a slice of Channels for the given provider specific lineupID.
+func (x *XMLTV) PreviewLineupChannels(lineupID string) ([]Channel, error) {
+	return nil, nil
+}
+
+// SubscribeToLineup will subscribe the user to a lineup.
+func (x *XMLTV) SubscribeToLineup(providerID string) error {
+	return nil
+}
+
+// UnsubscribeFromLineup will remove a lineup from the provider account.
+func (x *XMLTV) UnsubscribeFromLineup(providerID string) error {
+	return nil
+}
+
 // Channels returns a slice of Channel that the provider has available.
 func (x *XMLTV) Channels() ([]Channel, error) {
 	return x.channels, nil
 }
 
 // Schedule returns a slice of xmltv.Programme for the given channelIDs.
-func (x *XMLTV) Schedule(inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error) {
+func (x *XMLTV) Schedule(daysToGet int, inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error) {
 	channelIDMap := make(map[string]struct{})
 	for _, chanID := range inputChannels {
 		channelIDMap[chanID.ID] = struct{}{}

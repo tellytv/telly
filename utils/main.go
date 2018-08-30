@@ -273,7 +273,11 @@ func PadNumberWithZeros(value int, expectedLength int) string {
 	padded := fmt.Sprintf("%02d", value)
 	valLength := CountDigits(value)
 	if valLength != expectedLength {
-		return fmt.Sprintf("%s%d", strings.Repeat("0", expectedLength-valLength), value)
+		repeatLength := expectedLength - valLength
+		if repeatLength < 0 {
+			repeatLength = 0
+		}
+		return fmt.Sprintf("%s%d", strings.Repeat("0", repeatLength), value)
 	}
 	return padded
 }

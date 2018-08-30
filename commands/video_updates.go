@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tellytv/telly/context"
+	"github.com/tellytv/telly/models"
 )
 
 // FireVideoUpdatesCommand Command to fire one off video source updates
@@ -23,7 +24,7 @@ func fireVideoUpdates(cc *context.CContext) error {
 }
 
 // StartFireVideoUpdates Scheduler triggered function to update video sources
-func StartFireVideoUpdates(cc *context.CContext, providerID int) {
+func StartFireVideoUpdates(cc *context.CContext, provider *models.VideoSource) {
 	err := fireVideoUpdates(cc)
 	if err != nil {
 		panic(fmt.Errorf("could not complete video updates: %s", err.Error()))
