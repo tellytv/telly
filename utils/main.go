@@ -181,6 +181,21 @@ func GetStringMapKeys(s map[string]struct{}) []string {
 	return keys
 }
 
+// Difference returns the elements in a that aren't in b
+func Difference(a, b []string) []string {
+	mb := map[string]bool{}
+	for _, x := range b {
+		mb[x] = true
+	}
+	ab := []string{}
+	for _, x := range a {
+		if _, ok := mb[x]; !ok {
+			ab = append(ab, x)
+		}
+	}
+	return ab
+}
+
 // From https://github.com/stoewer/go-strcase
 
 // KebabCase converts a string into kebab case.

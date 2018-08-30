@@ -109,7 +109,7 @@ func (l *LineupChannel) HDHomeRunLineupItem() *HDHomeRunLineupItem {
 type LineupChannelAPI interface {
 	InsertLineupChannel(channelStruct LineupChannel) (*LineupChannel, error)
 	UpsertLineupChannel(channelStruct LineupChannel) (*LineupChannel, error)
-	DeleteLineupChannel(channelID int) (*LineupChannel, error)
+	DeleteLineupChannel(channelID string) error
 	UpdateLineupChannel(channelStruct LineupChannel) (*LineupChannel, error)
 	GetLineupChannelByID(lineupID int, channelNumber string) (*LineupChannel, error)
 	GetChannelsForLineup(lineupID int, expanded bool) ([]LineupChannel, error)
@@ -169,10 +169,9 @@ func (db *LineupChannelDB) GetLineupChannelByID(lineupID int, channelNumber stri
 }
 
 // DeleteLineupChannel marks a channel with the given ID as deleted.
-func (db *LineupChannelDB) DeleteLineupChannel(channelID int) (*LineupChannel, error) {
-	channel := LineupChannel{}
-	err := db.SQL.Get(&channel, `DELETE FROM lineup_channel WHERE id = $1`, channelID)
-	return &channel, err
+func (db *LineupChannelDB) DeleteLineupChannel(channelID string) error {
+	_, err := db.SQL.Exec(`DELETE FROM lineup_channel WHERE id = ?`, channelID)
+	return err
 }
 
 // UpdateLineupChannel updates a channel.

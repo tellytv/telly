@@ -48,7 +48,7 @@ type GuideSourceProgramme struct {
 // GuideSourceProgrammeAPI contains all methods for the User struct
 type GuideSourceProgrammeAPI interface {
 	InsertGuideSourceProgramme(guideID int, programme xmltv.Programme, providerData interface{}) (*GuideSourceProgramme, error)
-	DeleteGuideSourceProgramme(channelID int) (*GuideSourceProgramme, error)
+	DeleteGuideSourceProgrammesForChannel(channelID string) error
 	UpdateGuideSourceProgramme(programmeID string, providerData interface{}) error
 	GetGuideSourceProgrammeByID(id int) (*GuideSourceProgramme, error)
 	GetProgrammesForActiveChannels() ([]GuideSourceProgramme, error)
@@ -122,10 +122,9 @@ func (db *GuideSourceProgrammeDB) GetGuideSourceProgrammeByID(id int) (*GuideSou
 }
 
 // DeleteGuideSourceProgramme marks a programme with the given ID as deleted.
-func (db *GuideSourceProgrammeDB) DeleteGuideSourceProgramme(programmeID int) (*GuideSourceProgramme, error) {
-	programme := GuideSourceProgramme{}
-	err := db.SQL.Get(&programme, `DELETE FROM guide_source_programme WHERE id = $1`, programmeID)
-	return &programme, err
+func (db *GuideSourceProgrammeDB) DeleteGuideSourceProgrammesForChannel(channelID string) error {
+	_, err := db.SQL.Exec(`DELETE FROM guide_source_programme WHERE channel IN (SELECT xmltv_id FROM guide_source_channel WHERE id IN (SELECT guide_channel_id FROM lineup_channel WHERE id = ?))`, channelID)
+	return err
 }
 
 // UpdateGuideSourceProgramme updates a programme.
