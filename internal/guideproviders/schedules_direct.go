@@ -38,6 +38,15 @@ func (s *SchedulesDirect) SupportsLineups() bool {
 
 // LineupCoverage returns a map of regions and countries the provider has support for.
 func (s *SchedulesDirect) LineupCoverage() ([]CoverageArea, error) {
+	if s.client == nil {
+		sdClient, sdClientErr := schedulesdirect.NewClient(s.BaseConfig.Username, s.BaseConfig.Password)
+		if sdClientErr != nil {
+			return nil, fmt.Errorf("error setting up schedules direct client: %s", sdClientErr)
+		}
+
+		s.client = sdClient
+	}
+
 	coverage, coverageErr := s.client.GetAvailableCountries()
 	if coverageErr != nil {
 		return nil, fmt.Errorf("error while getting coverage from provider %s: %s", s.Name(), coverageErr)
@@ -63,6 +72,15 @@ func (s *SchedulesDirect) LineupCoverage() ([]CoverageArea, error) {
 
 // AvailableLineups will return a slice of AvailableLineup for the given countryCode and postalCode.
 func (s *SchedulesDirect) AvailableLineups(countryCode, postalCode string) ([]AvailableLineup, error) {
+	if s.client == nil {
+		sdClient, sdClientErr := schedulesdirect.NewClient(s.BaseConfig.Username, s.BaseConfig.Password)
+		if sdClientErr != nil {
+			return nil, fmt.Errorf("error setting up schedules direct client: %s", sdClientErr)
+		}
+
+		s.client = sdClient
+	}
+
 	headends, headendsErr := s.client.GetHeadends(countryCode, postalCode)
 	if headendsErr != nil {
 		return nil, fmt.Errorf("error while getting available lineups from provider %s: %s", s.Name(), headendsErr)
@@ -85,6 +103,15 @@ func (s *SchedulesDirect) AvailableLineups(countryCode, postalCode string) ([]Av
 
 // PreviewLineupChannels will return a slice of Channels for the given provider specific lineupID.
 func (s *SchedulesDirect) PreviewLineupChannels(lineupID string) ([]Channel, error) {
+	if s.client == nil {
+		sdClient, sdClientErr := schedulesdirect.NewClient(s.BaseConfig.Username, s.BaseConfig.Password)
+		if sdClientErr != nil {
+			return nil, fmt.Errorf("error setting up schedules direct client: %s", sdClientErr)
+		}
+
+		s.client = sdClient
+	}
+
 	channels, channelsErr := s.client.PreviewLineup(lineupID)
 	if channelsErr != nil {
 		return nil, fmt.Errorf("error while previewing channels in lineup from provider %s: %s", s.Name(), channelsErr)
@@ -107,6 +134,15 @@ func (s *SchedulesDirect) PreviewLineupChannels(lineupID string) ([]Channel, err
 
 // SubscribeToLineup will subscribe the user to a lineup.
 func (s *SchedulesDirect) SubscribeToLineup(lineupID string) error {
+	if s.client == nil {
+		sdClient, sdClientErr := schedulesdirect.NewClient(s.BaseConfig.Username, s.BaseConfig.Password)
+		if sdClientErr != nil {
+			return fmt.Errorf("error setting up schedules direct client: %s", sdClientErr)
+		}
+
+		s.client = sdClient
+	}
+
 	_, addLineupErr := s.client.AddLineup(lineupID)
 	if addLineupErr != nil {
 		return fmt.Errorf("error while subscribing to lineup from provider %s: %s", s.Name(), addLineupErr)
@@ -116,6 +152,15 @@ func (s *SchedulesDirect) SubscribeToLineup(lineupID string) error {
 
 // UnsubscribeFromLineup will remove a lineup from the provider account.
 func (s *SchedulesDirect) UnsubscribeFromLineup(lineupID string) error {
+	if s.client == nil {
+		sdClient, sdClientErr := schedulesdirect.NewClient(s.BaseConfig.Username, s.BaseConfig.Password)
+		if sdClientErr != nil {
+			return fmt.Errorf("error setting up schedules direct client: %s", sdClientErr)
+		}
+
+		s.client = sdClient
+	}
+
 	_, deleteLineupErr := s.client.AddLineup(lineupID)
 	if deleteLineupErr != nil {
 		return fmt.Errorf("error while deleting lineup from provider %s: %s", s.Name(), deleteLineupErr)
@@ -130,6 +175,14 @@ func (s *SchedulesDirect) Channels() ([]Channel, error) {
 
 // Schedule returns a slice of xmltv.Programme for the given channelIDs.
 func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error) {
+	if s.client == nil {
+		sdClient, sdClientErr := schedulesdirect.NewClient(s.BaseConfig.Username, s.BaseConfig.Password)
+		if sdClientErr != nil {
+			return nil, nil, fmt.Errorf("error setting up schedules direct client: %s", sdClientErr)
+		}
+
+		s.client = sdClient
+	}
 	// First, convert the slice of channelIDs into a slice of schedule requests.
 	reqs := make([]schedulesdirect.StationScheduleRequest, 0)
 	channelsCache := make(map[string]map[string]schedulesdirect.LastModifiedEntry)
