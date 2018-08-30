@@ -48,7 +48,7 @@ docker run -d \
   -e TELLY_FILTER_REGEX='.*UK.*' \
   -p '6077:6077/tcp' \
   -v '/tmp/telly':'/tmp':'rw' \
-  tellytv/telly --listen.base-address=localhost:6077
+  tellytv/telly --web.base-address=localhost:6077
 ```
 
 ## docker-compose
