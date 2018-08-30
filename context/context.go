@@ -69,7 +69,7 @@ func NewCContext() (*CContext, error) {
 	}
 
 	if _, execErr := sql.Exec(`PRAGMA foreign_keys = ON;`); execErr != nil {
-		log.WithError(dbErr).Panicln("error enabling foreign keys")
+		log.WithError(execErr).Panicln("error enabling foreign keys")
 	}
 
 	log.Debugln("Checking migrations status and running any required migrations...")
