@@ -4,7 +4,7 @@ IPTV proxy for Plex Live written in Golang
 
 ## ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) THIS IS A DEVELOPMENT BRANCH ![#f03c15](https://placehold.it/15/f03c15/000000?text=+)
 
-It is under active develepment and things may change quickly and dramatically.  Please join the discord server if you use this branch and be prepared for some tinkering and breakage.
+It is under active development and things may change quickly and dramatically.  Please join the discord server if you use this branch and be prepared for some tinkering and breakage.
 
 # Configuration
 
@@ -74,7 +74,7 @@ Here's an example configuration file. **You will need to create this file.**  It
   Provider = "IPTV-EPG"
   Username = "M3U-Identifier"  # From http://iptv-epg.com/[M3U-Identifier].m3u
   Password = "XML-Identifier"  # From http://iptv-epg.com/[XML-Identifier].xml
-  # THE FOLLOWING KEYS ARE OPTIONAL HERE; IF YOU"RE USING IPTV-EPG YOU'FE PROBABLY DONE YOUR
+  # THE FOLLOWING KEYS ARE OPTIONAL HERE; IF YOU"RE USING IPTV-EPG YOU'VE PROBABLY DONE YOUR
   # FILTERING THERE ALREADY
   # Filter = ""
   # FilterKey = ""
