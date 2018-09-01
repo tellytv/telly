@@ -141,6 +141,30 @@ SELECT
 // InsertLineup inserts a new Lineup into the database.
 func (db *LineupDB) InsertLineup(lineupStruct Lineup) (*Lineup, error) {
 	lineup := Lineup{}
+	if lineupStruct.Manufacturer == "" {
+		lineupStruct.Manufacturer = "Silicondust"
+	}
+	if lineupStruct.ModelName == "" {
+		lineupStruct.ModelName = "HDHomeRun EXTEND"
+	}
+	if lineupStruct.ModelNumber == "" {
+		lineupStruct.ModelNumber = "HDTC-2US"
+	}
+	if lineupStruct.FirmwareName == "" {
+		lineupStruct.FirmwareName = "hdhomeruntc_atsc"
+	}
+	if lineupStruct.FirmwareVersion == "" {
+		lineupStruct.FirmwareVersion = "20150826"
+	}
+	if lineupStruct.DeviceID == "" {
+		lineupStruct.DeviceID = "12345678"
+	}
+	if lineupStruct.DeviceAuth == "" {
+		lineupStruct.DeviceAuth = "telly"
+	}
+	if lineupStruct.DeviceUUID == "" {
+		lineupStruct.DeviceUUID = "12345678-AE2A-4E54-BBC9-33AF7D5D6A92"
+	}
 	res, err := db.SQL.NamedExec(`
     INSERT INTO lineup (name, ssdp, listen_address, discovery_address, port, tuners, manufacturer, model_name, model_number, firmware_name, firmware_version, device_id, device_auth, device_uuid)
     VALUES (:name, :ssdp, :listen_address, :discovery_address, :port, :tuners, :manufacturer, :model_name, :model_number, :firmware_name, :firmware_version, :device_id, :device_auth, :device_uuid)`, lineupStruct)
