@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -309,23 +310,23 @@ func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, input
 		for _, program := range moreInfo {
 			extendedProgramInfo[program.ProgramID] = program
 			if program.HasArtwork() {
-				programsWithArtwork[program.ProgramID] = struct{}{}
+				for _, programID := range program.ArtworkLookupIDs() {
+					programsWithArtwork[programID] = struct{}{}
+				}
 			}
 		}
 	}
 
-	allArtwork := make(map[string][]schedulesdirect.ProgramArtwork, 0)
+	allArtwork := make(map[string][]schedulesdirect.Artwork, 0)
 
 	// Now that we have the initial program info results, let's get all the artwork.
-	for _, chunk := range utils.ChunkStringSlice(utils.GetStringMapKeys(programsWithArtwork), 500) {
-		artworkResp, artworkErr := s.client.GetArtworkForProgramIDs(chunk)
-		if artworkErr != nil {
-			return nil, nil, fmt.Errorf("error when getting artwork from schedules direct: %s", artworkErr)
-		}
+	artworkResp, artworkErr := s.client.GetArtworkForProgramIDs(utils.GetStringMapKeys(programsWithArtwork))
+	if artworkErr != nil {
+		return nil, nil, fmt.Errorf("error when getting artwork from schedules direct: %s", artworkErr)
+	}
 
-		for _, artworks := range artworkResp {
-			allArtwork[artworks.ProgramID] = *artworks.Artwork
-		}
+	for _, artworks := range artworkResp {
+		allArtwork[artworks.ProgramID] = *artworks.Artwork
 	}
 
 	// We finally have all the data, time to convert to the XMLTV format.
@@ -335,7 +336,30 @@ func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, input
 	for _, schedule := range schedules {
 		station := s.stations[schedule.StationID]
 		for _, airing := range schedule.Programs {
-			programme, programmeErr := s.processProgrammeToXMLTV(airing, extendedProgramInfo[airing.ProgramID], allArtwork[airing.ProgramID[:10]], station)
+			programInfo := extendedProgramInfo[airing.ProgramID]
+			artworks := make([]schedulesdirect.Artwork, 0)
+			for _, lookupKey := range programInfo.ArtworkLookupIDs() {
+				if hasArtwork, ok := allArtwork[lookupKey]; ok {
+					artworks = append(artworks, hasArtwork...)
+				}
+			}
+
+			sort.Slice(artworks, func(i, j int) bool {
+				tier := func(a schedulesdirect.Artwork) int {
+					return int(parseArtworkTierToOrder(a.Tier))
+				}
+				category := func(a schedulesdirect.Artwork) int {
+					return int(parseArtworkCategoryToOrder(a.Category))
+				}
+				a := tier(artworks[i])
+				b := tier(artworks[i])
+				if a == b {
+					return category(artworks[i]) < category(artworks[j])
+				}
+				return a < b
+			})
+
+			programme, programmeErr := s.processProgrammeToXMLTV(airing, extendedProgramInfo[airing.ProgramID], artworks, station)
 			if programmeErr != nil {
 				return nil, nil, fmt.Errorf("error while processing schedules direct result to xmltv format: %s", programmeErr)
 			}
@@ -554,11 +578,11 @@ func getXMLTVNumber(mdata []map[string]schedulesdirect.Metadata, multipartInfo *
 type sdProgrammeData struct {
 	Airing      schedulesdirect.Program
 	ProgramInfo schedulesdirect.ProgramInfo
-	AllArtwork  []schedulesdirect.ProgramArtwork
+	AllArtwork  []schedulesdirect.Artwork
 	Station     sdStationContainer
 }
 
-func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program, programInfo schedulesdirect.ProgramInfo, allArtwork []schedulesdirect.ProgramArtwork, station sdStationContainer) (*ProgrammeContainer, error) {
+func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program, programInfo schedulesdirect.ProgramInfo, allArtwork []schedulesdirect.Artwork, station sdStationContainer) (*ProgrammeContainer, error) {
 	stationID := fmt.Sprintf("I%s.%s.schedulesdirect.org", station.ChannelMap.Channel, station.Station.StationID)
 	endTime := airing.AirDateTime.Add(time.Duration(airing.Duration) * time.Second)
 	length := xmltv.Length{Units: "seconds", Value: strconv.Itoa(airing.Duration)}
@@ -652,7 +676,7 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 		}
 	}
 
-	entityTypeCat := programInfo.EntityType
+	entityTypeCat := string(programInfo.EntityType)
 
 	if programInfo.EntityType == "episode" {
 		entityTypeCat = "series"
@@ -831,4 +855,64 @@ func getDaysBetweenTimes(start, end time.Time) []string {
 		dates = append(dates, last.Format("2006-01-02"))
 	}
 	return dates
+}
+
+type artworkTierOrder int
+
+const (
+	EpisodeTier artworkTierOrder = 1
+	SeasonTier  artworkTierOrder = 2
+	SeriesTier  artworkTierOrder = 3
+
+	DontCareTier artworkTierOrder = 10
+)
+
+func parseArtworkTierToOrder(tier schedulesdirect.ArtworkTier) artworkTierOrder {
+	switch tier {
+	case schedulesdirect.EpisodeTier:
+		return EpisodeTier
+	case schedulesdirect.SeasonTier:
+		return SeasonTier
+	case schedulesdirect.SeriesTier:
+		return SeriesTier
+	default:
+		return DontCareTier
+	}
+
+	return DontCareTier
+}
+
+type artworkCategoryOrder int
+
+const (
+	BannerL1  artworkCategoryOrder = 1
+	BannerL1T artworkCategoryOrder = 2
+	Banner    artworkCategoryOrder = 3
+	BannerL2  artworkCategoryOrder = 4
+	BannerL3  artworkCategoryOrder = 5
+	BannerLO  artworkCategoryOrder = 6
+	BannerLOT artworkCategoryOrder = 7
+
+	DontCareCategory artworkCategoryOrder = 10
+)
+
+func parseArtworkCategoryToOrder(Category schedulesdirect.ArtworkCategory) artworkCategoryOrder {
+	switch Category {
+	case schedulesdirect.BannerL1:
+		return BannerL1
+	case schedulesdirect.BannerL1T:
+		return BannerL1T
+	case schedulesdirect.Banner:
+		return Banner
+	case schedulesdirect.BannerL2:
+		return BannerL2
+	case schedulesdirect.BannerL3:
+		return BannerL3
+	case schedulesdirect.BannerLO:
+		return BannerLO
+	case schedulesdirect.BannerLOT:
+		return BannerLOT
+	}
+
+	return DontCareCategory
 }

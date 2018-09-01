@@ -115,12 +115,12 @@
   version = "1.0.0"
 
 [[projects]]
-  digest = "1:58ad79834dc097c36a857a8c325d646af0a8bbd73375a6958a639507c5399a61"
+  branch = "master"
+  digest = "1:8f57afa9ef1d9205094e9d89b9cb4ecb3123f342c4eb0053d7631181b511e6e4"
   name = "github.com/koron/go-ssdp"
   packages = ["."]
   pruneopts = "UT"
-  revision = "6d1709049dead37ead37808479f88c9bffa2c4d6"
-  version = "v0.1"
+  revision = "4a0ed625a78b6858dc8d3a55fb7728968b712122"
 
 [[projects]]
   digest = "1:ca955a9cd5b50b0f43d2cc3aeb35c951473eeca41b34eb67507f1dbcc0542394"
@@ -307,11 +307,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9ae6456cbbd0aca86266e34fad46fcdb27ce7492d7668a8c5d84e5ac0da7aa1d"
+  digest = "1:990b7cb1f771a9f48b2647d207c6f5356c0bb4372fa744648c95b98ca11ed0f4"
   name = "github.com/tellytv/go.schedulesdirect"
   packages = ["."]
   pruneopts = "UT"
-  revision = "9386c019cdd72747f7056ed549e035e3cd1aa08e"
+  revision = "ba31b244c694fa4bd6f8f8417c73e823874d2b33"
 
 [[projects]]
   branch = "master"
