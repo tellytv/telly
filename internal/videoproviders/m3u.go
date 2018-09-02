@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/tellytv/telly/internal/m3uplus"
-	"github.com/tellytv/telly/utils"
+	"github.com/tellytv/telly/internal/utils"
 )
 
 // M3U is a VideoProvider supporting M3U files.

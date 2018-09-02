@@ -9,9 +9,9 @@ import (
 	"github.com/gobuffalo/packr"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"github.com/tellytv/telly/context"
-	"github.com/tellytv/telly/models"
-	"github.com/tellytv/telly/utils"
+	"github.com/tellytv/telly/internal/context"
+	"github.com/tellytv/telly/internal/models"
+	"github.com/tellytv/telly/internal/utils"
 )
 
 func scanM3U(c *gin.Context) {

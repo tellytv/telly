@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tellytv/telly/context"
-	"github.com/tellytv/telly/models"
+	"github.com/tellytv/telly/internal/context"
+	"github.com/tellytv/telly/internal/models"
 )
 
 func addLineup(cc *context.CContext, c *gin.Context) {

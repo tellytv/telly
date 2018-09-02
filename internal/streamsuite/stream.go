@@ -11,8 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	"github.com/tellytv/telly/metrics"
-	"github.com/tellytv/telly/models"
+	"github.com/tellytv/telly/internal/metrics"
+	"github.com/tellytv/telly/internal/models"
 )
 
 var (

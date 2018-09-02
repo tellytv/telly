@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"github.com/tellytv/telly/context"
+	"github.com/tellytv/telly/internal/context"
 	"github.com/tellytv/telly/internal/guideproviders"
-	"github.com/tellytv/telly/models"
+	"github.com/tellytv/telly/internal/models"
 )
 
 var (

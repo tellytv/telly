@@ -8,7 +8,7 @@ import (
 	"github.com/gobuffalo/packr"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"github.com/tellytv/telly/context"
+	"github.com/tellytv/telly/internal/context"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 

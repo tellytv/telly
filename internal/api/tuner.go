@@ -13,10 +13,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/koron/go-ssdp"
 	uuid "github.com/satori/go.uuid"
-	ccontext "github.com/tellytv/telly/context"
+	ccontext "github.com/tellytv/telly/internal/context"
+	"github.com/tellytv/telly/internal/metrics"
+	"github.com/tellytv/telly/internal/models"
 	"github.com/tellytv/telly/internal/streamsuite"
-	"github.com/tellytv/telly/metrics"
-	"github.com/tellytv/telly/models"
 )
 
 // ServeLineup starts up a server dedicated to a single Lineup.

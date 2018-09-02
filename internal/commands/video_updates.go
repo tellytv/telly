@@ -3,8 +3,8 @@ package commands
 import (
 	"fmt"
 
-	"github.com/tellytv/telly/context"
-	"github.com/tellytv/telly/models"
+	"github.com/tellytv/telly/internal/context"
+	"github.com/tellytv/telly/internal/models"
 )
 
 // FireVideoUpdatesCommand Command to fire one off video source updates

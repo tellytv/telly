@@ -5,10 +5,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tellytv/telly/commands"
-	"github.com/tellytv/telly/context"
-	"github.com/tellytv/telly/models"
-	"github.com/tellytv/telly/utils"
+	"github.com/tellytv/telly/internal/commands"
+	"github.com/tellytv/telly/internal/context"
+	"github.com/tellytv/telly/internal/models"
+	"github.com/tellytv/telly/internal/utils"
 )
 
 func getLineup(lineup *models.Lineup, cc *context.CContext, c *gin.Context) {

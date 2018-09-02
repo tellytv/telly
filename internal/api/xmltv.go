@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tellytv/telly/context"
+	"github.com/tellytv/telly/internal/context"
 	"github.com/tellytv/telly/internal/guideproviders"
 	"github.com/tellytv/telly/internal/xmltv"
 )
@@ -18,7 +18,7 @@ func xmlTV(cc *context.CContext, c *gin.Context) {
 	epg := &xmltv.TV{
 		Date:              time.Now().Format("2006-01-02"),
 		GeneratorInfoName: "telly",
-		GeneratorInfoURL:  "https://github.com/tellytv/telly",
+		GeneratorInfoURL:  "https://github.com/tellytv/telly/internal",
 	}
 
 	lineups, lineupsErr := cc.API.Lineup.GetEnabledLineups(true)

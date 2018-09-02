@@ -11,9 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/tellytv/telly/internal/guideproviders"
+	"github.com/tellytv/telly/internal/models"
 	"github.com/tellytv/telly/internal/streamsuite"
 	"github.com/tellytv/telly/internal/videoproviders"
-	"github.com/tellytv/telly/models"
 )
 
 // CContext is a context struct that gets passed around the application.

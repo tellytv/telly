@@ -12,11 +12,11 @@ import (
 	"github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"github.com/tellytv/telly/api"
-	"github.com/tellytv/telly/commands"
-	"github.com/tellytv/telly/context"
-	"github.com/tellytv/telly/models"
-	"github.com/tellytv/telly/utils"
+	"github.com/tellytv/telly/internal/api"
+	"github.com/tellytv/telly/internal/commands"
+	"github.com/tellytv/telly/internal/context"
+	"github.com/tellytv/telly/internal/models"
+	"github.com/tellytv/telly/internal/utils"
 )
 
 var (

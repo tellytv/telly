@@ -3,8 +3,8 @@ package guideproviders
 import (
 	"fmt"
 
+	"github.com/tellytv/telly/internal/utils"
 	"github.com/tellytv/telly/internal/xmltv"
-	"github.com/tellytv/telly/utils"
 )
 
 // XMLTV is a GuideProvider supporting XMLTV files.

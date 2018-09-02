@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/tellytv/go.schedulesdirect"
+	"github.com/tellytv/telly/internal/utils"
 	"github.com/tellytv/telly/internal/xmltv"
-	"github.com/tellytv/telly/utils"
 )
 
 // SchedulesDirect is a GuideProvider supporting the Schedules Direct JSON service.
