@@ -58,7 +58,7 @@ func (d *DiscoveryData) UPNP() upnp.RootDevice {
 		URLBaseStr: d.BaseURL,
 		Device: upnp.Device{
 			DeviceType:   "urn:schemas-upnp-org:device:MediaServer:1",
-			FriendlyName: d.FriendlyName,
+			FriendlyName: fmt.Sprintf("HDHomerun (%s)", d.FriendlyName),
 			Manufacturer: d.Manufacturer,
 			ManufacturerURL: upnp.URLField{
 				Str: "http://www.silicondust.com/",
