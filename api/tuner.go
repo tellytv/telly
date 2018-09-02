@@ -1,24 +1,20 @@
 package api
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"database/sql"
 	"encoding/xml"
 	"fmt"
-	"io"
 	"net/http"
-	"os/exec"
-	"regexp"
 	"strings"
 	"time"
 
 	upnp "github.com/NebulousLabs/go-upnp/goupnp"
 	"github.com/gin-gonic/gin"
 	"github.com/koron/go-ssdp"
-	"github.com/spf13/viper"
+	uuid "github.com/satori/go.uuid"
 	ccontext "github.com/tellytv/telly/context"
+	"github.com/tellytv/telly/internal/streamsuite"
 	"github.com/tellytv/telly/metrics"
 	"github.com/tellytv/telly/models"
 )
@@ -34,9 +30,10 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.Lineup) {
 	hdhrItems := make([]models.HDHomeRunLineupItem, 0)
 	for _, channel := range channels {
 		hdhrItems = append(hdhrItems, *channel.HDHR)
+		log.Infoln("LABELS", lineup.Name, channel.VideoTrack.VideoSource.Name, channel.VideoTrack.VideoSource.Provider)
+		metrics.ExposedChannels.WithLabelValues(lineup.Name, channel.VideoTrack.VideoSource.Name, channel.VideoTrack.VideoSource.Provider).Inc()
 	}
 
-	metrics.ExposedChannels.WithLabelValues(lineup.Name).Set(float64(len(channels)))
 	discoveryData := lineup.GetDiscoveryData()
 
 	log.Debugln("creating device xml")
@@ -161,88 +158,54 @@ func serveHDHRLineup(hdhrItems []models.HDHomeRunLineupItem) gin.HandlerFunc {
 	}
 }
 
+func NewStreamStatus(cc *ccontext.CContext, lineup *models.Lineup, channelID string) (*streamsuite.Stream, string, error) {
+	statusUUID := uuid.Must(uuid.NewV4()).String()
+	ss := &streamsuite.Stream{
+		UUID: statusUUID,
+	}
+	channel, channelErr := cc.API.LineupChannel.GetLineupChannelByID(lineup.ID, channelID)
+	if channelErr != nil {
+		if channelErr == sql.ErrNoRows {
+			return nil, statusUUID, fmt.Errorf("unknown channel number %s", channelID)
+		}
+		return nil, statusUUID, channelErr
+	}
+
+	ss.Channel = channel
+
+	streamURL, streamURLErr := cc.VideoSourceProviders[channel.VideoTrack.VideoSourceID].StreamURL(channel.VideoTrack.StreamID, "ts")
+	if streamURLErr != nil {
+		return nil, statusUUID, streamURLErr
+	}
+
+	ss.StreamURL = streamURL
+
+	if lineup.StreamTransport == "ffmpeg" {
+		ss.Transport = streamsuite.FFMPEG{}
+	} else {
+		ss.Transport = streamsuite.HTTP{}
+	}
+
+	ss.PromLabels = []string{lineup.Name, channel.VideoTrack.VideoSource.Name, channel.VideoTrack.VideoSource.Provider, channel.Title, ss.Transport.Type()}
+
+	return ss, statusUUID, nil
+}
+
 func stream(cc *ccontext.CContext, lineup *models.Lineup) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		channel, channelErr := cc.API.LineupChannel.GetLineupChannelByID(lineup.ID, c.Param("channelNumber")[1:])
-		if channelErr != nil {
-			if channelErr == sql.ErrNoRows {
-				c.AbortWithError(http.StatusNotFound, fmt.Errorf("unknown channel number %s", channel.ChannelNumber))
-				return
-			}
-			c.AbortWithError(http.StatusInternalServerError, channelErr)
+		stream, streamUUID, streamErr := NewStreamStatus(cc, lineup, c.Param("channelNumber")[1:])
+		if streamErr != nil {
+			log.WithError(streamErr).Errorf("Error when starting streaming")
+			c.AbortWithError(http.StatusInternalServerError, streamErr)
 			return
 		}
 
-		log.Infoln("Serving", channel)
+		cc.Streams[streamUUID] = stream
 
-		streamURL, streamURLErr := cc.VideoSourceProviders[channel.VideoTrack.VideoSourceID].StreamURL(channel.VideoTrack.StreamID, "ts")
-		if streamURLErr != nil {
-			c.AbortWithError(http.StatusInternalServerError, streamURLErr)
-			return
-		}
+		log.Infof("Serving via %s: %s", stream.Transport.Type(), stream.Channel)
 
-		if !viper.IsSet("iptv.ffmpeg") {
-			c.Redirect(http.StatusMovedPermanently, streamURL)
-			return
-		}
+		stream.Start(c)
 
-		log.Infoln("Transcoding stream with ffmpeg")
-
-		run := exec.Command("ffmpeg", "-re", "-i", streamURL, "-codec", "copy", "-bsf:v", "h264_mp4toannexb", "-f", "mpegts", "-tune", "zerolatency", "-progress", "pipe:2", "pipe:1")
-		ffmpegout, err := run.StdoutPipe()
-		if err != nil {
-			log.WithError(err).Errorln("StdoutPipe Error")
-			return
-		}
-
-		stderr, stderrErr := run.StderrPipe()
-		if stderrErr != nil {
-			log.WithError(stderrErr).Errorln("Error creating ffmpeg stderr pipe")
-		}
-
-		if startErr := run.Start(); startErr != nil {
-			log.WithError(startErr).Errorln("Error starting ffmpeg")
-			return
-		}
-
-		metrics.ActiveStreams.WithLabelValues(lineup.Name).Inc()
-
-		go func() {
-			scanner := bufio.NewScanner(stderr)
-			scanner.Split(split)
-			buf := make([]byte, 2)
-			scanner.Buffer(buf, bufio.MaxScanTokenSize)
-
-			for scanner.Scan() {
-				line := scanner.Text()
-				status := processFFMPEGStatus(line)
-				if status != nil {
-					fmt.Printf("\rFFMPEG Status: channel number: %d bitrate: %s frames: %s total time: %s speed: %s", channel.ID, status.CurrentBitrate, status.FramesProcessed, status.CurrentTime, status.Speed)
-				}
-			}
-		}()
-
-		continueStream := true
-
-		streamVideo := func(w io.Writer) bool {
-			defer func() {
-				metrics.ActiveStreams.WithLabelValues(lineup.Name).Dec()
-				log.Infoln("Stopped streaming", channel.ChannelNumber)
-				if killErr := run.Process.Kill(); killErr != nil {
-					log.WithError(killErr).Panicln("error when killing ffmpeg")
-				}
-				continueStream = false
-				return
-			}()
-			if _, copyErr := io.Copy(w, ffmpegout); copyErr != nil {
-				log.WithError(copyErr).Errorln("error when streaming from ffmpeg to http")
-				continueStream = false
-				return false
-			}
-			return continueStream
-		}
-
-		c.Stream(streamVideo)
 	}
 }
 
@@ -284,80 +247,4 @@ func lineupStatus(lineup *models.Lineup) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, payload)
 	}
-}
-
-func split(data []byte, atEOF bool) (advance int, token []byte, spliterror error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	if i := bytes.IndexByte(data, '\n'); i >= 0 {
-		// We have a full newline-terminated line.
-		return i + 1, data[0:i], nil
-	}
-	if i := bytes.IndexByte(data, '\r'); i >= 0 {
-		// We have a cr terminated line
-		return i + 1, data[0:i], nil
-	}
-	if atEOF {
-		return len(data), data, nil
-	}
-
-	return 0, nil, nil
-}
-
-type ffMPEGStatus struct {
-	FramesProcessed string
-	CurrentTime     string
-	CurrentBitrate  string
-	Progress        float64
-	Speed           string
-}
-
-func processFFMPEGStatus(line string) *ffMPEGStatus {
-	status := new(ffMPEGStatus)
-	if strings.Contains(line, "frame=") && strings.Contains(line, "time=") && strings.Contains(line, "bitrate=") {
-		var re = regexp.MustCompile(`=\s+`)
-		st := re.ReplaceAllString(line, `=`)
-
-		f := strings.Fields(st)
-		var framesProcessed string
-		var currentTime string
-		var currentBitrate string
-		var currentSpeed string
-
-		for j := 0; j < len(f); j++ {
-			field := f[j]
-			fieldSplit := strings.Split(field, "=")
-
-			if len(fieldSplit) > 1 {
-				fieldname := strings.Split(field, "=")[0]
-				fieldvalue := strings.Split(field, "=")[1]
-
-				if fieldname == "frame" {
-					framesProcessed = fieldvalue
-				}
-
-				if fieldname == "time" {
-					currentTime = fieldvalue
-				}
-
-				if fieldname == "bitrate" {
-					currentBitrate = fieldvalue
-				}
-				if fieldname == "speed" {
-					currentSpeed = fieldvalue
-					if currentSpeed == "1x" {
-						currentSpeed = "1.000x"
-					}
-				}
-			}
-		}
-
-		status.CurrentBitrate = currentBitrate
-		status.FramesProcessed = framesProcessed
-		status.CurrentTime = currentTime
-		status.Speed = currentSpeed
-		return status
-	}
-	return nil
 }

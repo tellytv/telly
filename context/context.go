@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/tellytv/telly/internal/guideproviders"
+	"github.com/tellytv/telly/internal/streamsuite"
 	"github.com/tellytv/telly/internal/videoproviders"
 	"github.com/tellytv/telly/models"
 )
@@ -19,9 +20,10 @@ import (
 type CContext struct {
 	API                  *models.APICollection
 	Ctx                  ctx.Context
-	Log                  *logrus.Logger
-	Tuners               map[int]chan bool
 	GuideSourceProviders map[int]guideproviders.GuideProvider
+	Log                  *logrus.Logger
+	Streams              map[string]*streamsuite.Stream
+	Tuners               map[int]chan bool
 	VideoSourceProviders map[int]videoproviders.VideoProvider
 
 	RawSQL *sqlx.DB
@@ -32,11 +34,12 @@ func (cc *CContext) Copy() *CContext {
 	return &CContext{
 		API:                  cc.API,
 		Ctx:                  cc.Ctx,
-		Log:                  cc.Log,
-		Tuners:               cc.Tuners,
 		GuideSourceProviders: cc.GuideSourceProviders,
-		VideoSourceProviders: cc.VideoSourceProviders,
+		Log:                  cc.Log,
 		RawSQL:               cc.RawSQL,
+		Streams:              cc.Streams,
+		Tuners:               cc.Tuners,
+		VideoSourceProviders: cc.VideoSourceProviders,
 	}
 }
 
@@ -128,11 +131,12 @@ func NewCContext() (*CContext, error) {
 	context := &CContext{
 		API:                  api,
 		Ctx:                  theCtx,
-		Log:                  log,
-		Tuners:               tuners,
 		GuideSourceProviders: guideSourceProvidersMap,
-		VideoSourceProviders: videoSourceProvidersMap,
+		Log:                  log,
 		RawSQL:               sql,
+		Streams:              make(map[string]*streamsuite.Stream),
+		Tuners:               tuners,
+		VideoSourceProviders: videoSourceProvidersMap,
 	}
 
 	log.Debugln("Context: Context build complete")

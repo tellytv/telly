@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -66,6 +67,10 @@ func ServeAPI(cc *context.CContext) {
 	apiGroup.GET("/video_sources", wrapContext(cc, getVideoSources))
 	apiGroup.POST("/video_sources", wrapContext(cc, addVideoSource))
 	apiGroup.GET("/video_sources/tracks", wrapContext(cc, getAllTracks))
+
+	apiGroup.GET("/streams", func(c *gin.Context) {
+		c.JSON(http.StatusOK, cc.Streams)
+	})
 
 	log.Infof("telly is live and on the air!")
 	log.Infof("Broadcasting from http://%s/", viper.GetString("web.listen-address"))

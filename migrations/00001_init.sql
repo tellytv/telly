@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS lineup (
   device_id           TEXT DEFAULT '12345678',
   device_auth         TEXT DEFAULT 'telly',
   device_uuid         TEXT DEFAULT '12345678-AE2A-4E54-BBC9-33AF7D5D6A92',
+  stream_transport    TEXT DEFAULT 'http',
   created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -95,6 +95,7 @@ type Lineup struct {
 	DeviceID         string     `db:"device_id"`
 	DeviceAuth       string     `db:"device_auth"`
 	DeviceUUID       string     `db:"device_uuid"`
+	StreamTransport  string     `db:"stream_transport"`
 	CreatedAt        *time.Time `db:"created_at"`
 
 	Channels []LineupChannel
@@ -145,6 +146,7 @@ SELECT
   L.device_id,
   L.device_auth,
   L.device_uuid,
+  L.stream_transport,
   L.created_at
   FROM lineup L`
 
@@ -179,9 +181,12 @@ func (db *LineupDB) InsertLineup(lineupStruct Lineup) (*Lineup, error) {
 	if lineupStruct.DeviceUUID == "" {
 		lineupStruct.DeviceUUID = uuid.Must(uuid.NewV4()).String()
 	}
+	if lineupStruct.StreamTransport == "" {
+		lineupStruct.StreamTransport = "http"
+	}
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO lineup (name, ssdp, listen_address, discovery_address, port, tuners, manufacturer, model_name, model_number, firmware_name, firmware_version, device_id, device_auth, device_uuid)
-    VALUES (:name, :ssdp, :listen_address, :discovery_address, :port, :tuners, :manufacturer, :model_name, :model_number, :firmware_name, :firmware_version, :device_id, :device_auth, :device_uuid)`, lineupStruct)
+    INSERT INTO lineup (name, ssdp, listen_address, discovery_address, port, tuners, manufacturer, model_name, model_number, firmware_name, firmware_version, device_id, device_auth, device_uuid, stream_transport)
+    VALUES (:name, :ssdp, :listen_address, :discovery_address, :port, :tuners, :manufacturer, :model_name, :model_number, :firmware_name, :firmware_version, :device_id, :device_auth, :device_uuid, :stream_transport)`, lineupStruct)
 	if err != nil {
 		return &lineup, err
 	}
