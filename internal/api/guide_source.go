@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/schollz/closestmatch"
 	"github.com/tellytv/telly/internal/context"
 	"github.com/tellytv/telly/internal/guideproviders"
 	"github.com/tellytv/telly/internal/models"
@@ -101,7 +102,7 @@ func getAllProgrammes(cc *context.CContext, c *gin.Context) {
 	c.JSON(http.StatusOK, programmes)
 }
 
-func getLineupCoverage(provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+func getLineupCoverage(source *models.GuideSource, provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
 	coverage, coverageErr := provider.LineupCoverage()
 	if coverageErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, coverageErr)
@@ -110,7 +111,7 @@ func getLineupCoverage(provider guideproviders.GuideProvider, cc *context.CConte
 	c.JSON(http.StatusOK, coverage)
 }
 
-func getAvailableLineups(provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+func getAvailableLineups(source *models.GuideSource, provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
 	countryCode := c.Query("countryCode")
 	postalCode := c.Query("postalCode")
 	lineups, lineupsErr := provider.AvailableLineups(countryCode, postalCode)
@@ -121,9 +122,9 @@ func getAvailableLineups(provider guideproviders.GuideProvider, cc *context.CCon
 	c.JSON(http.StatusOK, lineups)
 }
 
-func previewLineupChannels(provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
-	lineupId := c.Param("lineupId")
-	channels, channelsErr := provider.PreviewLineupChannels(lineupId)
+func previewLineupChannels(source *models.GuideSource, provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+	lineupID := c.Param("lineupId")
+	channels, channelsErr := provider.PreviewLineupChannels(lineupID)
 	if channelsErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, channelsErr)
 		return
@@ -131,18 +132,18 @@ func previewLineupChannels(provider guideproviders.GuideProvider, cc *context.CC
 	c.JSON(http.StatusOK, channels)
 }
 
-func subscribeToLineup(provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
-	lineupId := c.Param("lineupId")
-	if subscribeErr := provider.SubscribeToLineup(lineupId); subscribeErr != nil {
+func subscribeToLineup(source *models.GuideSource, provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+	lineupID := c.Param("lineupId")
+	if subscribeErr := provider.SubscribeToLineup(lineupID); subscribeErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, subscribeErr)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "okay"})
 }
 
-func unsubscribeFromLineup(provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
-	lineupId := c.Param("lineupId")
-	if unsubscribeErr := provider.UnsubscribeFromLineup(lineupId); unsubscribeErr != nil {
+func unsubscribeFromLineup(source *models.GuideSource, provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+	lineupID := c.Param("lineupId")
+	if unsubscribeErr := provider.UnsubscribeFromLineup(lineupID); unsubscribeErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, unsubscribeErr)
 		return
 	}
@@ -165,11 +166,17 @@ func guideSourceRoute(cc *context.CContext, originalFunc func(*models.GuideSourc
 	})
 }
 
-func guideSourceLineupRoute(cc *context.CContext, originalFunc func(guideproviders.GuideProvider, *context.CContext, *gin.Context)) gin.HandlerFunc {
+func guideSourceLineupRoute(cc *context.CContext, originalFunc func(*models.GuideSource, guideproviders.GuideProvider, *context.CContext, *gin.Context)) gin.HandlerFunc {
 	return wrapContext(cc, func(cc *context.CContext, c *gin.Context) {
 		guideSourceID, guideSourceIDErr := strconv.Atoi(c.Param("guideSourceId"))
 		if guideSourceIDErr != nil {
 			c.AbortWithError(http.StatusBadRequest, guideSourceIDErr)
+			return
+		}
+
+		guideSource, guideSourceErr := cc.API.GuideSource.GetGuideSourceByID(guideSourceID)
+		if guideSourceErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, guideSourceErr)
 			return
 		}
 
@@ -180,10 +187,43 @@ func guideSourceLineupRoute(cc *context.CContext, originalFunc func(guideprovide
 		}
 
 		if !provider.SupportsLineups() {
-			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("Provider %s does not support lineups", guideSourceID))
+			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("Provider %d does not support lineups", guideSourceID))
 			return
 		}
 
-		originalFunc(provider, cc, c)
+		originalFunc(guideSource, provider, cc, c)
 	})
+}
+
+func match(guideSource *models.GuideSource, provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+	inputChannelName := c.Query("channelName") // this is a string, ensure it's not empty
+
+	if inputChannelName != "" {
+		c.JSON(http.StatusOK, gin.H{"status": "empty input"})
+	}
+	channels := make([]string, len(guideSource.Channels))
+	channelMap := make(map[string]models.GuideSourceChannel)
+
+	for _, channel := range guideSource.Channels {
+		name := channel.XMLTV.DisplayNames[0].Value
+		channels = append(channels, name)
+		channelMap[name] = channel
+	}
+
+	bagSizes := []int{3}
+
+	// Create a closestmatch object
+	cm := closestmatch.New(channels, bagSizes)
+
+	results := cm.ClosestN(inputChannelName, 3)
+
+	var filteredChannels []models.GuideSourceChannel
+
+	for _, result := range results {
+		filteredChannels = append(filteredChannels, channelMap[result])
+	}
+
+	// get matching channels back and form into json for response
+
+	c.JSON(http.StatusOK, filteredChannels)
 }
