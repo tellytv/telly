@@ -134,21 +134,21 @@ func (s *SchedulesDirect) PreviewLineupChannels(lineupID string) ([]Channel, err
 }
 
 // SubscribeToLineup will subscribe the user to a lineup.
-func (s *SchedulesDirect) SubscribeToLineup(lineupID string) error {
+func (s *SchedulesDirect) SubscribeToLineup(lineupID string) (interface{}, error) {
 	if s.client == nil {
 		sdClient, sdClientErr := schedulesdirect.NewClient(s.BaseConfig.Username, s.BaseConfig.Password)
 		if sdClientErr != nil {
-			return fmt.Errorf("error setting up schedules direct client: %s", sdClientErr)
+			return nil, fmt.Errorf("error setting up schedules direct client: %s", sdClientErr)
 		}
 
 		s.client = sdClient
 	}
 
-	_, addLineupErr := s.client.AddLineup(lineupID)
+	newLineup, addLineupErr := s.client.AddLineup(lineupID)
 	if addLineupErr != nil {
-		return fmt.Errorf("error while subscribing to lineup from provider %s: %s", s.Name(), addLineupErr)
+		return nil, fmt.Errorf("error while subscribing to lineup from provider %s: %s", s.Name(), addLineupErr)
 	}
-	return nil
+	return newLineup, nil
 }
 
 // UnsubscribeFromLineup will remove a lineup from the provider account.

@@ -30,7 +30,6 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.Lineup) {
 	hdhrItems := make([]models.HDHomeRunLineupItem, 0)
 	for _, channel := range channels {
 		hdhrItems = append(hdhrItems, *channel.HDHR)
-		log.Infoln("LABELS", lineup.Name, channel.VideoTrack.VideoSource.Name, channel.VideoTrack.VideoSource.Provider)
 		metrics.ExposedChannels.WithLabelValues(lineup.Name, channel.VideoTrack.VideoSource.Name, channel.VideoTrack.VideoSource.Provider).Inc()
 	}
 

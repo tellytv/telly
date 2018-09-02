@@ -130,6 +130,6 @@ type GuideProvider interface {
 	LineupCoverage() ([]CoverageArea, error)
 	AvailableLineups(countryCode, postalCode string) ([]AvailableLineup, error)
 	PreviewLineupChannels(lineupID string) ([]Channel, error)
-	SubscribeToLineup(providerID string) error
+	SubscribeToLineup(lineupID string) (interface{}, error)
 	UnsubscribeFromLineup(providerID string) error
 }

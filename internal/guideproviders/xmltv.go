@@ -51,8 +51,8 @@ func (x *XMLTV) PreviewLineupChannels(lineupID string) ([]Channel, error) {
 }
 
 // SubscribeToLineup will subscribe the user to a lineup.
-func (x *XMLTV) SubscribeToLineup(providerID string) error {
-	return nil
+func (x *XMLTV) SubscribeToLineup(lineupID string) (interface{}, error) {
+	return nil, nil
 }
 
 // UnsubscribeFromLineup will remove a lineup from the provider account.

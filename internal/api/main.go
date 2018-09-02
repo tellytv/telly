@@ -35,7 +35,7 @@ func ServeAPI(cc *context.CContext) {
 
 	router := newGin()
 
-	box := packr.NewBox("../frontend/dist/telly-fe")
+	box := packr.NewBox("../../frontend/dist/telly-fe")
 
 	router.Use(ServeBox("/", box))
 
