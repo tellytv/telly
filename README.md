@@ -70,8 +70,8 @@ Here's an example configuration file. **You will need to create this file.**  It
   Sort = "group-title"      # Sort will alphabetically sort your channels by the M3U key provided
 
 [[Source]]
-  Name = ""
-  Provider = "IPTV-EPG"
+  Name = ""                    # Name is optional and is used mostly for logging purposes
+  Provider = "IPTV-EPG"        # DO NOT CHANGE THIS IF YOU ARE USING THIS PROVIDER
   Username = "M3U-Identifier"  # From http://iptv-epg.com/[M3U-Identifier].m3u
   Password = "XML-Identifier"  # From http://iptv-epg.com/[XML-Identifier].xml
   # THE FOLLOWING KEYS ARE OPTIONAL HERE; IF YOU"RE USING IPTV-EPG YOU'VE PROBABLY DONE YOUR
@@ -82,7 +82,11 @@ Here's an example configuration file. **You will need to create this file.**  It
   # Sort = ""
 
 [[Source]]
-  Provider = "Custom"
+  Name = ""                 # Name is optional and is used mostly for logging purposes
+  Provider = "Custom"       # DO NOT CHANGE THIS IF YOU ARE ENTERING URLS OR FILE PATHS
+                            # "Custom" is telly's internal identifier for this 'Provider'
+                            # If you change it to "NAMEOFPROVIDER" telly's reaction will be
+                            # "I don't recognize a provider called 'NAMEOFPROVIDER'."
   M3U = "http://myprovider.com/playlist.m3u"  # These can be either URLs or fully-qualified paths.
   EPG = "http://myprovider.com/epg.xml"
   # THE FOLLOWING KEYS ARE OPTIONAL IN THEORY, REQUIRED IN PRACTICE
