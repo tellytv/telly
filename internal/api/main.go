@@ -59,6 +59,7 @@ func ServeAPI(cc *context.CContext) {
 	apiGroup.GET("/guide_sources/programmes", wrapContext(cc, getAllProgrammes))
 
 	apiGroup.GET("/guide_source/:guideSourceId/coverage", guideSourceLineupRoute(cc, getLineupCoverage))
+	apiGroup.GET("/guide_source/:guideSourceId/match", guideSourceLineupRoute(cc, match))
 	apiGroup.GET("/guide_source/:guideSourceId/lineups", guideSourceLineupRoute(cc, getAvailableLineups))
 	apiGroup.PUT("/guide_source/:guideSourceId/lineups/:lineupId", guideSourceLineupRoute(cc, subscribeToLineup))
 	apiGroup.DELETE("/guide_source/:guideSourceId/lineups/:lineupId", guideSourceLineupRoute(cc, unsubscribeFromLineup))
