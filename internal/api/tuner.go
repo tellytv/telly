@@ -158,6 +158,7 @@ func serveHDHRLineup(hdhrItems []models.HDHomeRunLineupItem) gin.HandlerFunc {
 	}
 }
 
+// NewStreamStatus creates a new stream status
 func NewStreamStatus(cc *ccontext.CContext, lineup *models.Lineup, channelID string) (*streamsuite.Stream, string, error) {
 	statusUUID := uuid.Must(uuid.NewV4()).String()
 	ss := &streamsuite.Stream{
