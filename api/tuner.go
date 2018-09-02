@@ -16,7 +16,7 @@ import (
 
 	upnp "github.com/NebulousLabs/go-upnp/goupnp"
 	"github.com/gin-gonic/gin"
-	ssdp "github.com/koron/go-ssdp"
+	"github.com/koron/go-ssdp"
 	"github.com/spf13/viper"
 	ccontext "github.com/tellytv/telly/context"
 	"github.com/tellytv/telly/metrics"
@@ -56,7 +56,7 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.Lineup) {
 	baseAddr := fmt.Sprintf("%s:%d", lineup.ListenAddress, lineup.Port)
 
 	if lineup.SSDP {
-		if _, ssdpErr := setupSSDP(baseAddr, lineup.Name, lineup.DeviceUUID); ssdpErr != nil {
+		if ssdpErr := setupSSDP(baseAddr, lineup.Name, lineup.DeviceUUID, exit); ssdpErr != nil {
 			log.WithError(ssdpErr).Errorln("telly cannot advertise over ssdp")
 		}
 	}
@@ -88,34 +88,41 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.Lineup) {
 	}
 }
 
-func setupSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
-	log.Debugf("Advertising telly as %s (%s)", deviceName, deviceUUID)
+func setupSSDP(baseAddress, deviceName, deviceUUID string, exit chan bool) error {
+	log.Debugf("Advertising telly as %s (%s) on %s", deviceName, deviceUUID, baseAddress)
 
 	adv, err := ssdp.Advertise(
-		"upnp:rootdevice",
+		ssdp.RootDevice,
 		fmt.Sprintf("uuid:%s::upnp:rootdevice", deviceUUID),
 		fmt.Sprintf("http://%s/device.xml", baseAddress),
-		deviceName,
+		`telly/2.0 UPnP/1.0`,
 		1800)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	go func(advertiser *ssdp.Advertiser) {
-		aliveTick := time.Tick(15 * time.Second)
+	go func() {
+		aliveTick := time.Tick(300 * time.Second)
 
+	loop:
 		for {
 			select {
+			case <-exit:
+				break loop
 			case <-aliveTick:
-				if err := advertiser.Alive(); err != nil {
+				log.Debugln("Sending SSDP heartbeat")
+				if err := adv.Alive(); err != nil {
 					log.WithError(err).Panicln("error when sending ssdp heartbeat")
 				}
 			}
 		}
-	}(adv)
 
-	return adv, nil
+		adv.Bye()
+		adv.Close()
+	}()
+
+	return nil
 }
 
 type dXMLContainer struct {
