@@ -25,6 +25,14 @@ Here's an example configuration file. **You will need to create this file.**  It
   Device-Model-Number = "HDTC-2US"
   SSDP = true
 
+# Note on running multiple instances of telly
+# There are three things that make up a "key" for a given Telly Virtual DVR:
+# Device-ID [required], Device-UUID [optional], and port [required]
+# When you configure your additional telly instances, change:
+# the Device-ID [above] AND
+# the Device-UUID [above, if you're entering one] AND
+# the port [below in the "Web" section]
+
 # THIS SECTION IS REQUIRED ########################################################################
 [IPTV]
   Streams = 1               # number of simultaneous streams that the telly virtual DVR will provide
