@@ -10,9 +10,9 @@ import (
 type ConvertibleBoolean bool
 
 // MarshalJSON returns a 0 or 1 depending on bool state.
-func (bit *ConvertibleBoolean) MarshalJSON() ([]byte, error) {
+func (bit ConvertibleBoolean) MarshalJSON() ([]byte, error) {
 	var bitSetVar int8
-	if *bit {
+	if bit {
 		bitSetVar = 1
 	}
 
