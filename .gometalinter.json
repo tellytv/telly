@@ -2,7 +2,6 @@
   "Enable": [
     "deadcode",
     "errcheck",
-    "gochecknoglobals",
     "gochecknoinits",
     "goconst",
     "gofmt",

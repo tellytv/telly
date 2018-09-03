@@ -49,7 +49,7 @@ func serve(opts config) {
 
 	if opts.SSDP {
 		log.Debugln("advertising telly service on network via UPNP/SSDP")
-		if _, ssdpErr := setupSSDP(opts.BaseAddress.String(), opts.FriendlyName, opts.DeviceUUID); ssdpErr != nil {
+		if ssdpErr := setupSSDP(opts.BaseAddress.String(), opts.FriendlyName, opts.DeviceUUID); ssdpErr != nil {
 			log.WithError(ssdpErr).Errorln("telly cannot advertise over ssdp")
 		}
 	}
@@ -93,7 +93,7 @@ func stream(c *gin.Context) {
 	decodedStreamURI, decodeErr := base64.StdEncoding.DecodeString(channelID)
 	if decodeErr != nil {
 		log.WithError(decodeErr).Errorf("Invalid base64: %s", channelID)
-		c.AbortWithError(http.StatusBadRequest, decodeErr)
+		c.AbortWithError(http.StatusBadRequest, decodeErr) // nolint: errcheck
 		return
 	}
 
@@ -133,7 +133,7 @@ func ginrus() gin.HandlerFunc {
 	}
 }
 
-func setupSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, error) {
+func setupSSDP(baseAddress, deviceName, deviceUUID string) error {
 	log.Debugf("Advertising telly as %s (%s)", deviceName, deviceUUID)
 
 	adv, err := ssdp.Advertise(
@@ -144,21 +144,19 @@ func setupSSDP(baseAddress, deviceName, deviceUUID string) (*ssdp.Advertiser, er
 		1800)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	go func(advertiser *ssdp.Advertiser) {
 		aliveTick := time.Tick(15 * time.Second)
 
 		for {
-			select {
-			case <-aliveTick:
-				if err := advertiser.Alive(); err != nil {
-					log.WithError(err).Panicln("error when sending ssdp heartbeat")
-				}
+			<-aliveTick
+			if err := advertiser.Alive(); err != nil {
+				log.WithError(err).Panicln("error when sending ssdp heartbeat")
 			}
 		}
 	}(adv)
 
-	return adv, nil
+	return nil
 }

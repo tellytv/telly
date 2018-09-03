@@ -17,9 +17,8 @@ import (
 )
 
 var (
-	namespace = "telly"
-	log       = logrus.New()
-	opts      = config{}
+	log  = logrus.New()
+	opts = config{}
 
 	exposedChannels = prometheus.NewGauge(
 		prometheus.GaugeOpts{
