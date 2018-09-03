@@ -2,14 +2,14 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.8
+      - image: circleci/golang:1
 
     working_directory: /go/src/github.com/tellytv/telly
     steps:
       - checkout
-
-      - run: go get -v -t -d ./...
+      - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+      # - run: go get -u github.com/alecthomas/gometalinter
+      # - run: gometalinter --install
+      - run: dep ensure -vendor-only
       - run: go test -v ./...
-      - run: GOOS=linux GOARCH=amd64 go build -o telly_linux_amd64
-      - run: GOOS=darwin GOARCH=amd64 go build -o telly_darwin_amd64
-      - run: GOOS=windows GOARCH=amd64 go build -o telly_windows_amd64.exe
+      # - run: gometalinter --config=.gometalinter.json ./...
