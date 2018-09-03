@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/schollz/closestmatch"
 	"github.com/tellytv/telly/internal/context"
 	"github.com/tellytv/telly/internal/guideproviders"
 	"github.com/tellytv/telly/internal/models"
@@ -122,8 +123,8 @@ func getAvailableLineups(guideSource *models.GuideSource, provider guideprovider
 }
 
 func previewLineupChannels(guideSource *models.GuideSource, provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
-	lineupId := c.Param("lineupId")
-	channels, channelsErr := provider.PreviewLineupChannels(lineupId)
+	lineupID := c.Param("lineupId")
+	channels, channelsErr := provider.PreviewLineupChannels(lineupID)
 	if channelsErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, channelsErr)
 		return
@@ -173,8 +174,8 @@ func subscribeToLineup(guideSource *models.GuideSource, provider guideproviders.
 }
 
 func unsubscribeFromLineup(guideSource *models.GuideSource, provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
-	lineupId := c.Param("lineupId")
-	if unsubscribeErr := provider.UnsubscribeFromLineup(lineupId); unsubscribeErr != nil {
+	lineupID := c.Param("lineupId")
+	if unsubscribeErr := provider.UnsubscribeFromLineup(lineupID); unsubscribeErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, unsubscribeErr)
 		return
 	}
@@ -219,10 +220,43 @@ func guideSourceLineupRoute(cc *context.CContext, originalFunc func(*models.Guid
 		}
 
 		if !provider.SupportsLineups() {
-			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("Provider %s does not support lineups", guideSourceID))
+			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("Provider %d does not support lineups", guideSourceID))
 			return
 		}
 
 		originalFunc(guideSource, provider, cc, c)
 	})
+}
+
+func match(guideSource *models.GuideSource, provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
+	inputChannelName := c.Query("channelName") // this is a string, ensure it's not empty
+
+	if inputChannelName != "" {
+		c.JSON(http.StatusOK, gin.H{"status": "empty input"})
+	}
+	channels := make([]string, len(guideSource.Channels))
+	channelMap := make(map[string]models.GuideSourceChannel)
+
+	for _, channel := range guideSource.Channels {
+		name := channel.XMLTV.DisplayNames[0].Value
+		channels = append(channels, name)
+		channelMap[name] = channel
+	}
+
+	bagSizes := []int{3}
+
+	// Create a closestmatch object
+	cm := closestmatch.New(channels, bagSizes)
+
+	results := cm.ClosestN(inputChannelName, 3)
+
+	var filteredChannels []models.GuideSourceChannel
+
+	for _, result := range results {
+		filteredChannels = append(filteredChannels, channelMap[result])
+	}
+
+	// get matching channels back and form into json for response
+
+	c.JSON(http.StatusOK, filteredChannels)
 }
