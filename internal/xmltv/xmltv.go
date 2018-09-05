@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/net/html/charset"
@@ -53,6 +54,11 @@ func (p *Date) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) 
 	dateFormat := "20060102"
 
 	if len(content) == 4 {
+		dateFormat = "2006"
+	}
+
+	if strings.Contains(content, "|") {
+		content = strings.Split(content, "|")[0]
 		dateFormat = "2006"
 	}
 
