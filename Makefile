@@ -11,6 +11,7 @@ PREFIX                  ?= $(shell pwd)
 BIN_DIR                 ?= $(shell pwd)
 DOCKER_IMAGE_NAME       ?= telly
 DOCKER_IMAGE_TAG        ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
+DOCKER_REPO             ?= tellytv
 
 
 all: dep style build test
