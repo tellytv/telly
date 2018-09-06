@@ -39,7 +39,7 @@
 
 [[constraint]]
   name = "github.com/gobuffalo/packr"
-  version = "1.13.3"
+  version = "1.13.5"
 
 [[constraint]]
   branch = "master"
@@ -47,7 +47,7 @@
 
 [[constraint]]
   name = "github.com/koron/go-ssdp"
-  branch = "master"
+  version = "0.1.0"
 
 [[constraint]]
   name = "github.com/kr/pretty"
@@ -62,16 +62,28 @@
   version = "1.0.0"
 
 [[constraint]]
-  name = "github.com/pressly/goose"
-  version = "2.3.0"
-
-[[constraint]]
   name = "github.com/prometheus/client_golang"
-  branch = "master"
+  version = "0.8.0"
 
 [[constraint]]
   branch = "master"
   name = "github.com/prometheus/common"
+
+[[constraint]]
+  name = "github.com/robfig/cron"
+  version = "1.1.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/rubenv/sql-migrate"
+
+[[constraint]]
+  name = "github.com/satori/go.uuid"
+  version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/schollz/closestmatch"
+  version = "2.1.0"
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"

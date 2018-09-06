@@ -1,5 +1,5 @@
--- +goose Up
--- SQL in this section is executed when the migration is applied.
+
+-- +migrate Up
 
 CREATE TABLE IF NOT EXISTS video_source (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,8 +103,7 @@ CREATE TABLE IF NOT EXISTS lineup_channel (
 );
 
 
--- +goose Down
--- SQL in this section is executed when the migration is rolled back.
+-- +migrate Down
 
 DROP TABLE video_source;
 DROP TABLE video_source_track;

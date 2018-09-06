@@ -5,9 +5,10 @@ import (
 	ctx "context"
 	"os"
 
+	"github.com/gobuffalo/packr"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3" // the SQLite driver
-	"github.com/pressly/goose"
+	"github.com/rubenv/sql-migrate"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/tellytv/telly/internal/guideproviders"
@@ -57,15 +58,6 @@ func NewCContext() (*CContext, error) {
 		Level: logrus.InfoLevel,
 	}
 
-	gooseLog := &logrus.Logger{
-		Out: os.Stderr,
-		Formatter: &logrus.TextFormatter{
-			FullTimestamp: true,
-		},
-		Hooks: make(logrus.LevelHooks),
-		Level: logrus.DebugLevel,
-	}
-
 	sql, dbErr := sqlx.Open("sqlite3", viper.GetString("database.file"))
 	if dbErr != nil {
 		log.WithError(dbErr).Panicln("Unable to open database")
@@ -77,19 +69,17 @@ func NewCContext() (*CContext, error) {
 
 	log.Debugln("Checking migrations status and running any required migrations...")
 
-	goose.SetLogger(gooseLog)
+	migrate.SetTable("migrations")
 
-	if dialectErr := goose.SetDialect("sqlite3"); dialectErr != nil {
-		log.WithError(dialectErr).Panicln("error setting migrations dialect")
+	migrations := &migrate.PackrMigrationSource{
+		Box: packr.NewBox("../../migrations"),
 	}
 
-	if statusErr := goose.Status(sql.DB, "./migrations"); statusErr != nil {
-		log.WithError(statusErr).Panicln("error getting migrations status")
+	numMigrations, upErr := migrate.Exec(sql.DB, "sqlite3", migrations, migrate.Up)
+	if upErr != nil {
+		log.WithError(upErr).Panicln("error migrating database to newer version")
 	}
-
-	if upErr := goose.Up(sql.DB, "./migrations"); upErr != nil {
-		log.WithError(upErr).Panicln("error migrating up")
-	}
+	log.Debugf("successfully applied %d migrations to database", numMigrations)
 
 	api := models.NewAPICollection(theCtx, sql)
 

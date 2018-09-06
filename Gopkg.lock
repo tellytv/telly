@@ -61,20 +61,12 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:b793158861dda5660883cc91ed3ba69b9b4e3bccff97feb08c34a2fc11b93228"
+  digest = "1:f45caa3c5c4541c3a73b9fa2b38db97fcbda57618eaaaf45dd5c728362ad8f09"
   name = "github.com/gobuffalo/packr"
   packages = ["."]
   pruneopts = "UT"
-  revision = "ee1318b82b25993be2f7161d48315e1f14697528"
-  version = "v1.13.3"
-
-[[projects]]
-  digest = "1:bbadccf3d3317ea03c0dac0b45b673b4b397c8f91a1d2eff550a3c51c4ad770e"
-  name = "github.com/gogo/protobuf"
-  packages = ["proto"]
-  pruneopts = "UT"
-  revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
-  version = "v1.1.1"
+  revision = "6c8156ee36301dd007342e79d81c99e7a7834337"
+  version = "v1.13.5"
 
 [[projects]]
   digest = "1:97df918963298c287643883209a2c3f642e6593379f97ab400c2a2e219ab647d"
@@ -123,12 +115,12 @@
   version = "1.0.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:8f57afa9ef1d9205094e9d89b9cb4ecb3123f342c4eb0053d7631181b511e6e4"
+  digest = "1:58ad79834dc097c36a857a8c325d646af0a8bbd73375a6958a639507c5399a61"
   name = "github.com/koron/go-ssdp"
   packages = ["."]
   pruneopts = "UT"
-  revision = "4a0ed625a78b6858dc8d3a55fb7728968b712122"
+  revision = "6d1709049dead37ead37808479f88c9bffa2c4d6"
+  version = "v0.1"
 
 [[projects]]
   digest = "1:ca955a9cd5b50b0f43d2cc3aeb35c951473eeca41b34eb67507f1dbcc0542394"
@@ -202,23 +194,15 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:65c6401efaeb147041aed03d5b18862ce666a54e4ce754ea6ddbfa5ddaa24b07"
-  name = "github.com/pressly/goose"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "95600eb369b1f657efd54a401ab85d0647a1db80"
-  version = "v2.3.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:1e7e38945e6406ec04688d7f020d04fe8d5ea84ea7e0fe220ef2a24cb30acc34"
+  digest = "1:d14a5f4bfecf017cb780bdde1b6483e5deb87e12c332544d2c430eda58734bcb"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
     "prometheus/promhttp",
   ]
   pruneopts = "UT"
-  revision = "676eaf6b948046fcd9dbbcf5cc9ff5077921aa81"
+  revision = "c5b7fccd204277076155f10851dad72b76a49317"
+  version = "v0.8.0"
 
 [[projects]]
   branch = "master"
@@ -263,12 +247,31 @@
   version = "v1.1"
 
 [[projects]]
-  digest = "1:ff6b0586c0621a76832cf783eee58cbb9d9795d2ce8acbc199a4131db11c42a9"
+  branch = "master"
+  digest = "1:cd638908d04442c8b6afd5d0221c21556e76c5e7130448ca97d249b47d66dd41"
+  name = "github.com/rubenv/sql-migrate"
+  packages = [
+    ".",
+    "sqlparse",
+  ]
+  pruneopts = "UT"
+  revision = "3f452fc0ebebbb784fdab91f7bc79a31dcacab5c"
+
+[[projects]]
+  digest = "1:274f67cb6fed9588ea2521ecdac05a6d62a8c51c074c1fccc6a49a40ba80e925"
   name = "github.com/satori/go.uuid"
   packages = ["."]
   pruneopts = "UT"
-  revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
   version = "v1.2.0"
+
+[[projects]]
+  digest = "1:2b97fd8c3ebafa161b3cf34948a0dd7d1ec27ab3fed686eb3639ead64344e9e6"
+  name = "github.com/schollz/closestmatch"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "56fb6b15a5e88fbcbc21b196488e749fc176514c"
+  version = "v2.1.0"
 
 [[projects]]
   digest = "1:d867dfa6751c8d7a435821ad3b736310c2ed68945d05b50fb9d23aee0540c8cc"
@@ -323,11 +326,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:990b7cb1f771a9f48b2647d207c6f5356c0bb4372fa744648c95b98ca11ed0f4"
+  digest = "1:56994293d84b7c01c28fc1479118038c238742ad24eeff676e11ffc45331e4e2"
   name = "github.com/tellytv/go.schedulesdirect"
   packages = ["."]
   pruneopts = "UT"
-  revision = "ba31b244c694fa4bd6f8f8417c73e823874d2b33"
+  revision = "bb2d9eec79e9ab9655574be4faa1e7b952478686"
 
 [[projects]]
   branch = "master"
@@ -358,7 +361,7 @@
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = "UT"
-  revision = "614d502a4dac94afa3a6ce146bd1736da82514c6"
+  revision = "0709b304e793a5edb4a2c0145f281ecdc20838a4"
 
 [[projects]]
   branch = "master"
@@ -378,14 +381,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0dafafed83f125cdc945a014b2dec15e5b5d8cd2d77a2d1e3763120b08ab381b"
+  digest = "1:7f4a61b989d94774dc61016b660cf8347f59eb0bed91a10b2f23fc72a38d45d4"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "4910a1d54f876d7b22162a85f4d066d3ee649450"
+  revision = "ebe1bf3edb3325c393447059974de898d5133eb8"
 
 [[projects]]
   digest = "1:4392fcf42d5cf0e3ff78c96b2acf8223d49e4fdc53eb77c99d2f8dfe4680e006"
@@ -425,11 +428,20 @@
   version = "v8.18.1"
 
 [[projects]]
-  digest = "1:cacb98d52c60c337c2ce95a7af83ba0313a93ce5e73fa9e99a96aff70776b9d3"
+  digest = "1:fa9a7c0ef59217bd22f32eb7cc027894d73f340a5633258cc079dec025db6a7f"
+  name = "gopkg.in/gorp.v1"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c87af80f3cc5036b55b83d77171e156791085e2e"
+  version = "v1.7.1"
+
+[[projects]]
+  digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   pruneopts = "UT"
-  revision = "a5b47d31c556af34a302ce5d659e6fea44d90de0"
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -444,11 +456,12 @@
     "github.com/kr/pretty",
     "github.com/mattn/go-sqlite3",
     "github.com/mitchellh/mapstructure",
-    "github.com/pressly/goose",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/common/version",
     "github.com/robfig/cron",
+    "github.com/rubenv/sql-migrate",
     "github.com/satori/go.uuid",
+    "github.com/schollz/closestmatch",
     "github.com/sirupsen/logrus",
     "github.com/spf13/pflag",
     "github.com/spf13/viper",
