@@ -20,6 +20,7 @@ jobs:
     steps:
     - checkout
     - run: make promu
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
     - run: make dep
     - run: promu crossbuild -v
     - persist_to_workspace:
@@ -57,6 +58,7 @@ jobs:
     - attach_workspace:
         at: .
     - run: make promu
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
     - run: make dep
     - run: promu crossbuild tarballs
     - run: promu checksum .tarballs

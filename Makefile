@@ -22,7 +22,6 @@ style:
 
 dep: $(DEP_BINARY)
 	@echo ">> installing dependencies"
-	@curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 	@$(DEP_BINARY) ensure -vendor-only -v
 
 test:
