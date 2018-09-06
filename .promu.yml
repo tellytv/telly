@@ -23,7 +23,5 @@ crossbuild:
     - darwin/386
     - windows/amd64
     - windows/386
-    - freebsd/amd64
-    - freebsd/386
     - linux/arm
     - linux/arm64
