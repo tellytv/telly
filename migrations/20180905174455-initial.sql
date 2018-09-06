@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS video_source (
   base_url         TEXT,
   m3u_url          TEXT,
   max_streams      INTEGER,
-  update_frequency TEXT,
+  update_frequency TEXT DEFAULT '@daily',
   imported_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS guide_source (
   password         VARCHAR(64) NULL,
   xmltv_url        TEXT,
   provider_data    TEXT,
-  update_frequency TEXT,
+  update_frequency TEXT DEFAULT '@daily',
   imported_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
