@@ -112,7 +112,7 @@ func (db *GuideSourceDB) GetGuideSourceByID(id int) (*GuideSource, error) {
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
-	err := db.SQL.Get(&guideSource, sql, args)
+	err := db.SQL.Get(&guideSource, sql, args...)
 	return &guideSource, err
 }
 

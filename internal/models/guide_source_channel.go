@@ -112,7 +112,7 @@ func (db *GuideSourceChannelDB) GetGuideSourceChannelByID(id int, expanded bool)
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
-	err := db.SQL.Get(&channel, sql, args)
+	err := db.SQL.Get(&channel, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -146,6 +146,6 @@ func (db *GuideSourceChannelDB) GetChannelsForGuideSource(guideSourceID int) ([]
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
-	err := db.SQL.Select(&channels, sql, args)
+	err := db.SQL.Select(&channels, sql, args...)
 	return channels, err
 }

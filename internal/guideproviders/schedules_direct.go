@@ -215,7 +215,7 @@ func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, input
 	// Next, we get all modified parts of the schedule for any channels.
 	lastModifieds, lastModifiedsErr := s.client.GetLastModified(reqs)
 	if lastModifiedsErr != nil {
-		return nil, nil, fmt.Errorf("error getting lastModifieds from lastModifieds direct: %s", lastModifiedsErr)
+		return nil, nil, fmt.Errorf("error getting lastModifieds from schedules direct: %s", lastModifiedsErr)
 	}
 
 	channelsNeedingUpdate := make(map[string][]string)

@@ -206,7 +206,7 @@ func (db *LineupDB) GetLineupByID(id int, withChannels bool) (*Lineup, error) {
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
-	err := db.SQL.Get(&lineup, sql, args)
+	err := db.SQL.Get(&lineup, sql, args...)
 	if withChannels {
 		channels, channelsErr := db.Collection.LineupChannel.GetChannelsForLineup(lineup.ID, true)
 		if channelsErr != nil {

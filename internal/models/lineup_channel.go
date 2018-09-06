@@ -166,7 +166,7 @@ func (db *LineupChannelDB) GetLineupChannelByID(lineupID int, channelNumber stri
 		return nil, sqlGenErr
 	}
 
-	err := db.SQL.Get(&channel, sql, args)
+	err := db.SQL.Get(&channel, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (db *LineupChannelDB) GetChannelsForLineup(lineupID int, expanded bool) ([]
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
-	err := db.SQL.Select(&channels, sql, args)
+	err := db.SQL.Select(&channels, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -231,19 +231,22 @@ func (db *LineupChannelDB) GetEnabledChannelsForGuideProvider(providerID int) ([
 		return nil, sqlGenErr
 	}
 
-	err := db.SQL.Select(&channels, sql, args)
+	err := db.SQL.Select(&channels, sql, args...)
 	if err != nil {
 		return nil, err
 	}
-	// Need to get the address and port number to properly fill
-	lineup, lineupErr := db.Collection.Lineup.GetLineupByID(channels[0].LineupID, false)
-	if lineupErr != nil {
-		return nil, lineupErr
-	}
-	for idx, channel := range channels {
-		channel.lineup = lineup
-		channel.Fill(db.Collection)
-		channels[idx] = channel
+
+	if len(channels) > 0 {
+		// Need to get the address and port number to properly fill
+		lineup, lineupErr := db.Collection.Lineup.GetLineupByID(channels[0].LineupID, false)
+		if lineupErr != nil {
+			return nil, lineupErr
+		}
+		for idx, channel := range channels {
+			channel.lineup = lineup
+			channel.Fill(db.Collection)
+			channels[idx] = channel
+		}
 	}
 	return channels, err
 }
@@ -260,7 +263,7 @@ func (db *LineupChannelDB) GetEnabledChannelsForVideoProvider(providerID int) ([
 		return nil, sqlGenErr
 	}
 
-	err := db.SQL.Select(&channels, sql, args)
+	err := db.SQL.Select(&channels, sql, args...)
 	if err != nil {
 		return nil, err
 	}

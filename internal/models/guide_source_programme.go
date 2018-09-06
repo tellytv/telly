@@ -120,7 +120,7 @@ func (db *GuideSourceProgrammeDB) GetGuideSourceProgrammeByID(id int) (*GuideSou
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
-	err := db.SQL.Get(&programme, sql, args)
+	err := db.SQL.Get(&programme, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,11 +142,11 @@ func (db *GuideSourceProgrammeDB) UpdateGuideSourceProgramme(programmeID string,
 // GetProgrammesForActiveChannels returns a slice of GuideSourceProgrammes for actively assigned channels.
 func (db *GuideSourceProgrammeDB) GetProgrammesForActiveChannels() ([]GuideSourceProgramme, error) {
 	programmes := make([]GuideSourceProgramme, 0)
-	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_programme").Where("WHERE G.channel IN (SELECT xmltv_id FROM guide_source_channel WHERE id IN (SELECT guide_channel_id FROM lineup_channel)) ORDER BY start ASC").ToSql()
+	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_programme").Where("channel IN (SELECT xmltv_id FROM guide_source_channel WHERE id IN (SELECT guide_channel_id FROM lineup_channel)) ORDER BY start ASC").ToSql()
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
-	err := db.SQL.Select(&programmes, sql, args)
+	err := db.SQL.Select(&programmes, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (db *GuideSourceProgrammeDB) GetProgrammesForChannel(channelID string) ([]G
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
-	err := db.SQL.Select(&programmes, sql, args)
+	err := db.SQL.Select(&programmes, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (db *GuideSourceProgrammeDB) GetProgrammesForGuideID(guideSourceID int) ([]
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
-	err := db.SQL.Select(&programmes, sql, args)
+	err := db.SQL.Select(&programmes, sql, args...)
 	if err != nil {
 		return nil, err
 	}

@@ -60,6 +60,10 @@ func fireGuideUpdates(cc *context.CContext, provider *models.GuideSource) error 
 		return fmt.Errorf("error getting guide sources for lineup: %s", guideChannelsErr)
 	}
 
+	if len(guideChannels) == 0 {
+		return nil
+	}
+
 	channelsToGet := make(map[string]guideproviders.Channel)
 
 	for _, channel := range guideChannels {

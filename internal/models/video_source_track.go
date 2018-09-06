@@ -93,7 +93,7 @@ func (db *VideoSourceTrackDB) GetVideoSourceTrackByID(id int, expanded bool) (*V
 		return nil, sqlGenErr
 	}
 
-	err := db.SQL.Get(&track, sql, args)
+	err := db.SQL.Get(&track, sql, args...)
 	if expanded {
 		video, videoErr := db.Collection.VideoSource.GetVideoSourceByID(track.VideoSourceID)
 		if videoErr != nil {
@@ -127,6 +127,6 @@ func (db *VideoSourceTrackDB) GetTracksForVideoSource(videoSourceID int) ([]Vide
 		return nil, sqlGenErr
 	}
 
-	err := db.SQL.Select(&tracks, sql, args)
+	err := db.SQL.Select(&tracks, sql, args...)
 	return tracks, err
 }

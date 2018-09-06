@@ -106,7 +106,7 @@ func (db *VideoSourceDB) GetVideoSourceByID(id int) (*VideoSource, error) {
 		return nil, sqlGenErr
 	}
 
-	err := db.SQL.Get(&videoSource, sql, args)
+	err := db.SQL.Get(&videoSource, sql, args...)
 	return &videoSource, err
 }
 
