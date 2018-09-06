@@ -63,7 +63,7 @@ var (
 
 // nolint
 func init() {
-	version.NewCollector("telly")
+	prometheus.MustRegister(version.NewCollector("telly"))
 	prometheus.MustRegister(ExposedChannels)
 	prometheus.MustRegister(ActiveStreams)
 	prometheus.MustRegister(PausedStreams)
