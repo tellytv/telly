@@ -69,6 +69,14 @@
   version = "v1.13.5"
 
 [[projects]]
+  digest = "1:bbadccf3d3317ea03c0dac0b45b673b4b397c8f91a1d2eff550a3c51c4ad770e"
+  name = "github.com/gogo/protobuf"
+  packages = ["proto"]
+  pruneopts = "UT"
+  revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
+  version = "v1.1.1"
+
+[[projects]]
   digest = "1:97df918963298c287643883209a2c3f642e6593379f97ab400c2a2e219ab647d"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
@@ -115,12 +123,12 @@
   version = "1.0.0"
 
 [[projects]]
-  digest = "1:58ad79834dc097c36a857a8c325d646af0a8bbd73375a6958a639507c5399a61"
+  branch = "master"
+  digest = "1:8f57afa9ef1d9205094e9d89b9cb4ecb3123f342c4eb0053d7631181b511e6e4"
   name = "github.com/koron/go-ssdp"
   packages = ["."]
   pruneopts = "UT"
-  revision = "6d1709049dead37ead37808479f88c9bffa2c4d6"
-  version = "v0.1"
+  revision = "4a0ed625a78b6858dc8d3a55fb7728968b712122"
 
 [[projects]]
   digest = "1:ca955a9cd5b50b0f43d2cc3aeb35c951473eeca41b34eb67507f1dbcc0542394"
@@ -194,15 +202,16 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:d14a5f4bfecf017cb780bdde1b6483e5deb87e12c332544d2c430eda58734bcb"
+  branch = "master"
+  digest = "1:85e2aede1e81915ef1d12551ea082ce6aab0e0cfb70f7b29581ef496e1b0ec0d"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
+    "prometheus/internal",
     "prometheus/promhttp",
   ]
   pruneopts = "UT"
-  revision = "c5b7fccd204277076155f10851dad72b76a49317"
-  version = "v0.8.0"
+  revision = "3525612fea19680dd3d49c768802ec082ca853b2"
 
 [[projects]]
   branch = "master"
@@ -258,12 +267,12 @@
   revision = "3f452fc0ebebbb784fdab91f7bc79a31dcacab5c"
 
 [[projects]]
-  digest = "1:274f67cb6fed9588ea2521ecdac05a6d62a8c51c074c1fccc6a49a40ba80e925"
+  branch = "master"
+  digest = "1:ff6b0586c0621a76832cf783eee58cbb9d9795d2ce8acbc199a4131db11c42a9"
   name = "github.com/satori/go.uuid"
   packages = ["."]
   pruneopts = "UT"
-  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
-  version = "v1.2.0"
+  revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
 
 [[projects]]
   digest = "1:2b97fd8c3ebafa161b3cf34948a0dd7d1ec27ab3fed686eb3639ead64344e9e6"

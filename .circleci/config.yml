@@ -20,6 +20,7 @@ jobs:
     steps:
     - checkout
     - run: make promu
+    - run: make dep
     - run: promu crossbuild -v
     - persist_to_workspace:
         root: .
@@ -56,6 +57,7 @@ jobs:
     - attach_workspace:
         at: .
     - run: make promu
+    - run: make dep
     - run: promu crossbuild tarballs
     - run: promu checksum .tarballs
     - run: promu release .tarballs

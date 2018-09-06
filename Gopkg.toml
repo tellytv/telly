@@ -47,7 +47,7 @@
 
 [[constraint]]
   name = "github.com/koron/go-ssdp"
-  version = "0.1.0"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/kr/pretty"
@@ -63,7 +63,7 @@
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
-  version = "0.8.0"
+  branch = "master"
 
 [[constraint]]
   branch = "master"
@@ -79,7 +79,7 @@
 
 [[constraint]]
   name = "github.com/satori/go.uuid"
-  version = "1.2.0"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/schollz/closestmatch"
