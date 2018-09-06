@@ -10,6 +10,7 @@ jobs:
     steps:
     - checkout
     - setup_remote_docker
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
     - run: make promu
     - run: make
 
@@ -19,8 +20,8 @@ jobs:
 
     steps:
     - checkout
-    - run: make promu
     - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+    - run: make promu
     - run: make dep
     - run: promu crossbuild -v
     - persist_to_workspace:
@@ -38,6 +39,7 @@ jobs:
     - setup_remote_docker
     - attach_workspace:
         at: .
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
     - run: ln -s .build/linux-amd64/telly telly
     - run: make docker
     - run: docker images
@@ -57,8 +59,8 @@ jobs:
     - run: echo 'export PATH=${HOME}/bin:${PATH}' >> ${BASH_ENV}
     - attach_workspace:
         at: .
-    - run: make promu
     - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+    - run: make promu
     - run: make dep
     - run: promu crossbuild tarballs
     - run: promu checksum .tarballs
