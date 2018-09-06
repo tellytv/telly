@@ -55,11 +55,14 @@ docker-publish:
 	@echo ">> publishing docker image"
 	@docker push "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)"
 
+docker-tag-latest:
+	@docker tag "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)" "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):latest"
+
 promu:
 	GOOS= GOARCH= $(GO) get -u github.com/prometheus/promu
 
 
-.PHONY: all style dep format build test vet tarball docker docker-publish promu
+.PHONY: all style dep format build test vet tarball docker docker-publish docker-tag-latest promu
 
 
 run:
