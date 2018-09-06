@@ -113,6 +113,10 @@
   branch = "master"
   name = "golang.org/x/net"
 
+[[constraint]]
+  name = "github.com/Masterminds/squirrel"
+  version = "1.0"
+
 [prune]
   go-tests = true
   unused-packages = true
