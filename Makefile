@@ -1,10 +1,12 @@
-# Need CGO_ENABLED=1 for go-sqlite3
-GO                      ?= CGO_ENABLED=1 go
+# Ensure GOBIN is not set during build so that promu is installed to the correct path
+unexport GOBIN
+
+GO                      ?= go
 GOFMT                   ?= $(GO)fmt
 FIRST_GOPATH            := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
 PROMU                   := $(FIRST_GOPATH)/bin/promu
 
-GOMETALINTER_BINARY     := CGO_ENABLED=1 $(FIRST_GOPATH)/bin/gometalinter
+GOMETALINTER_BINARY     := $(FIRST_GOPATH)/bin/gometalinter
 DEP_BINARY              := $(FIRST_GOPATH)/bin/dep
 
 PREFIX                  ?= $(shell pwd)
@@ -54,7 +56,7 @@ docker-publish:
 	@docker push "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)"
 
 promu:
-	$(GO) get -u github.com/prometheus/promu
+	GOOS= GOARCH= $(GO) get -u github.com/prometheus/promu
 
 
 .PHONY: all style dep format build test vet tarball docker docker-publish promu
