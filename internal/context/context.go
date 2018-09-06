@@ -45,18 +45,20 @@ func (cc *CContext) Copy() *CContext {
 }
 
 // NewCContext returns an initialized CContext struct
-func NewCContext() (*CContext, error) {
+func NewCContext(log *logrus.Logger) (*CContext, error) {
+
+	if log == nil {
+		log = &logrus.Logger{
+			Out: os.Stderr,
+			Formatter: &logrus.TextFormatter{
+				FullTimestamp: true,
+			},
+			Hooks: make(logrus.LevelHooks),
+			Level: logrus.DebugLevel,
+		}
+	}
 
 	theCtx := ctx.Background()
-
-	log := &logrus.Logger{
-		Out: os.Stderr,
-		Formatter: &logrus.TextFormatter{
-			FullTimestamp: true,
-		},
-		Hooks: make(logrus.LevelHooks),
-		Level: logrus.InfoLevel,
-	}
 
 	sql, dbErr := sqlx.Open("sqlite3", viper.GetString("database.file"))
 	if dbErr != nil {
@@ -81,7 +83,7 @@ func NewCContext() (*CContext, error) {
 	}
 	log.Debugf("successfully applied %d migrations to database", numMigrations)
 
-	api := models.NewAPICollection(sql)
+	api := models.NewAPICollection(sql, log)
 
 	tuners := make(map[int]chan bool)
 

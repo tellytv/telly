@@ -13,14 +13,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/koron/go-ssdp"
 	uuid "github.com/satori/go.uuid"
+	"github.com/sirupsen/logrus"
 	ccontext "github.com/tellytv/telly/internal/context"
 	"github.com/tellytv/telly/internal/metrics"
 	"github.com/tellytv/telly/internal/models"
 	"github.com/tellytv/telly/internal/streamsuite"
 )
 
+var log = &logrus.Logger{}
+
 // ServeLineup starts up a server dedicated to a single Lineup.
 func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.Lineup) {
+	log = cc.Log
 	channels, channelsErr := cc.API.LineupChannel.GetChannelsForLineup(lineup.ID, true)
 	if channelsErr != nil {
 		log.WithError(channelsErr).Errorln("error getting channels in lineup")
@@ -38,7 +42,7 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.Lineup) {
 	log.Debugln("creating device xml")
 	upnp := discoveryData.UPNP()
 
-	router := newGin()
+	router := newGin(cc)
 
 	router.GET("/", deviceXML(upnp))
 	router.GET("/device.xml", deviceXML(upnp))

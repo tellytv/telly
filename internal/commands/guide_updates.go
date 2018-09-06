@@ -25,7 +25,7 @@ var (
 
 // FireGuideUpdatesCommand Command to fire one off guide source updates
 func FireGuideUpdatesCommand() {
-	cc, err := context.NewCContext()
+	cc, err := context.NewCContext(log)
 	if err != nil {
 		log.Fatalln("Couldn't create context", err)
 	}

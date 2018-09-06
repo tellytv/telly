@@ -11,7 +11,7 @@ import (
 func getVideoSources(cc *context.CContext, c *gin.Context) {
 	sources, sourcesErr := cc.API.VideoSource.GetAllVideoSources(false)
 	if sourcesErr != nil {
-		log.WithError(sourcesErr).Errorln("error getting all video sources")
+		cc.Log.WithError(sourcesErr).Errorln("error getting all video sources")
 		c.AbortWithError(http.StatusInternalServerError, sourcesErr)
 		return
 	}
@@ -31,14 +31,14 @@ func addVideoSource(cc *context.CContext, c *gin.Context) {
 
 		provider, providerErr := providerCfg.GetProvider()
 		if providerErr != nil {
-			log.WithError(providerErr).Errorln("error getting provider")
+			cc.Log.WithError(providerErr).Errorln("error getting provider")
 			c.AbortWithError(http.StatusInternalServerError, providerErr)
 			return
 		}
 
 		cc.VideoSourceProviders[newProvider.ID] = provider
 
-		log.Infoln("Detected passed config is for provider", provider.Name())
+		cc.Log.Infoln("Detected passed config is for provider", provider.Name())
 
 		channels, channelsErr := provider.Channels()
 		if channelsErr != nil {
@@ -57,7 +57,7 @@ func addVideoSource(cc *context.CContext, c *gin.Context) {
 				EPGID:         channel.EPGID,
 			})
 			if newTrackErr != nil {
-				log.WithError(newTrackErr).Errorln("Error creating new video source track!")
+				cc.Log.WithError(newTrackErr).Errorln("Error creating new video source track!")
 				c.AbortWithError(http.StatusInternalServerError, newTrackErr)
 				return
 			}

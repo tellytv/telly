@@ -31,7 +31,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 
 		cc.GuideSourceProviders[newGuide.ID] = provider
 
-		log.Infoln("Detected passed config is for provider", provider.Name())
+		cc.Log.Infoln("Detected passed config is for provider", provider.Name())
 
 		lineupMetadata, reloadErr := provider.Refresh(nil)
 		if reloadErr != nil {
@@ -46,7 +46,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 
 		channels, channelsErr := provider.Channels()
 		if channelsErr != nil {
-			log.WithError(channelsErr).Errorln("unable to get channels from provider")
+			cc.Log.WithError(channelsErr).Errorln("unable to get channels from provider")
 			c.AbortWithError(http.StatusBadRequest, channelsErr)
 			return
 		}
@@ -54,7 +54,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 		for _, channel := range channels {
 			newChannel, newChannelErr := cc.API.GuideSourceChannel.InsertGuideSourceChannel(newGuide.ID, channel, nil)
 			if newChannelErr != nil {
-				log.WithError(newChannelErr).Errorf("Error creating new guide source channel %s!", channel.ID)
+				cc.Log.WithError(newChannelErr).Errorf("Error creating new guide source channel %s!", channel.ID)
 				c.AbortWithError(http.StatusInternalServerError, newChannelErr)
 				return
 			}
@@ -153,7 +153,7 @@ func subscribeToLineup(guideSource *models.GuideSource, provider guideproviders.
 
 	channels, channelsErr := provider.Channels()
 	if channelsErr != nil {
-		log.WithError(channelsErr).Errorln("unable to get channels from provider")
+		cc.Log.WithError(channelsErr).Errorln("unable to get channels from provider")
 		c.AbortWithError(http.StatusBadRequest, channelsErr)
 		return
 	}
@@ -163,7 +163,7 @@ func subscribeToLineup(guideSource *models.GuideSource, provider guideproviders.
 		if channel.Lineup == lineupID {
 			_, newChannelErr := cc.API.GuideSourceChannel.InsertGuideSourceChannel(guideSource.ID, channel, nil)
 			if newChannelErr != nil {
-				log.WithError(newChannelErr).Errorf("Error creating new guide source channel %s!", channel.ID)
+				cc.Log.WithError(newChannelErr).Errorf("Error creating new guide source channel %s!", channel.ID)
 				c.AbortWithError(http.StatusInternalServerError, newChannelErr)
 				return
 			}

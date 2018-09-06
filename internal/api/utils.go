@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -12,13 +13,13 @@ import (
 	"github.com/tellytv/telly/internal/context"
 	"github.com/tellytv/telly/internal/models"
 	"github.com/tellytv/telly/internal/utils"
+	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
 func scanM3U(c *gin.Context) {
 	rawPlaylist, m3uErr := utils.GetM3U(c.Query("m3u_url"))
 	if m3uErr != nil {
-		log.WithError(m3uErr).Errorln("unable to get m3u file")
-		c.AbortWithError(http.StatusBadRequest, m3uErr)
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("unable to get m3u file: %s", m3uErr))
 		return
 	}
 
@@ -47,7 +48,7 @@ type LineupStatus struct {
 	Found          int                       `json:",omitempty"` // Number of found channels
 }
 
-func ginrus() gin.HandlerFunc {
+func ginrus(cc *context.CContext) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		// some evil middlewares modify this values
@@ -68,7 +69,7 @@ func ginrus() gin.HandlerFunc {
 			"time":      end.Format(time.RFC3339),
 		}
 
-		entry := log.WithFields(logFields)
+		entry := cc.Log.WithFields(logFields)
 
 		if len(c.Errors) > 0 {
 			// Append error field if this is an erroneous request.
@@ -100,13 +101,15 @@ func ServeBox(urlPrefix string, box packr.Box) gin.HandlerFunc {
 	}
 }
 
-func newGin() *gin.Engine {
+var prom = ginprometheus.NewPrometheus("http")
+
+func newGin(cc *context.CContext) *gin.Engine {
 	router := gin.New()
 	router.Use(cors.Default())
 	router.Use(gin.Recovery())
 
 	if viper.GetBool("log.requests") {
-		router.Use(ginrus())
+		router.Use(ginrus(cc))
 	}
 
 	prom.Use(router)

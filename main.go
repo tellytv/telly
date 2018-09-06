@@ -94,7 +94,7 @@ func main() {
 		log.Debugf("Loaded configuration %s", js)
 	}
 
-	cc, err := context.NewCContext()
+	cc, err := context.NewCContext(log)
 	if err != nil {
 		log.WithError(err).Panicln("Couldn't create context")
 	}

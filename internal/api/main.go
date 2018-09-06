@@ -2,38 +2,23 @@ package api
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gobuffalo/packr"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/tellytv/telly/internal/context"
-	ginprometheus "github.com/zsais/go-gin-prometheus"
-)
-
-var (
-	log = &logrus.Logger{
-		Out: os.Stderr,
-		Formatter: &logrus.TextFormatter{
-			FullTimestamp: true,
-		},
-		Hooks: make(logrus.LevelHooks),
-		Level: logrus.DebugLevel,
-	}
-
-	prom = ginprometheus.NewPrometheus("http")
 )
 
 // ServeAPI starts up the telly frontend + REST API.
 func ServeAPI(cc *context.CContext) {
-	log.Debugln("creating webserver routes")
+	cc.Log.Debugln("creating webserver routes")
 
 	if viper.GetString("log.level") != logrus.DebugLevel.String() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	router := newGin()
+	router := newGin(cc)
 
 	box := packr.NewBox("../../frontend/dist/telly-fe")
 
@@ -73,11 +58,11 @@ func ServeAPI(cc *context.CContext) {
 		c.JSON(http.StatusOK, cc.Streams)
 	})
 
-	log.Infof("telly is live and on the air!")
-	log.Infof("Broadcasting from http://%s/", viper.GetString("web.listen-address"))
-	log.Infof("EPG URL: http://%s/epg.xml", viper.GetString("web.listen-address"))
+	cc.Log.Infof("telly is live and on the air!")
+	cc.Log.Infof("Broadcasting from http://%s/", viper.GetString("web.listen-address"))
+	cc.Log.Infof("EPG URL: http://%s/epg.xml", viper.GetString("web.listen-address"))
 
 	if err := router.Run(viper.GetString("web.listen-address")); err != nil {
-		log.WithError(err).Panicln("Error starting up web server")
+		cc.Log.WithError(err).Panicln("Error starting up web server")
 	}
 }

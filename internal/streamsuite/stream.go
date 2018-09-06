@@ -1,6 +1,7 @@
 package streamsuite
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -65,19 +66,18 @@ func (s *Stream) Start(c *gin.Context) {
 
 	streamData, streamErr := s.Transport.Start(s.StreamURL)
 	if streamErr != nil {
-		log.WithError(streamErr).Errorf("Error when starting streaming via %s", s.Transport.Type())
-		c.AbortWithError(http.StatusInternalServerError, streamErr)
+		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error when starting streaming via %s: %s", s.Transport.Type(), streamErr))
 		return
 	}
 
 	defer func() {
 		if closeErr := streamData.Close(); closeErr != nil {
-			log.WithError(closeErr).Errorf("error when closing stream via %s", s.Transport.Type())
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error when closing stream via %s: %s", s.Transport.Type(), closeErr))
 			return
 		}
 
 		if stopErr := s.Transport.Stop(); stopErr != nil {
-			log.WithError(stopErr).Errorf("error when cleaning up stream via %s", s.Transport.Type())
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error when cleaning up stream via %s: %s", s.Transport.Type(), stopErr))
 			return
 		}
 	}()
@@ -139,7 +139,7 @@ forLoop:
 			data := buffer[:n]
 			if _, respWriteErr := writer.Write(data); respWriteErr != nil {
 				if respWriteErr == io.EOF || respWriteErr == io.ErrUnexpectedEOF || respWriteErr == io.ErrClosedPipe {
-					log.Infoln("CAUGHT IO ERR")
+					log.Debugln("CAUGHT IO ERR")
 				}
 				log.WithError(respWriteErr).Errorln("Error while writing to connected stream client")
 				break forLoop

@@ -9,7 +9,7 @@ import (
 
 // FireVideoUpdatesCommand Command to fire one off video source updates
 func FireVideoUpdatesCommand() {
-	cc, err := context.NewCContext()
+	cc, err := context.NewCContext(nil)
 	if err != nil {
 		panic(fmt.Errorf("couldn't create context: %s", err))
 	}
