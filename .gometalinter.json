@@ -1,0 +1,34 @@
+{
+  "Enable": [
+    "deadcode",
+    "errcheck",
+    "gochecknoinits",
+    "goconst",
+    "gofmt",
+    "goimports",
+    "golint",
+    "gosec",
+    "gotype",
+    "gotypex",
+    "ineffassign",
+    "interfacer",
+    "megacheck",
+    "misspell",
+    "nakedret",
+    "safesql",
+    "structcheck",
+    "test",
+    "testify",
+    "unconvert",
+    "unparam",
+    "varcheck",
+    "vet",
+    "vetshadow"
+  ],
+  "Deadline": "5m",
+  "Sort": [
+    "path",
+    "linter"
+  ],
+  "Vendor": true
+}
