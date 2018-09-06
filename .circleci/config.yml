@@ -15,8 +15,11 @@ jobs:
     - run: make
 
   build:
-    machine: true
-    working_directory: /home/circleci/.go_workspace/src/github.com/tellytv/telly
+    # machine: true
+    # working_directory: /home/circleci/.go_workspace/src/github.com/tellytv/telly
+    docker:
+    - image: circleci/golang:1.10
+    working_directory: /go/src/github.com/tellytv/telly
 
     steps:
     - checkout
