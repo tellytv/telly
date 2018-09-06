@@ -13,7 +13,7 @@ DOCKER_IMAGE_NAME       ?= telly
 DOCKER_IMAGE_TAG        ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
 
 
-all: style dep build test
+all: dep style build test
 
 style:
 	@echo ">> checking code style"
