@@ -18,8 +18,7 @@ all: style dep build test
 style:
 	@echo ">> checking code style"
 	@$(GO) get -u github.com/alecthomas/gometalinter
-	@$(GOMETALINTER_BINARY) --config=.gometalinter.json --install
-	@$(GOMETALINTER_BINARY) --config=.gometalinter.json ./...
+	@$(GOMETALINTER_BINARY) --config=.gometalinter.json --install ./...
 
 dep: $(DEP_BINARY)
 	@echo ">> installing dependencies"
