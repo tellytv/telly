@@ -1,7 +1,10 @@
 repository:
   path: github.com/tellytv/telly
+go:
+  version: 1.11
+  cgo: true
 build:
-  flags: -a -tags netgo
+  flags: -a -tags 'netgo json1'
   ldflags: |
     -X {{repoPath}}/vendor/github.com/prometheus/common/version.Version={{.Version}}
     -X {{repoPath}}/vendor/github.com/prometheus/common/version.Revision={{.Revision}}
