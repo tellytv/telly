@@ -10,7 +10,7 @@ jobs:
     steps:
     - checkout
     - setup_remote_docker
-    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | INSTALL_DIRECTORY=/usr/local/bin sh
     - run: make promu
     - run: make
 
@@ -20,7 +20,7 @@ jobs:
 
     steps:
     - checkout
-    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | INSTALL_DIRECTORY=/usr/local/bin sh
     - run: make promu
     - run: make dep
     - run: promu crossbuild -v
@@ -39,7 +39,7 @@ jobs:
     - setup_remote_docker
     - attach_workspace:
         at: .
-    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | INSTALL_DIRECTORY=/usr/local/bin sh
     - run: ln -s .build/linux-amd64/telly telly
     - run: make docker
     - run: docker images
@@ -59,7 +59,7 @@ jobs:
     - run: echo 'export PATH=${HOME}/bin:${PATH}' >> ${BASH_ENV}
     - attach_workspace:
         at: .
-    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | INSTALL_DIRECTORY=/usr/local/bin sh
     - run: make promu
     - run: make dep
     - run: promu crossbuild tarballs
