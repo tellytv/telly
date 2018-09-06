@@ -34,7 +34,7 @@ var (
 func main() {
 
 	// Web flags
-	flag.StringP("web.listen-address", "l", "localhost:6077", "Address to listen on for web interface, API and telemetry $(TELLY_WEB_LISTEN_ADDRESS)")
+	flag.StringP("web.listen-address", "l", ":6077", "Address to listen on for web interface, API and telemetry $(TELLY_WEB_LISTEN_ADDRESS)")
 
 	// Log flags
 	flag.String("log.level", logrus.InfoLevel.String(), "Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal] $(TELLY_LOG_LEVEL)")
@@ -117,6 +117,9 @@ func main() {
 		}
 
 		for _, videoSource := range videoProviders {
+			if videoSource.UpdateFrequency == "" {
+				continue
+			}
 			commands.StartFireVideoUpdates(cc, videoSource)
 			if addErr := c.AddFunc(videoSource.UpdateFrequency, func() { commands.StartFireVideoUpdates(cc, videoSource) }); addErr != nil {
 				log.WithError(addErr).Errorln("error when adding video source to scheduled background jobs")
@@ -124,6 +127,9 @@ func main() {
 		}
 
 		for _, guideSource := range guideProviders {
+			if guideSource.UpdateFrequency == "" {
+				continue
+			}
 			commands.StartFireGuideUpdates(cc, guideSource)
 			if addErr := c.AddFunc(guideSource.UpdateFrequency, func() { commands.StartFireGuideUpdates(cc, guideSource) }); addErr != nil {
 				log.WithError(addErr).Errorln("error when adding guide source to scheduled background jobs")

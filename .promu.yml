@@ -3,9 +3,12 @@ repository:
 go:
   cgo: true
 build:
-  flags: -a -tags 'netgo json1'
+  flags: -a -tags 'netgo cgo static_build json1'
   ldflags: |
-    -linkmode=external
+    -linkmode external
+    -w
+    -extldflags
+    -static
     -X {{repoPath}}/vendor/github.com/prometheus/common/version.Version={{.Version}}
     -X {{repoPath}}/vendor/github.com/prometheus/common/version.Revision={{.Revision}}
     -X {{repoPath}}/vendor/github.com/prometheus/common/version.Branch={{.Branch}}
