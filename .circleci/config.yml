@@ -10,6 +10,7 @@ jobs:
     steps:
     - checkout
     - setup_remote_docker
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
     - run: make promu
     - run: make
 
