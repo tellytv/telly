@@ -15,7 +15,7 @@ import (
 )
 
 func scanM3U(c *gin.Context) {
-	rawPlaylist, m3uErr := utils.GetM3U(c.Query("m3u_url"), false)
+	rawPlaylist, m3uErr := utils.GetM3U(c.Query("m3u_url"))
 	if m3uErr != nil {
 		log.WithError(m3uErr).Errorln("unable to get m3u file")
 		c.AbortWithError(http.StatusBadRequest, m3uErr)
@@ -26,7 +26,7 @@ func scanM3U(c *gin.Context) {
 }
 
 func scanXMLTV(c *gin.Context) {
-	epg, epgErr := utils.GetXMLTV(c.Query("epg_url"), false)
+	epg, epgErr := utils.GetXMLTV(c.Query("epg_url"))
 	if epgErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, epgErr)
 		return
@@ -118,7 +118,6 @@ func StartTuner(cc *context.CContext, lineup *models.Lineup) {
 	tunerChan := make(chan bool)
 	cc.Tuners[lineup.ID] = tunerChan
 	go ServeLineup(cc, tunerChan, lineup)
-	return
 }
 
 // RestartTuner will trigger a restart of the tuner server for the given lineup.
@@ -127,5 +126,4 @@ func RestartTuner(cc *context.CContext, lineup *models.Lineup) {
 		tuner <- true
 	}
 	StartTuner(cc, lineup)
-	return
 }

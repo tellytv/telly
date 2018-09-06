@@ -13,19 +13,19 @@ func FireVideoUpdatesCommand() {
 	if err != nil {
 		panic(fmt.Errorf("couldn't create context: %s", err))
 	}
-	if err = fireVideoUpdates(cc); err != nil {
+	if err = fireVideoUpdates(cc, nil); err != nil {
 		panic(fmt.Errorf("could not complete video updates: %s", err))
 	}
 }
 
-func fireVideoUpdates(cc *context.CContext) error {
+func fireVideoUpdates(cc *context.CContext, provider *models.VideoSource) error {
 	fmt.Println("VIDEO source update is beginning")
 	return nil
 }
 
 // StartFireVideoUpdates Scheduler triggered function to update video sources
 func StartFireVideoUpdates(cc *context.CContext, provider *models.VideoSource) {
-	err := fireVideoUpdates(cc)
+	err := fireVideoUpdates(cc, provider)
 	if err != nil {
 		panic(fmt.Errorf("could not complete video updates: %s", err.Error()))
 	}

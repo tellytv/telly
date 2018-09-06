@@ -1,9 +1,10 @@
-GO                      ?= go
+# Need CGO_ENABLED=1 for go-sqlite3
+GO                      ?= CGO_ENABLED=1 go
 GOFMT                   ?= $(GO)fmt
 FIRST_GOPATH            := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
 PROMU                   := $(FIRST_GOPATH)/bin/promu
 
-GOMETALINTER_BINARY     := $(FIRST_GOPATH)/bin/gometalinter
+GOMETALINTER_BINARY     := CGO_ENABLED=1 $(FIRST_GOPATH)/bin/gometalinter
 DEP_BINARY              := $(FIRST_GOPATH)/bin/dep
 
 PREFIX                  ?= $(shell pwd)

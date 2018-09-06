@@ -133,8 +133,8 @@ func previewLineupChannels(guideSource *models.GuideSource, provider guideprovid
 }
 
 func subscribeToLineup(guideSource *models.GuideSource, provider guideproviders.GuideProvider, cc *context.CContext, c *gin.Context) {
-	lineupId := c.Param("lineupId")
-	newLineup, subscribeErr := provider.SubscribeToLineup(lineupId)
+	lineupID := c.Param("lineupId")
+	newLineup, subscribeErr := provider.SubscribeToLineup(lineupID)
 	if subscribeErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, subscribeErr)
 		return
@@ -160,7 +160,7 @@ func subscribeToLineup(guideSource *models.GuideSource, provider guideproviders.
 
 	for _, channel := range channels {
 		// Only add new channels, not existing ones.
-		if channel.Lineup == lineupId {
+		if channel.Lineup == lineupID {
 			_, newChannelErr := cc.API.GuideSourceChannel.InsertGuideSourceChannel(guideSource.ID, channel, nil)
 			if newChannelErr != nil {
 				log.WithError(newChannelErr).Errorf("Error creating new guide source channel %s!", channel.ID)
@@ -183,21 +183,21 @@ func unsubscribeFromLineup(guideSource *models.GuideSource, provider guideprovid
 	c.JSON(http.StatusOK, gin.H{"status": "okay"})
 }
 
-func guideSourceRoute(cc *context.CContext, originalFunc func(*models.GuideSource, *context.CContext, *gin.Context)) gin.HandlerFunc {
-	return wrapContext(cc, func(cc *context.CContext, c *gin.Context) {
-		guideSourceID, guideSourceIDErr := strconv.Atoi(c.Param("guideSourceId"))
-		if guideSourceIDErr != nil {
-			c.AbortWithError(http.StatusBadRequest, guideSourceIDErr)
-			return
-		}
-		guideSource, guideSourceErr := cc.API.GuideSource.GetGuideSourceByID(guideSourceID)
-		if guideSourceErr != nil {
-			c.AbortWithError(http.StatusInternalServerError, guideSourceErr)
-			return
-		}
-		originalFunc(guideSource, cc, c)
-	})
-}
+// func guideSourceRoute(cc *context.CContext, originalFunc func(*models.GuideSource, *context.CContext, *gin.Context)) gin.HandlerFunc {
+// 	return wrapContext(cc, func(cc *context.CContext, c *gin.Context) {
+// 		guideSourceID, guideSourceIDErr := strconv.Atoi(c.Param("guideSourceId"))
+// 		if guideSourceIDErr != nil {
+// 			c.AbortWithError(http.StatusBadRequest, guideSourceIDErr)
+// 			return
+// 		}
+// 		guideSource, guideSourceErr := cc.API.GuideSource.GetGuideSourceByID(guideSourceID)
+// 		if guideSourceErr != nil {
+// 			c.AbortWithError(http.StatusInternalServerError, guideSourceErr)
+// 			return
+// 		}
+// 		originalFunc(guideSource, cc, c)
+// 	})
+// }
 
 func guideSourceLineupRoute(cc *context.CContext, originalFunc func(*models.GuideSource, guideproviders.GuideProvider, *context.CContext, *gin.Context)) gin.HandlerFunc {
 	return wrapContext(cc, func(cc *context.CContext, c *gin.Context) {

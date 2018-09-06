@@ -51,9 +51,7 @@ func updateLineupChannels(lineup *models.Lineup, cc *context.CContext, c *gin.Co
 		deletedChannelIDs := utils.Difference(existingChannelIDs, passedChannelIDs)
 
 		for idx, channel := range providedChannels {
-			if channel.ID > 0 {
-				passedChannelIDs = append(passedChannelIDs, strconv.Itoa(channel.ID))
-			} else if utils.Contains(deletedChannelIDs, strconv.Itoa(channel.ID)) {
+			if utils.Contains(deletedChannelIDs, strconv.Itoa(channel.ID)) {
 				// Channel is about to be deleted, no reason to upsert it.
 				continue
 			}

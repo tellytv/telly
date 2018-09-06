@@ -20,9 +20,8 @@ import (
 )
 
 var (
-	namespace            = "telly"
-	namespaceWithVersion = fmt.Sprintf("%s %s", namespace, version.Version)
-	log                  = &logrus.Logger{
+	namespace = "telly"
+	log       = &logrus.Logger{
 		Out: os.Stderr,
 		Formatter: &logrus.TextFormatter{
 			FullTimestamp: true,
@@ -119,12 +118,16 @@ func main() {
 
 		for _, videoSource := range videoProviders {
 			commands.StartFireVideoUpdates(cc, videoSource)
-			c.AddFunc(videoSource.UpdateFrequency, func() { commands.StartFireVideoUpdates(cc, videoSource) })
+			if addErr := c.AddFunc(videoSource.UpdateFrequency, func() { commands.StartFireVideoUpdates(cc, videoSource) }); addErr != nil {
+				log.WithError(addErr).Errorln("error when adding video source to scheduled background jobs")
+			}
 		}
 
 		for _, guideSource := range guideProviders {
 			commands.StartFireGuideUpdates(cc, guideSource)
-			c.AddFunc(guideSource.UpdateFrequency, func() { commands.StartFireGuideUpdates(cc, guideSource) })
+			if addErr := c.AddFunc(guideSource.UpdateFrequency, func() { commands.StartFireGuideUpdates(cc, guideSource) }); addErr != nil {
+				log.WithError(addErr).Errorln("error when adding guide source to scheduled background jobs")
+			}
 		}
 	}
 

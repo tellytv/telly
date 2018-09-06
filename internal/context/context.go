@@ -81,7 +81,7 @@ func NewCContext() (*CContext, error) {
 	}
 	log.Debugf("successfully applied %d migrations to database", numMigrations)
 
-	api := models.NewAPICollection(theCtx, sql)
+	api := models.NewAPICollection(sql)
 
 	tuners := make(map[int]chan bool)
 

@@ -70,6 +70,7 @@ func ServeLineup(cc *ccontext.CContext, exit chan bool, lineup *models.Lineup) {
 		}
 	}()
 
+	// nolint
 	for {
 		select {
 		case <-exit:
@@ -99,14 +100,14 @@ func setupSSDP(baseAddress, deviceName, deviceUUID string, exit chan bool) error
 	}
 
 	go func() {
-		aliveTick := time.Tick(300 * time.Second)
+		aliveTick := time.NewTicker(300 * time.Second)
 
 	loop:
 		for {
 			select {
 			case <-exit:
 				break loop
-			case <-aliveTick:
+			case <-aliveTick.C:
 				log.Debugln("Sending SSDP heartbeat")
 				if err := adv.Alive(); err != nil {
 					log.WithError(err).Panicln("error when sending ssdp heartbeat")
@@ -114,8 +115,12 @@ func setupSSDP(baseAddress, deviceName, deviceUUID string, exit chan bool) error
 			}
 		}
 
-		adv.Bye()
-		adv.Close()
+		if byeErr := adv.Bye(); byeErr != nil {
+			log.WithError(byeErr).Panicln("error when sending ssdp bye")
+		}
+		if closeErr := adv.Close(); closeErr != nil {
+			log.WithError(closeErr).Panicln("error when closing ssdp")
+		}
 	}()
 
 	return nil
@@ -183,7 +188,7 @@ func NewStreamStatus(cc *ccontext.CContext, lineup *models.Lineup, channelID str
 	if lineup.StreamTransport == "ffmpeg" {
 		ss.Transport = streamsuite.FFMPEG{}
 	} else {
-		ss.Transport = streamsuite.HTTP{}
+		ss.Transport = &streamsuite.HTTP{}
 	}
 
 	ss.PromLabels = []string{lineup.Name, channel.VideoTrack.VideoSource.Name, channel.VideoTrack.VideoSource.Provider, channel.Title, ss.Transport.Type()}

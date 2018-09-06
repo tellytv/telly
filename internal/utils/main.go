@@ -47,10 +47,10 @@ func GetTCPAddr(key string) *net.TCPAddr {
 }
 
 // GetM3U is a helper function to download/open and parse a M3U Plus file.
-func GetM3U(path string, cacheFiles bool) (*m3uplus.Playlist, error) {
+func GetM3U(path string) (*m3uplus.Playlist, error) {
 	// safePath := SafeStringsRegex.ReplaceAllStringFunc(path, StringSafer)
 
-	file, _, err := GetFile(path, cacheFiles)
+	file, _, err := GetFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("error while opening m3u file: %s", err)
 	}
@@ -68,10 +68,10 @@ func GetM3U(path string, cacheFiles bool) (*m3uplus.Playlist, error) {
 }
 
 // GetXMLTV is a helper function to download/open and parse a XMLTV file.
-func GetXMLTV(path string, cacheFiles bool) (*xmltv.TV, error) {
+func GetXMLTV(path string) (*xmltv.TV, error) {
 	// safePath := SafeStringsRegex.ReplaceAllStringFunc(path, StringSafer)
 
-	file, _, err := GetFile(path, cacheFiles)
+	file, _, err := GetFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func GetXMLTV(path string, cacheFiles bool) (*xmltv.TV, error) {
 }
 
 // GetFile is a helper function to download/open and parse a file.
-func GetFile(path string, cacheFiles bool) (io.ReadCloser, string, error) {
+func GetFile(path string) (io.ReadCloser, string, error) {
 	transport := "disk"
 
 	if strings.HasPrefix(strings.ToLower(path), "http") {
@@ -105,7 +105,7 @@ func GetFile(path string, cacheFiles bool) (io.ReadCloser, string, error) {
 		// For whatever reason, some providers only allow access from a "real" User-Agent.
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36")
 
-		resp, err := http.Get(path)
+		resp, err := http.Get(path) // nolint
 		if err != nil {
 			return nil, transport, err
 		}
@@ -117,21 +117,13 @@ func GetFile(path string, cacheFiles bool) (io.ReadCloser, string, error) {
 				return nil, transport, gzErr
 			}
 
-			if cacheFiles {
-				return writeFile(path, transport, gz)
-			}
-
 			return gz, transport, nil
-		}
-
-		if cacheFiles {
-			return writeFile(path, transport, resp.Body)
 		}
 
 		return resp.Body, transport, nil
 	}
 
-	file, fileErr := os.Open(path)
+	file, fileErr := os.Open(path) // nolint
 	if fileErr != nil {
 		return nil, transport, fileErr
 	}
@@ -153,13 +145,6 @@ func ChunkStringSlice(sl []string, chunkSize int) [][]string {
 		divided = append(divided, sl[i:end])
 	}
 	return divided
-}
-
-func writeFile(path, transport string, reader io.ReadCloser) (io.ReadCloser, string, error) {
-	// buf := new(bytes.Buffer)
-	// buf.ReadFrom(reader)
-	// buf.Bytes()
-	return reader, transport, nil
 }
 
 // Contains returns true if the given element "e" is found inside the slice of strings "s".
@@ -223,15 +208,15 @@ func toLower(ch rune) rune {
 	return ch
 }
 
-// isLower checks if a character is upper case. More precisely it evaluates if it is
+// isUpper checks if a character is upper case. More precisely it evaluates if it is
 // in the range of ASCII characters 'A' to 'Z'.
 func isUpper(ch rune) bool {
 	return ch >= 'A' && ch <= 'Z'
 }
 
-// toLower converts a character in the range of ASCII characters 'a' to 'z' to its lower
+// toUpper converts a character in the range of ASCII characters 'a' to 'z' to its lower
 // case counterpart. Other characters remain the same.
-func toUpper(ch rune) rune {
+func toUpper(ch rune) rune { // nolint
 	if ch >= 'a' && ch <= 'z' {
 		return ch - 32
 	}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // LineupChannelDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -117,6 +118,7 @@ type LineupChannelAPI interface {
 	GetEnabledChannelsForVideoProvider(providerID int) ([]LineupChannel, error)
 }
 
+// nolint
 const baseLineupChannelQuery string = `
 SELECT
   C.id,
@@ -158,7 +160,13 @@ func (db *LineupChannelDB) UpsertLineupChannel(channelStruct LineupChannel) (*Li
 // GetLineupChannelByID returns a single LineupChannel for the given ID.
 func (db *LineupChannelDB) GetLineupChannelByID(lineupID int, channelNumber string) (*LineupChannel, error) {
 	var channel LineupChannel
-	err := db.SQL.Get(&channel, fmt.Sprintf(`%s WHERE C.lineup_id = $1 AND C.channel_number = $2`, baseLineupChannelQuery), lineupID, channelNumber)
+
+	sql, args, sqlGenErr := squirrel.Select("*").From("lineup_channel").Where(squirrel.Eq{"lineup_id": lineupID, "channel_number": channelNumber}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+
+	err := db.SQL.Get(&channel, sql, args)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +196,11 @@ func (db *LineupChannelDB) UpdateLineupChannel(channelStruct LineupChannel) (*Li
 // GetChannelsForLineup returns a slice of LineupChannels for the given lineup ID.
 func (db *LineupChannelDB) GetChannelsForLineup(lineupID int, expanded bool) ([]LineupChannel, error) {
 	channels := make([]LineupChannel, 0)
-	err := db.SQL.Select(&channels, fmt.Sprintf(`%s WHERE C.lineup_id = $1`, baseLineupChannelQuery), lineupID)
+	sql, args, sqlGenErr := squirrel.Select("*").From("lineup_channel").Where(squirrel.Eq{"lineup_id": lineupID}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+	err := db.SQL.Select(&channels, sql, args)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +222,16 @@ func (db *LineupChannelDB) GetChannelsForLineup(lineupID int, expanded bool) ([]
 // GetEnabledChannelsForGuideProvider returns a slice of LineupChannels for the given guide provider ID.
 func (db *LineupChannelDB) GetEnabledChannelsForGuideProvider(providerID int) ([]LineupChannel, error) {
 	channels := make([]LineupChannel, 0)
-	err := db.SQL.Select(&channels, fmt.Sprintf(`%s WHERE C.guide_channel_id IN (SELECT id FROM guide_source_channel WHERE guide_id = $1)`, baseLineupChannelQuery), providerID)
+
+	inQuery := squirrel.Select("id").From("guide_source_channel").Where(squirrel.Eq{"guide_id": providerID})
+
+	// Using DebugSqlizer is unsafe but Squirrel doesn't support WHERE IN subqueries.
+	sql, args, sqlGenErr := squirrel.Select("*").From("lineup_channel").Where(squirrel.Eq{"guide_channel_id": squirrel.DebugSqlizer(inQuery)}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+
+	err := db.SQL.Select(&channels, sql, args)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +251,16 @@ func (db *LineupChannelDB) GetEnabledChannelsForGuideProvider(providerID int) ([
 // GetEnabledChannelsForVideoProvider returns a slice of LineupChannels for the given video provider ID.
 func (db *LineupChannelDB) GetEnabledChannelsForVideoProvider(providerID int) ([]LineupChannel, error) {
 	channels := make([]LineupChannel, 0)
-	err := db.SQL.Select(&channels, fmt.Sprintf(`%s WHERE C.video_track_id IN (SELECT id FROM video_source_track WHERE video_source_id = $1)`, baseLineupChannelQuery), providerID)
+
+	inQuery := squirrel.Select("id").From("video_source_track").Where(squirrel.Eq{"video_source_id": providerID})
+
+	// Using DebugSqlizer is unsafe but Squirrel doesn't support WHERE IN subqueries.
+	sql, args, sqlGenErr := squirrel.Select("*").From("lineup_channel").Where(squirrel.Eq{"video_track_id": squirrel.DebugSqlizer(inQuery)}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+
+	err := db.SQL.Select(&channels, sql, args)
 	if err != nil {
 		return nil, err
 	}

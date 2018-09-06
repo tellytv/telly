@@ -85,7 +85,7 @@ func (x *XMLTV) Schedule(daysToGet int, inputChannels []Channel, inputProgrammes
 
 // Refresh causes the provider to request the latest information.
 func (x *XMLTV) Refresh(lineupStateJSON []byte) ([]byte, error) {
-	xTV, xTVErr := utils.GetXMLTV(x.BaseConfig.XMLTVURL, false)
+	xTV, xTVErr := utils.GetXMLTV(x.BaseConfig.XMLTVURL)
 	if xTVErr != nil {
 		return nil, fmt.Errorf("error when getting XMLTV file: %s", xTVErr)
 	}

@@ -1,11 +1,11 @@
 package models
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/tellytv/telly/internal/videoproviders"
+	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // VideoSourceDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -100,7 +100,13 @@ func (db *VideoSourceDB) InsertVideoSource(videoSourceStruct VideoSource) (*Vide
 // GetVideoSourceByID returns a single VideoSource for the given ID.
 func (db *VideoSourceDB) GetVideoSourceByID(id int) (*VideoSource, error) {
 	var videoSource VideoSource
-	err := db.SQL.Get(&videoSource, fmt.Sprintf(`%s WHERE V.id = $1`, baseVideoSourceQuery), id)
+
+	sql, args, sqlGenErr := squirrel.Select("*").From("video_source").Where(squirrel.Eq{"id": id}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+
+	err := db.SQL.Get(&videoSource, sql, args)
 	return &videoSource, err
 }
 

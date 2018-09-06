@@ -7,6 +7,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/tellytv/telly/internal/guideproviders"
+	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // GuideSourceDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -107,7 +108,11 @@ func (db *GuideSourceDB) InsertGuideSource(guideSourceStruct GuideSource, provid
 // GetGuideSourceByID returns a single GuideSource for the given ID.
 func (db *GuideSourceDB) GetGuideSourceByID(id int) (*GuideSource, error) {
 	var guideSource GuideSource
-	err := db.SQL.Get(&guideSource, fmt.Sprintf(`%s WHERE G.id = $1`, baseGuideSourceQuery), id)
+	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source").Where(squirrel.Eq{"id": id}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+	err := db.SQL.Get(&guideSource, sql, args)
 	return &guideSource, err
 }
 

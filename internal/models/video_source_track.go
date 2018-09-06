@@ -1,10 +1,10 @@
 package models
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // VideoSourceTrackDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -53,6 +53,7 @@ type VideoSourceTrackAPI interface {
 	GetTracksForVideoSource(videoSourceID int) ([]VideoSourceTrack, error)
 }
 
+// nolint
 const baseVideoSourceTrackQuery string = `
 SELECT
   T.id,
@@ -86,7 +87,13 @@ func (db *VideoSourceTrackDB) InsertVideoSourceTrack(trackStruct VideoSourceTrac
 // GetVideoSourceTrackByID returns a single VideoSourceTrack for the given ID.
 func (db *VideoSourceTrackDB) GetVideoSourceTrackByID(id int, expanded bool) (*VideoSourceTrack, error) {
 	var track VideoSourceTrack
-	err := db.SQL.Get(&track, fmt.Sprintf(`%s WHERE T.id = $1`, baseVideoSourceTrackQuery), id)
+
+	sql, args, sqlGenErr := squirrel.Select("*").From("video_source_track").Where(squirrel.Eq{"id": id}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+
+	err := db.SQL.Get(&track, sql, args)
 	if expanded {
 		video, videoErr := db.Collection.VideoSource.GetVideoSourceByID(track.VideoSourceID)
 		if videoErr != nil {
@@ -114,6 +121,12 @@ func (db *VideoSourceTrackDB) UpdateVideoSourceTrack(trackID int, description st
 // GetTracksForVideoSource returns a slice of VideoSourceTracks for the given video source ID.
 func (db *VideoSourceTrackDB) GetTracksForVideoSource(videoSourceID int) ([]VideoSourceTrack, error) {
 	tracks := make([]VideoSourceTrack, 0)
-	err := db.SQL.Select(&tracks, fmt.Sprintf(`%s WHERE T.video_source_id = $1`, baseVideoSourceTrackQuery), videoSourceID)
+
+	sql, args, sqlGenErr := squirrel.Select("*").From("video_source_track").Where(squirrel.Eq{"video_source_id": videoSourceID}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+
+	err := db.SQL.Select(&tracks, sql, args)
 	return tracks, err
 }

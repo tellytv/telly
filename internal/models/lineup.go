@@ -10,6 +10,7 @@ import (
 	upnp "github.com/NebulousLabs/go-upnp/goupnp"
 	"github.com/jmoiron/sqlx"
 	"github.com/satori/go.uuid"
+	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // LineupDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -201,7 +202,11 @@ func (db *LineupDB) InsertLineup(lineupStruct Lineup) (*Lineup, error) {
 // GetLineupByID returns a single Lineup for the given ID.
 func (db *LineupDB) GetLineupByID(id int, withChannels bool) (*Lineup, error) {
 	var lineup Lineup
-	err := db.SQL.Get(&lineup, fmt.Sprintf(`%s WHERE L.id = $1`, baseLineupQuery), id)
+	sql, args, sqlGenErr := squirrel.Select("*").From("lineup").Where(squirrel.Eq{"id": id}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+	err := db.SQL.Get(&lineup, sql, args)
 	if withChannels {
 		channels, channelsErr := db.Collection.LineupChannel.GetChannelsForLineup(lineup.ID, true)
 		if channelsErr != nil {

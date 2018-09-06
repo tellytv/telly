@@ -266,7 +266,7 @@ func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, input
 		}
 	}
 
-	outputChannelsMap := make(map[string]interface{}, 0)
+	outputChannelsMap := make(map[string]interface{})
 	for shortChannelID, longChannelID := range channelShortToLongIDMap {
 		outputChannelsMap[longChannelID] = channelsCache[shortChannelID]
 	}
@@ -288,7 +288,7 @@ func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, input
 	}
 
 	// Next, we need to bundle up all the program IDs and request detailed information about them.
-	neededProgramIDs := make(map[string]struct{}, 0)
+	neededProgramIDs := make(map[string]struct{})
 
 	for _, schedule := range schedules {
 		for _, program := range schedule.Programs {
@@ -296,9 +296,9 @@ func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, input
 		}
 	}
 
-	extendedProgramInfo := make(map[string]schedulesdirect.ProgramInfo, 0)
+	extendedProgramInfo := make(map[string]schedulesdirect.ProgramInfo)
 
-	programsWithArtwork := make(map[string]struct{}, 0)
+	programsWithArtwork := make(map[string]struct{})
 
 	// IDs slice is built, let's chunk and get the info.
 	for _, chunk := range utils.ChunkStringSlice(utils.GetStringMapKeys(neededProgramIDs), 5000) {
@@ -317,7 +317,7 @@ func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, input
 		}
 	}
 
-	allArtwork := make(map[string][]schedulesdirect.Artwork, 0)
+	allArtwork := make(map[string][]schedulesdirect.Artwork)
 
 	// Now that we have the initial program info results, let's get all the artwork.
 	artworkResp, artworkErr := s.client.GetArtworkForProgramIDs(utils.GetStringMapKeys(programsWithArtwork))
@@ -598,7 +598,7 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 
 	// Now for the fields that have to be parsed.
 	for _, broadcastLang := range station.Station.BroadcastLanguage {
-		xmlProgramme.Languages = []xmltv.CommonElement{xmltv.CommonElement{
+		xmlProgramme.Languages = []xmltv.CommonElement{{
 			Value: broadcastLang,
 			Lang:  broadcastLang,
 		}}
@@ -612,7 +612,7 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 	}
 
 	if programInfo.EpisodeTitle150 != "" {
-		xmlProgramme.SecondaryTitles = []xmltv.CommonElement{xmltv.CommonElement{
+		xmlProgramme.SecondaryTitles = []xmltv.CommonElement{{
 			Value: programInfo.EpisodeTitle150,
 		}}
 	}
@@ -860,59 +860,57 @@ func getDaysBetweenTimes(start, end time.Time) []string {
 type artworkTierOrder int
 
 const (
-	EpisodeTier artworkTierOrder = 1
-	SeasonTier  artworkTierOrder = 2
-	SeriesTier  artworkTierOrder = 3
+	episodeTier artworkTierOrder = 1
+	seasonTier  artworkTierOrder = 2
+	seriesTier  artworkTierOrder = 3
 
-	DontCareTier artworkTierOrder = 10
+	dontCareTier artworkTierOrder = 10
 )
 
 func parseArtworkTierToOrder(tier schedulesdirect.ArtworkTier) artworkTierOrder {
 	switch tier {
 	case schedulesdirect.EpisodeTier:
-		return EpisodeTier
+		return episodeTier
 	case schedulesdirect.SeasonTier:
-		return SeasonTier
+		return seasonTier
 	case schedulesdirect.SeriesTier:
-		return SeriesTier
+		return seriesTier
 	default:
-		return DontCareTier
+		return dontCareTier
 	}
-
-	return DontCareTier
 }
 
 type artworkCategoryOrder int
 
 const (
-	BannerL1  artworkCategoryOrder = 1
-	BannerL1T artworkCategoryOrder = 2
-	Banner    artworkCategoryOrder = 3
-	BannerL2  artworkCategoryOrder = 4
-	BannerL3  artworkCategoryOrder = 5
-	BannerLO  artworkCategoryOrder = 6
-	BannerLOT artworkCategoryOrder = 7
+	bannerL1  artworkCategoryOrder = 1
+	bannerL1T artworkCategoryOrder = 2
+	banner    artworkCategoryOrder = 3
+	bannerL2  artworkCategoryOrder = 4
+	bannerL3  artworkCategoryOrder = 5
+	bannerLO  artworkCategoryOrder = 6
+	bannerLOT artworkCategoryOrder = 7
 
-	DontCareCategory artworkCategoryOrder = 10
+	dontCareCategory artworkCategoryOrder = 10
 )
 
 func parseArtworkCategoryToOrder(Category schedulesdirect.ArtworkCategory) artworkCategoryOrder {
 	switch Category {
 	case schedulesdirect.BannerL1:
-		return BannerL1
+		return bannerL1
 	case schedulesdirect.BannerL1T:
-		return BannerL1T
+		return bannerL1T
 	case schedulesdirect.Banner:
-		return Banner
+		return banner
 	case schedulesdirect.BannerL2:
-		return BannerL2
+		return bannerL2
 	case schedulesdirect.BannerL3:
-		return BannerL3
+		return bannerL3
 	case schedulesdirect.BannerLO:
-		return BannerLO
+		return bannerLO
 	case schedulesdirect.BannerLOT:
-		return BannerLOT
+		return bannerLOT
 	}
 
-	return DontCareCategory
+	return dontCareCategory
 }

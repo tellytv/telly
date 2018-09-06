@@ -63,7 +63,7 @@ func (m *M3U) StreamURL(streamID int, wantedFormat string) (string, error) {
 
 // Refresh causes the provider to request the latest information.
 func (m *M3U) Refresh() error {
-	playlist, m3uErr := utils.GetM3U(m.BaseConfig.M3UURL, false)
+	playlist, m3uErr := utils.GetM3U(m.BaseConfig.M3UURL)
 	if m3uErr != nil {
 		return fmt.Errorf("error when reading m3u: %s", m3uErr)
 	}
@@ -130,7 +130,7 @@ func (m *M3U) Refresh() error {
 			Name:     nameVal,
 			StreamID: channelID,
 			Logo:     logoVal,
-			Type:     ChannelType(LiveStream),
+			Type:     LiveStream,
 			Category: categoryVal,
 			EPGID:    epgIDVal,
 

@@ -61,6 +61,7 @@ var (
 	)
 )
 
+// nolint
 func init() {
 	version.NewCollector("telly")
 	prometheus.MustRegister(ExposedChannels)

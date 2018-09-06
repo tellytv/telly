@@ -7,6 +7,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/tellytv/telly/internal/xmltv"
+	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // GuideSourceProgrammeDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -56,6 +57,7 @@ type GuideSourceProgrammeAPI interface {
 	GetProgrammesForGuideID(guideSourceID int) ([]GuideSourceProgramme, error)
 }
 
+// nolint
 const baseGuideSourceProgrammeQuery string = `
 SELECT
   G.guide_id,
@@ -114,14 +116,18 @@ func (db *GuideSourceProgrammeDB) InsertGuideSourceProgramme(guideID int, progra
 // GetGuideSourceProgrammeByID returns a single GuideSourceProgramme for the given ID.
 func (db *GuideSourceProgrammeDB) GetGuideSourceProgrammeByID(id int) (*GuideSourceProgramme, error) {
 	var programme GuideSourceProgramme
-	err := db.SQL.Get(&programme, fmt.Sprintf(`%s WHERE G.id = $1`, baseGuideSourceProgrammeQuery), id)
+	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_programme").Where(squirrel.Eq{"id": id}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+	err := db.SQL.Get(&programme, sql, args)
 	if err != nil {
 		return nil, err
 	}
 	return &programme, err
 }
 
-// DeleteGuideSourceProgramme marks a programme with the given ID as deleted.
+// DeleteGuideSourceProgrammesForChannel marks a programme with the given ID as deleted.
 func (db *GuideSourceProgrammeDB) DeleteGuideSourceProgrammesForChannel(channelID string) error {
 	_, err := db.SQL.Exec(`DELETE FROM guide_source_programme WHERE channel IN (SELECT xmltv_id FROM guide_source_channel WHERE id IN (SELECT guide_channel_id FROM lineup_channel WHERE id = ?))`, channelID)
 	return err
@@ -136,7 +142,11 @@ func (db *GuideSourceProgrammeDB) UpdateGuideSourceProgramme(programmeID string,
 // GetProgrammesForActiveChannels returns a slice of GuideSourceProgrammes for actively assigned channels.
 func (db *GuideSourceProgrammeDB) GetProgrammesForActiveChannels() ([]GuideSourceProgramme, error) {
 	programmes := make([]GuideSourceProgramme, 0)
-	err := db.SQL.Select(&programmes, fmt.Sprintf(`%s WHERE G.channel IN (SELECT xmltv_id FROM guide_source_channel WHERE id IN (SELECT guide_channel_id FROM lineup_channel)) ORDER BY start ASC`, baseGuideSourceProgrammeQuery))
+	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_programme").Where("WHERE G.channel IN (SELECT xmltv_id FROM guide_source_channel WHERE id IN (SELECT guide_channel_id FROM lineup_channel)) ORDER BY start ASC").ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+	err := db.SQL.Select(&programmes, sql, args)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +162,11 @@ func (db *GuideSourceProgrammeDB) GetProgrammesForActiveChannels() ([]GuideSourc
 // GetProgrammesForChannel returns a slice of GuideSourceProgrammes for the given XMLTV channel ID.
 func (db *GuideSourceProgrammeDB) GetProgrammesForChannel(channelID string) ([]GuideSourceProgramme, error) {
 	programmes := make([]GuideSourceProgramme, 0)
-	err := db.SQL.Select(&programmes, fmt.Sprintf(`%s WHERE G.channel = $1 AND G.start >= datetime('now') AND G.start <= datetime('now', '+6 hours')`, baseGuideSourceProgrammeQuery), channelID)
+	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_programme").Where(squirrel.And{squirrel.Eq{"channel": channelID}, squirrel.GtOrEq{"start": "datetime('now')"}, squirrel.LtOrEq{"start": "datetime('now', '+6 hours')"}}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+	err := db.SQL.Select(&programmes, sql, args)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +182,11 @@ func (db *GuideSourceProgrammeDB) GetProgrammesForChannel(channelID string) ([]G
 // GetProgrammesForGuideID returns a slice of GuideSourceProgrammes for the given guide ID.
 func (db *GuideSourceProgrammeDB) GetProgrammesForGuideID(guideSourceID int) ([]GuideSourceProgramme, error) {
 	programmes := make([]GuideSourceProgramme, 0)
-	err := db.SQL.Select(&programmes, fmt.Sprintf(`%s WHERE G.guide_id = $1 AND G.start >= datetime('now') AND G.start <= datetime('now', '+6 hours')`, baseGuideSourceProgrammeQuery), guideSourceID)
+	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_programme").Where(squirrel.And{squirrel.Eq{"guide_id": guideSourceID}, squirrel.GtOrEq{"start": "datetime('now')"}, squirrel.LtOrEq{"start": "datetime('now', '+6 hours')"}}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+	err := db.SQL.Select(&programmes, sql, args)
 	if err != nil {
 		return nil, err
 	}

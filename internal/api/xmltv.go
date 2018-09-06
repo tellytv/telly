@@ -48,7 +48,7 @@ func xmlTV(cc *context.CContext, c *gin.Context) {
 
 			xChannel := guideChannel.XMLTV()
 
-			displayNames := []xmltv.CommonElement{xmltv.CommonElement{Value: channel.Title}}
+			displayNames := []xmltv.CommonElement{{Value: channel.Title}}
 			displayNames = append(displayNames, xChannel.DisplayNames...)
 
 			epg.Channels = append(epg.Channels, xmltv.Channel{

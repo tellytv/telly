@@ -1,11 +1,11 @@
 package models
 
 import (
-	"context"
 	"os"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/Masterminds/squirrel.v1"
 )
 
 var (
@@ -19,6 +19,8 @@ var (
 	}
 )
 
+var sq = squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar) // nolint
+
 // APICollection is a struct containing all models.
 type APICollection struct {
 	GuideSource          GuideSourceAPI
@@ -31,7 +33,7 @@ type APICollection struct {
 }
 
 // NewAPICollection returns an initialized APICollection struct.
-func NewAPICollection(ctx context.Context, db *sqlx.DB) *APICollection {
+func NewAPICollection(db *sqlx.DB) *APICollection {
 	api := &APICollection{}
 
 	api.GuideSource = newGuideSourceDB(db, api)

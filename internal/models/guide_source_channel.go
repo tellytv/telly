@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/tellytv/telly/internal/guideproviders"
 	"github.com/tellytv/telly/internal/xmltv"
+	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // GuideSourceChannelDB is a struct containing initialized the SQL connection as well as the APICollection.
@@ -54,6 +55,7 @@ type GuideSourceChannelAPI interface {
 	GetChannelsForGuideSource(guideSourceID int) ([]GuideSourceChannel, error)
 }
 
+// nolint
 const baseGuideSourceChannelQuery string = `
 SELECT
   G.id,
@@ -106,7 +108,11 @@ func (db *GuideSourceChannelDB) InsertGuideSourceChannel(guideID int, channel gu
 // GetGuideSourceChannelByID returns a single GuideSourceChannel for the given ID.
 func (db *GuideSourceChannelDB) GetGuideSourceChannelByID(id int, expanded bool) (*GuideSourceChannel, error) {
 	var channel GuideSourceChannel
-	err := db.SQL.Get(&channel, fmt.Sprintf(`%s WHERE G.id = $1`, baseGuideSourceChannelQuery), id)
+	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_channel").Where(squirrel.Eq{"id": id}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+	err := db.SQL.Get(&channel, sql, args)
 	if err != nil {
 		return nil, err
 	}
@@ -136,6 +142,10 @@ func (db *GuideSourceChannelDB) UpdateGuideSourceChannel(XMLTVID string, provide
 // GetChannelsForGuideSource returns a slice of GuideSourceChannels for the given video source ID.
 func (db *GuideSourceChannelDB) GetChannelsForGuideSource(guideSourceID int) ([]GuideSourceChannel, error) {
 	channels := make([]GuideSourceChannel, 0)
-	err := db.SQL.Select(&channels, fmt.Sprintf(`%s WHERE G.guide_id = $1`, baseGuideSourceChannelQuery), guideSourceID)
+	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_channel").Where(squirrel.Eq{"guide_id": guideSourceID}).ToSql()
+	if sqlGenErr != nil {
+		return nil, sqlGenErr
+	}
+	err := db.SQL.Select(&channels, sql, args)
 	return channels, err
 }

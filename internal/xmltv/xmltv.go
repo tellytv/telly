@@ -4,7 +4,7 @@ package xmltv
 import (
 	"encoding/xml"
 	"fmt"
-	"os"
+	"io"
 	"strings"
 	"time"
 
@@ -111,16 +111,12 @@ type TV struct {
 }
 
 // LoadXML loads the XMLTV XML from file.
-func (t *TV) LoadXML(f *os.File) error {
+func (t *TV) LoadXML(f io.Reader) error {
 	decoder := xml.NewDecoder(f)
 	decoder.CharsetReader = charset.NewReaderLabel
 
 	err := decoder.Decode(&t)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // Channel details of a channel

@@ -27,9 +27,11 @@ var (
 )
 
 const (
+	// BufferSize is the size of the content buffer we will use.
 	BufferSize = 1024 * 8
 )
 
+// Stream describes a single active video stream in telly.
 type Stream struct {
 	UUID      string
 	Channel   *models.LineupChannel
@@ -46,6 +48,7 @@ type Stream struct {
 	LastWroteAt *time.Time
 }
 
+// Start will mark the stream as playing and begin playback.
 func (s *Stream) Start(c *gin.Context) {
 	now := time.Now()
 	s.LastWroteAt = &now
@@ -91,7 +94,7 @@ func (s *Stream) Start(c *gin.Context) {
 			}
 
 			// We wait at least 2 full seconds before declaring that a stream is paused.
-			if time.Now().Sub(*s.LastWroteAt) > 2*time.Second {
+			if time.Since(*s.LastWroteAt) > 2*time.Second {
 				s.Pause()
 			}
 		}
@@ -147,6 +150,7 @@ forLoop:
 
 }
 
+// Pause will cause the stream to pause playback.
 func (s *Stream) Pause() {
 	if !s.Paused {
 		s.Paused = true
@@ -157,6 +161,7 @@ func (s *Stream) Pause() {
 	}
 }
 
+// Unpause will resume playback.
 func (s *Stream) Unpause(increaseActiveStreams bool) {
 	if s.Paused {
 		s.Paused = false
@@ -168,6 +173,7 @@ func (s *Stream) Unpause(increaseActiveStreams bool) {
 	}
 }
 
+// Stop will tear down the stream.
 func (s *Stream) Stop() {
 	if s.Paused {
 		metrics.PausedStreams.WithLabelValues(s.PromLabels...).Dec()

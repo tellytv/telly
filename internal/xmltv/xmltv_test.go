@@ -42,30 +42,30 @@ func TestDecode(t *testing.T) {
 		XMLName: xml.Name{Space: "", Local: "channel"},
 		ID:      "I10436.labs.zap2it.com",
 		DisplayNames: []CommonElement{
-			CommonElement{
+			{
 				Value: "13 KERA",
 			},
-			CommonElement{
+			{
 				Value: "13 KERA TX42822:-",
 			},
-			CommonElement{
+			{
 				Value: "13",
 			},
-			CommonElement{
+			{
 				Value: "13 KERA fcc",
 			},
-			CommonElement{
+			{
 				Value: "KERA",
 			},
-			CommonElement{
+			{
 				Value: "KERA",
 			},
-			CommonElement{
+			{
 				Value: "PBS Affiliate",
 			},
 		},
 		Icons: []Icon{
-			Icon{
+			{
 				Source: `file://C:\Perl\site/share/xmltv/icons/KERA.gif`,
 			},
 		},
@@ -84,41 +84,41 @@ func TestDecode(t *testing.T) {
 		Start:   &Time{time.Date(2008, 07, 15, 0, 30, 0, 0, loc)},
 		Stop:    &Time{time.Date(2008, 07, 15, 1, 0, 0, 0, loc)},
 		Titles: []CommonElement{
-			CommonElement{
+			{
 				Lang:  "en",
 				Value: "NOW on PBS",
 			},
 		},
 		Descriptions: []CommonElement{
-			CommonElement{
+			{
 				Lang:  "en",
 				Value: "Jordan's Queen Rania has made job creation a priority to help curb the staggering unemployment rates among youths in the Middle East.",
 			},
 		},
 		Categories: []CommonElement{
-			CommonElement{
+			{
 				Lang:  "en",
 				Value: "Newsmagazine",
 			},
-			CommonElement{
+			{
 				Lang:  "en",
 				Value: "Interview",
 			},
-			CommonElement{
+			{
 				Lang:  "en",
 				Value: "Public affairs",
 			},
-			CommonElement{
+			{
 				Lang:  "en",
 				Value: "Series",
 			},
 		},
 		EpisodeNums: []EpisodeNum{
-			EpisodeNum{
+			{
 				System: "dd_progid",
 				Value:  "EP01006886.0028",
 			},
-			EpisodeNum{
+			{
 				System: "onscreen",
 				Value:  "427",
 			},
@@ -130,7 +130,7 @@ func TestDecode(t *testing.T) {
 			Start: Time{time.Date(2008, 07, 11, 0, 0, 0, 0, time.UTC)},
 		},
 		Subtitles: []Subtitle{
-			Subtitle{
+			{
 				Type: "teletext",
 			},
 		},

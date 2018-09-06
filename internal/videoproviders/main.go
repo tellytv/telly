@@ -7,9 +7,10 @@ import (
 )
 
 var streamNumberRegex = regexp.MustCompile(`/(\d+).(ts|.*.m3u8)`).FindAllStringSubmatch
-var channelNumberRegex = regexp.MustCompile(`^[0-9]+[[:space:]]?$`).MatchString
-var callSignRegex = regexp.MustCompile(`^[A-Z0-9]+$`).MatchString
-var hdRegex = regexp.MustCompile(`hd|4k`)
+
+// var channelNumberRegex = regexp.MustCompile(`^[0-9]+[[:space:]]?$`).MatchString
+// var callSignRegex = regexp.MustCompile(`^[A-Z0-9]+$`).MatchString
+// var hdRegex = regexp.MustCompile(`hd|4k`)
 
 // Configuration is the basic configuration struct for videoproviders with generic values for specific providers.
 type Configuration struct {

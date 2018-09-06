@@ -1,5 +1,5 @@
 // Package guideproviders is a telly internal package to provide electronic program guide (EPG) data.
-// It is generally modeled after the XMLTV standard with slight deviations to accomodate other providers.
+// It is generally modeled after the XMLTV standard with slight deviations to accommodate other providers.
 package guideproviders
 
 import (
@@ -62,13 +62,13 @@ func (c *Channel) XMLTV() xmltv.Channel {
 	// MythTV seems to assume that the first three display-name elements are
 	// name, callsign and channel number. We follow that scheme here.
 	ch.DisplayNames = []xmltv.CommonElement{
-		xmltv.CommonElement{
+		{
 			Value: c.Name,
 		},
-		xmltv.CommonElement{
+		{
 			Value: c.CallSign,
 		},
-		xmltv.CommonElement{
+		{
 			Value: c.Number,
 		},
 	}
