@@ -1,6 +1,6 @@
 FROM jrottenberg/ffmpeg:4.0-alpine
 
-RUN apk update && apk upgrade && apk add --update --no-cache ca-certificates musl-dev
+RUN apk update && apk upgrade && apk add --update --no-cache ca-certificates musl-dev tzdata
 
 COPY telly /bin/telly
 
