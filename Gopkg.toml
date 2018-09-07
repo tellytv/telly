@@ -114,7 +114,7 @@
   name = "golang.org/x/net"
 
 [[constraint]]
-  name = "github.com/Masterminds/squirrel"
+  name = "gopkg.in/Masterminds/squirrel.v1"
   version = "1.0"
 
 [prune]

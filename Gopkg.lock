@@ -363,7 +363,7 @@
   name = "github.com/tellytv/go.xtream-codes"
   packages = ["."]
   pruneopts = "UT"
-  revision = "33a6daa3da5246cf599b2af0a3e2c19555ed560a"
+  revision = "24bf20fc23a2745a01dbd3829abc9bf52b55ef96"
 
 [[projects]]
   digest = "1:c268acaa4a4d94a467980e5e91452eb61c460145765293dc0aed48e5e9919cc6"
