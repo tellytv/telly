@@ -4,5 +4,9 @@ RUN apk update && apk upgrade && apk add --update --no-cache ca-certificates mus
 
 COPY telly /bin/telly
 
+USER       nobody
 EXPOSE     6077
-ENTRYPOINT ["/bin/telly"]
+VOLUME     [ "/telly" ]
+WORKDIR    /telly
+ENTRYPOINT [ "/bin/telly" ]
+CMD        [ "--database.file=/telly/telly.db" ]

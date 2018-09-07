@@ -60,9 +60,10 @@ func main() {
 	if flag.Lookup("config.file").Changed {
 		viper.SetConfigFile(flag.Lookup("config.file").Value.String())
 	} else {
-		viper.SetConfigName("telly.config")
+		viper.SetConfigName("config")
 		viper.AddConfigPath("/etc/telly/")
 		viper.AddConfigPath("$HOME/.telly")
+		viper.AddConfigPath("/telly") // Docker exposes this as a volume
 		viper.AddConfigPath(".")
 		viper.SetEnvPrefix(namespace)
 		viper.AutomaticEnv()
