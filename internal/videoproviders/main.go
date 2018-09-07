@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var streamNumberRegex = regexp.MustCompile(`/(\d+).(ts|.*.m3u8)`).FindAllStringSubmatch
+var streamNumberRegex = regexp.MustCompile(`/(\d+).(mp4|mkv|avi|ts|.*.m3u8)`).FindAllStringSubmatch
 
 // var channelNumberRegex = regexp.MustCompile(`^[0-9]+[[:space:]]?$`).MatchString
 // var callSignRegex = regexp.MustCompile(`^[A-Z0-9]+$`).MatchString

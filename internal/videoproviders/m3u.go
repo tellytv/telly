@@ -3,6 +3,7 @@ package videoproviders
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/tellytv/telly/internal/m3uplus"
 	"github.com/tellytv/telly/internal/utils"
@@ -70,15 +71,20 @@ func (m *M3U) Refresh() error {
 	m.Playlist = playlist
 
 	for _, track := range playlist.Tracks {
-		streamURL := streamNumberRegex(track.URI, -1)[0]
+		streamURL := streamNumberRegex(strings.ToLower(track.URI), -1)
 
-		channelID, channelIDErr := strconv.Atoi(streamURL[1])
+		if len(streamURL) == 0 {
+			fmt.Println("Unable to process M3U track, continuing", track.URI)
+			continue
+		}
+
+		channelID, channelIDErr := strconv.Atoi(streamURL[0][1])
 		if channelIDErr != nil {
 			return fmt.Errorf("error when extracting channel id from m3u track: %s", channelIDErr)
 		}
 
-		if !utils.Contains(m.seenFormats, streamURL[2]) {
-			m.seenFormats = append(m.seenFormats, streamURL[2])
+		if !utils.Contains(m.seenFormats, streamURL[0][2]) {
+			m.seenFormats = append(m.seenFormats, streamURL[0][2])
 		}
 
 		nameVal := track.Name
