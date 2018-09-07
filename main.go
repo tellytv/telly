@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/prometheus/common/version"
 	"github.com/robfig/cron"
@@ -65,6 +66,7 @@ func main() {
 		viper.AddConfigPath("$HOME/.telly")
 		viper.AddConfigPath("/telly") // Docker exposes this as a volume
 		viper.AddConfigPath(".")
+		viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 		viper.SetEnvPrefix(namespace)
 		viper.AutomaticEnv()
 	}
