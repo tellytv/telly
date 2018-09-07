@@ -38,7 +38,7 @@ type GuideSource struct {
 	Provider        string          `db:"provider"`
 	Username        string          `db:"username"`
 	Password        string          `db:"password"`
-	URL             string          `db:"xmltv_url"`
+	URL             string          `db:"xmltv_url" json:"XMLTV_URL"`
 	ProviderData    json.RawMessage `db:"provider_data"`
 	UpdateFrequency string          `db:"update_frequency"`
 	ImportedAt      *time.Time      `db:"imported_at"`
