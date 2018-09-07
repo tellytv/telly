@@ -226,10 +226,12 @@ func (db *LineupChannelDB) GetEnabledChannelsForGuideProvider(providerID int) ([
 	inQuery := squirrel.Select("id").From("guide_source_channel").Where(squirrel.Eq{"guide_id": providerID})
 
 	// Using DebugSqlizer is unsafe but Squirrel doesn't support WHERE IN subqueries.
-	sql, args, sqlGenErr := squirrel.Select("*").From("lineup_channel").Where(squirrel.Eq{"guide_channel_id": squirrel.DebugSqlizer(inQuery)}).ToSql()
+	sql, args, sqlGenErr := squirrel.Select("*").From("lineup_channel").Where(fmt.Sprintf("guide_channel_id IN (%s)", squirrel.DebugSqlizer(inQuery))).ToSql()
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
+
+	fmt.Println(sql, args)
 
 	err := db.SQL.Select(&channels, sql, args...)
 	if err != nil {
@@ -258,7 +260,7 @@ func (db *LineupChannelDB) GetEnabledChannelsForVideoProvider(providerID int) ([
 	inQuery := squirrel.Select("id").From("video_source_track").Where(squirrel.Eq{"video_source_id": providerID})
 
 	// Using DebugSqlizer is unsafe but Squirrel doesn't support WHERE IN subqueries.
-	sql, args, sqlGenErr := squirrel.Select("*").From("lineup_channel").Where(squirrel.Eq{"video_track_id": squirrel.DebugSqlizer(inQuery)}).ToSql()
+	sql, args, sqlGenErr := squirrel.Select("*").From("lineup_channel").Where(fmt.Sprintf("video_track_id IN (%s)", squirrel.DebugSqlizer(inQuery))).ToSql()
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
