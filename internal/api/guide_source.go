@@ -17,6 +17,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 	if c.BindJSON(&payload) == nil {
 		newGuide, providerErr := cc.API.GuideSource.InsertGuideSource(payload, nil)
 		if providerErr != nil {
+			log.WithError(providerErr).Errorln("error inserting guide source")
 			c.AbortWithError(http.StatusInternalServerError, providerErr)
 			return
 		}
@@ -25,6 +26,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 
 		provider, providerErr := providerCfg.GetProvider()
 		if providerErr != nil {
+			log.WithError(providerErr).Errorln("Error getting provider")
 			c.AbortWithError(http.StatusInternalServerError, providerErr)
 			return
 		}
@@ -35,6 +37,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 
 		lineupMetadata, reloadErr := provider.Refresh(nil)
 		if reloadErr != nil {
+			log.WithError(reloadErr).Errorln("Error refreshing provider")
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error while initializing guide data provider: %s", reloadErr))
 			return
 		}

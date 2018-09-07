@@ -73,7 +73,7 @@ func ginrus(cc *context.CContext) gin.HandlerFunc {
 
 		if len(c.Errors) > 0 {
 			// Append error field if this is an erroneous request.
-			entry.Error(c.Errors.String())
+			entry.Errorln(c.Errors.String())
 		} else {
 			entry.Info()
 		}
