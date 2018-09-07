@@ -359,11 +359,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e51bee2c46f96d430b7f23e2824cd61c5ad2229b50d6618b0f1132e7947f4d54"
+  digest = "1:03cf379b75fbd215a1b0259db2b4ed517f0741f5bcac6a7c17c8c75acd97d71d"
   name = "github.com/tellytv/go.xtream-codes"
   packages = ["."]
   pruneopts = "UT"
-  revision = "24bf20fc23a2745a01dbd3829abc9bf52b55ef96"
+  revision = "c42c5900a05a107a25b8d22970223f515532bee7"
 
 [[projects]]
   digest = "1:c268acaa4a4d94a467980e5e91452eb61c460145765293dc0aed48e5e9919cc6"
