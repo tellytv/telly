@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"github.com/tellytv/telly/internal/metrics"
 	"github.com/tellytv/telly/internal/models"
@@ -39,66 +38,32 @@ type Stream struct {
 	StreamURL string
 
 	Transport   StreamTransport
-	Paused      bool
-	PausedAt    *time.Time
 	StartTime   *time.Time
 	PromLabels  []string
-	PlayTimer   *prometheus.Timer `json:"-"`
-	PauseTimer  *prometheus.Timer `json:"-"`
-	StopNow     chan bool         `json:"-"`
+	StopNow     chan bool `json:"-"`
 	LastWroteAt *time.Time
+
+	streamData io.ReadCloser
 }
 
 // Start will mark the stream as playing and begin playback.
 func (s *Stream) Start(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	now := time.Now()
-	s.LastWroteAt = &now
 	s.StartTime = &now
 	metrics.ActiveStreams.WithLabelValues(s.PromLabels...).Inc()
 
-	s.PlayTimer = prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.StreamPlayingTime.WithLabelValues(s.PromLabels...).Observe(v)
-	}))
-
-	s.PauseTimer = prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-		metrics.StreamPausedTime.WithLabelValues(s.PromLabels...).Observe(v)
-	}))
-
-	streamData, streamErr := s.Transport.Start(s.StreamURL)
+	log.Infoln("Transcoding stream with", s.Transport.Type())
+	sd, streamErr := s.Transport.Start(ctx, s.StreamURL)
 	if streamErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error when starting streaming via %s: %s", s.Transport.Type(), streamErr))
 		return
 	}
 
-	defer func() {
-		if closeErr := streamData.Close(); closeErr != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error when closing stream via %s: %s", s.Transport.Type(), closeErr))
-			return
-		}
-
-		if stopErr := s.Transport.Stop(); stopErr != nil {
-			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error when cleaning up stream via %s: %s", s.Transport.Type(), stopErr))
-			return
-		}
-	}()
+	s.streamData = sd
 
 	clientGone := c.Writer.CloseNotify()
-
-	go func() {
-		for {
-			// Keep the Prometheus timer updated
-			if !s.Paused {
-				s.PlayTimer.ObserveDuration()
-			} else {
-				s.PauseTimer.ObserveDuration()
-			}
-
-			// We wait at least 2 full seconds before declaring that a stream is paused.
-			if time.Since(*s.LastWroteAt) > 2*time.Second {
-				s.Pause()
-			}
-		}
-	}()
 
 	for key, value := range s.Transport.Headers() {
 		c.Writer.Header()[key] = value
@@ -114,27 +79,21 @@ forLoop:
 		case <-s.StopNow:
 			break forLoop
 		case <-clientGone:
+		case <-ctx.Done():
 			log.Debugln("Stream client is disconnected, returning!")
-			s.Stop()
 			break forLoop
 		default:
-			n, err := streamData.Read(buffer)
+			n, err := s.streamData.Read(buffer)
 
 			if n == 0 {
 				log.Debugln("Read 0 bytes from stream source, returning")
-				s.Unpause(false)
 				break forLoop
 			}
 
 			if err != nil {
 				log.WithError(err).Errorln("Received error while reading from stream source")
-				s.Unpause(false)
 				break forLoop
 			}
-
-			now := time.Now()
-			s.LastWroteAt = &now
-			s.Unpause(true)
 
 			data := buffer[:n]
 			if _, respWriteErr := writer.Write(data); respWriteErr != nil {
@@ -148,39 +107,19 @@ forLoop:
 		}
 	}
 
-}
+	s.Stop()
 
-// Pause will cause the stream to pause playback.
-func (s *Stream) Pause() {
-	if !s.Paused {
-		s.Paused = true
-		now := time.Now()
-		s.PausedAt = &now
-		metrics.ActiveStreams.WithLabelValues(s.PromLabels...).Dec()
-		metrics.PausedStreams.WithLabelValues(s.PromLabels...).Inc()
-	}
-}
-
-// Unpause will resume playback.
-func (s *Stream) Unpause(increaseActiveStreams bool) {
-	if s.Paused {
-		s.Paused = false
-		s.PausedAt = nil
-		metrics.PausedStreams.WithLabelValues(s.PromLabels...).Dec()
-		if increaseActiveStreams {
-			metrics.ActiveStreams.WithLabelValues(s.PromLabels...).Inc()
-		}
-	}
 }
 
 // Stop will tear down the stream.
 func (s *Stream) Stop() {
-	if s.Paused {
-		metrics.PausedStreams.WithLabelValues(s.PromLabels...).Dec()
-	} else {
-		metrics.ActiveStreams.WithLabelValues(s.PromLabels...).Dec()
+	metrics.ActiveStreams.WithLabelValues(s.PromLabels...).Dec()
+
+	if closeErr := s.streamData.Close(); closeErr != nil {
+		log.WithError(closeErr).Errorf("error when closing stream via %s", s.Transport.Type())
+		return
 	}
-	s.Paused = false
+
 	if stopErr := s.Transport.Stop(); stopErr != nil {
 		log.WithError(stopErr).Errorf("error when cleaning up stream via %s", s.Transport.Type())
 		return

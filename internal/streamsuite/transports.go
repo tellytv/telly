@@ -1,6 +1,7 @@
 package streamsuite
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,7 +15,7 @@ import (
 type StreamTransport interface {
 	Type() string
 	Headers() http.Header
-	Start(streamURL string) (io.ReadCloser, error)
+	Start(ctx context.Context, streamURL string) (io.ReadCloser, error)
 	Stop() error
 }
 
@@ -39,9 +40,8 @@ func (f FFMPEG) Headers() http.Header {
 }
 
 // Start will begin the stream.
-func (f FFMPEG) Start(streamURL string) (io.ReadCloser, error) {
-	log.Infoln("Transcoding stream with ffmpeg")
-	f.run = exec.Command("ffmpeg", "-re", "-i", streamURL, "-codec", "copy", "-f", "mpegts", "-tune", "zerolatency", "pipe:1") // nolint
+func (f FFMPEG) Start(ctx context.Context, streamURL string) (io.ReadCloser, error) {
+	f.run = exec.CommandContext(ctx, "ffmpeg", "-re", "-i", streamURL, "-codec", "copy", "-f", "mpegts", "-tune", "zerolatency", "pipe:1") // nolint
 	streamData, stdErr := f.run.StdoutPipe()
 	if stdErr != nil {
 		return nil, stdErr
@@ -84,11 +84,13 @@ func (h HTTP) Headers() http.Header {
 }
 
 // Start will begin the stream.
-func (h *HTTP) Start(streamURL string) (io.ReadCloser, error) {
+func (h *HTTP) Start(ctx context.Context, streamURL string) (io.ReadCloser, error) {
 	streamReq, reqErr := http.NewRequest("GET", streamURL, nil)
 	if reqErr != nil {
 		return nil, reqErr
 	}
+
+	streamReq = streamReq.WithContext(ctx)
 
 	streamReq.Header.Set("User-Agent", fmt.Sprintf("telly/%s", version.Version))
 
