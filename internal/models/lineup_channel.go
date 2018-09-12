@@ -231,8 +231,6 @@ func (db *LineupChannelDB) GetEnabledChannelsForGuideProvider(providerID int) ([
 		return nil, sqlGenErr
 	}
 
-	fmt.Println(sql, args)
-
 	err := db.SQL.Select(&channels, sql, args...)
 	if err != nil {
 		return nil, err
