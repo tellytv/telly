@@ -359,7 +359,9 @@ func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, input
 				return a < b
 			})
 
-			programme, programmeErr := s.processProgrammeToXMLTV(airing, extendedProgramInfo[airing.ProgramID], artworks, station)
+			extendedInfo := extendedProgramInfo[airing.ProgramID]
+
+			programme, programmeErr := s.processProgrammeToXMLTV(&airing, &extendedInfo, artworks, &station)
 			if programmeErr != nil {
 				return nil, nil, fmt.Errorf("error while processing schedules direct result to xmltv format: %s", programmeErr)
 			}
@@ -464,12 +466,13 @@ func (s *SchedulesDirect) Refresh(lastStatusJSON []byte) ([]byte, error) {
 
 		for _, entry := range channels.Map {
 			if val, ok := stationsMap[entry.StationID]; ok {
-				val.ChannelMap = entry
-				stationsMap[entry.StationID] = val
+				stationsMap[entry.StationID] = sdStationContainer{Station: val.Station, ChannelMap: entry}
 			}
 		}
 
-		s.stations = make(map[string]sdStationContainer)
+		if s.stations == nil {
+			s.stations = make(map[string]sdStationContainer)
+		}
 
 		if s.channels == nil {
 			s.channels = make([]Channel, 0)
@@ -582,7 +585,7 @@ type sdProgrammeData struct {
 	Station     sdStationContainer
 }
 
-func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program, programInfo schedulesdirect.ProgramInfo, allArtwork []schedulesdirect.Artwork, station sdStationContainer) (*ProgrammeContainer, error) {
+func (s *SchedulesDirect) processProgrammeToXMLTV(airing *schedulesdirect.Program, programInfo *schedulesdirect.ProgramInfo, allArtwork []schedulesdirect.Artwork, station *sdStationContainer) (*ProgrammeContainer, error) {
 	stationID := fmt.Sprintf("I%s.%s.schedulesdirect.org", station.ChannelMap.Channel, station.Station.StationID)
 	endTime := airing.AirDateTime.Add(time.Duration(airing.Duration) * time.Second)
 	length := xmltv.Length{Units: "seconds", Value: strconv.Itoa(airing.Duration)}
@@ -840,10 +843,10 @@ func (s *SchedulesDirect) processProgrammeToXMLTV(airing schedulesdirect.Program
 	return &ProgrammeContainer{
 		Programme: xmlProgramme,
 		ProviderData: sdProgrammeData{
-			airing,
-			programInfo,
+			*airing,
+			*programInfo,
 			allArtwork,
-			station,
+			*station,
 		},
 	}, nil
 
