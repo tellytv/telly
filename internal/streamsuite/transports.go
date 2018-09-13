@@ -1,6 +1,7 @@
 package streamsuite
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -87,7 +88,7 @@ func (h HTTP) Headers() http.Header {
 func (h *HTTP) Start(ctx context.Context, streamURL string) (io.ReadCloser, error) {
 	streamReq, reqErr := http.NewRequest("GET", streamURL, nil)
 	if reqErr != nil {
-		return nil, reqErr
+		return nil, newHTTPError(reqErr, http.StatusInternalServerError, nil)
 	}
 
 	streamReq = streamReq.WithContext(ctx)
@@ -98,13 +99,13 @@ func (h *HTTP) Start(ctx context.Context, streamURL string) (io.ReadCloser, erro
 
 	resp, respErr := http.DefaultClient.Do(streamReq)
 	if respErr != nil {
-		return nil, respErr
+		return nil, newHTTPError(respErr, 0, nil)
 	}
 
 	h.resp = resp
 
 	if resp.StatusCode > 399 {
-		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
+		return nil, newHTTPError(nil, resp.StatusCode, resp.Body)
 	}
 
 	return resp.Body, nil
@@ -113,4 +114,32 @@ func (h *HTTP) Start(ctx context.Context, streamURL string) (io.ReadCloser, erro
 // Stop kills the stream
 func (h HTTP) Stop() error {
 	return nil
+}
+
+type httpError struct {
+	OriginalError error
+	StatusCode    int
+	Contents      string
+}
+
+func newHTTPError(err error, code int, reader io.ReadCloser) httpError {
+	buf := &bytes.Buffer{}
+	if reader != nil {
+		if _, copyErr := io.Copy(buf, reader); copyErr != nil {
+			return httpError{OriginalError: err, StatusCode: code}
+		}
+	}
+
+	return httpError{
+		OriginalError: err,
+		StatusCode:    code,
+		Contents:      buf.String(),
+	}
+}
+
+func (h httpError) Error() string {
+	if h.OriginalError != nil {
+		return h.OriginalError.Error()
+	}
+	return fmt.Sprintf("unexpected status code %d, received contents: %s", h.StatusCode, h.Contents)
 }

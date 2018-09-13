@@ -54,9 +54,13 @@ func (s *Stream) Start(c *gin.Context) {
 	s.StartTime = &now
 	metrics.ActiveStreams.WithLabelValues(s.PromLabels...).Inc()
 
-	log.Infoln("Transcoding stream with", s.Transport.Type())
+	log.Infoln("Transcoding stream via", s.Transport.Type())
 	sd, streamErr := s.Transport.Start(ctx, s.StreamURL)
 	if streamErr != nil {
+		if httpErr, ok := streamErr.(httpError); ok {
+			c.AbortWithError(httpErr.StatusCode, httpErr)
+			return
+		}
 		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error when starting streaming via %s: %s", s.Transport.Type(), streamErr))
 		return
 	}

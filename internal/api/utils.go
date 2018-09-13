@@ -69,13 +69,12 @@ func ginrus(cc *context.CContext) gin.HandlerFunc {
 			"time":      end.Format(time.RFC3339),
 		}
 
-		entry := cc.Log.WithFields(logFields)
-
 		if len(c.Errors) > 0 {
 			// Append error field if this is an erroneous request.
-			entry.Errorln(c.Errors.String())
-		} else {
-			entry.Info()
+			logFields["error"] = c.Errors.String()
+			cc.Log.WithFields(logFields).Errorln("Error while serving request")
+		} else if viper.GetBool("log.requests") {
+			cc.Log.WithFields(logFields).Infoln()
 		}
 	}
 }
@@ -107,10 +106,7 @@ func newGin(cc *context.CContext) *gin.Engine {
 	router := gin.New()
 	router.Use(cors.Default())
 	router.Use(gin.Recovery())
-
-	if viper.GetBool("log.requests") {
-		router.Use(ginrus(cc))
-	}
+	router.Use(ginrus(cc))
 
 	prom.Use(router)
 	return router
