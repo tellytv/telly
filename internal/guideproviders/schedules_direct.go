@@ -373,7 +373,7 @@ func (s *SchedulesDirect) Schedule(daysToGet int, inputChannels []Channel, input
 }
 
 // Refresh causes the provider to request the latest information.
-func (s *SchedulesDirect) Refresh(lastStatusJSON []byte) ([]byte, error) {
+func (s *SchedulesDirect) Refresh(lastStatusJSON *json.RawMessage) ([]byte, error) {
 	if s.client == nil {
 		sdClient, sdClientErr := schedulesdirect.NewClient(s.BaseConfig.Username, s.BaseConfig.Password)
 		if sdClientErr != nil {
@@ -385,8 +385,8 @@ func (s *SchedulesDirect) Refresh(lastStatusJSON []byte) ([]byte, error) {
 
 	lineupsMetadataMap := make(map[string]schedulesdirect.Lineup)
 	var lastStatus schedulesdirect.StatusResponse
-	if len(lastStatusJSON) > 0 {
-		if unmarshalErr := json.Unmarshal(lastStatusJSON, &lastStatus); unmarshalErr != nil {
+	if len(*lastStatusJSON) > 0 {
+		if unmarshalErr := json.Unmarshal(*lastStatusJSON, &lastStatus); unmarshalErr != nil {
 			return nil, fmt.Errorf("error unmarshalling cached status JSON: %s", unmarshalErr)
 		}
 

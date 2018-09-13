@@ -33,15 +33,15 @@ func (db *GuideSourceDB) tableName() string {
 
 // GuideSource describes a source of EPG data.
 type GuideSource struct {
-	ID              int             `db:"id"`
-	Name            string          `db:"name"`
-	Provider        string          `db:"provider"`
-	Username        string          `db:"username"`
-	Password        string          `db:"password"`
-	URL             string          `db:"xmltv_url" json:"XMLTV_URL"`
-	ProviderData    json.RawMessage `db:"provider_data"`
-	UpdateFrequency string          `db:"update_frequency"`
-	ImportedAt      *time.Time      `db:"imported_at"`
+	ID              int              `db:"id"`
+	Name            string           `db:"name"`
+	Provider        string           `db:"provider"`
+	Username        string           `db:"username"`
+	Password        string           `db:"password"`
+	URL             string           `db:"xmltv_url" json:"XMLTV_URL"`
+	ProviderData    *json.RawMessage `db:"provider_data"`
+	UpdateFrequency string           `db:"update_frequency"`
+	ImportedAt      *time.Time       `db:"imported_at"`
 
 	Channels []GuideSourceChannel `db:"-"`
 }
@@ -89,7 +89,13 @@ func (db *GuideSourceDB) InsertGuideSource(guideSourceStruct GuideSource, provid
 		return nil, fmt.Errorf("error when marshalling providerData for use in guide_source_programme insert: %s", providerDataJSONErr)
 	}
 
-	guideSourceStruct.ProviderData = providerDataJSON
+	rawJSON := json.RawMessage(providerDataJSON)
+
+	guideSourceStruct.ProviderData = &rawJSON
+
+	if guideSourceStruct.UpdateFrequency == "" {
+		guideSourceStruct.UpdateFrequency = "@daily"
+	}
 
 	res, err := db.SQL.NamedExec(`
     INSERT INTO guide_source (name, provider, username, password, xmltv_url, provider_data, update_frequency)
@@ -133,6 +139,9 @@ func (db *GuideSourceDB) UpdateGuideSource(guideSourceID int, providerData inter
 func (db *GuideSourceDB) GetAllGuideSources(includeChannels bool) ([]GuideSource, error) {
 	sources := make([]GuideSource, 0)
 	err := db.SQL.Select(&sources, baseGuideSourceQuery)
+	if err != nil {
+		return nil, err
+	}
 	if includeChannels {
 		newSources := make([]GuideSource, 0)
 		for _, source := range sources {
@@ -145,7 +154,7 @@ func (db *GuideSourceDB) GetAllGuideSources(includeChannels bool) ([]GuideSource
 		}
 		return newSources, nil
 	}
-	return sources, err
+	return sources, nil
 }
 
 // GetGuideSourcesForLineup returns a slice of GuideSource for the given lineup ID.

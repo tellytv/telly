@@ -3,6 +3,7 @@
 package guideproviders
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/tellytv/telly/internal/xmltv"
@@ -122,7 +123,7 @@ type GuideProvider interface {
 	Channels() ([]Channel, error)
 	Schedule(daysToGet int, inputChannels []Channel, inputProgrammes []ProgrammeContainer) (map[string]interface{}, []ProgrammeContainer, error)
 
-	Refresh(lineupStateJSON []byte) ([]byte, error)
+	Refresh(lastStatusJSON *json.RawMessage) ([]byte, error)
 	Configuration() Configuration
 
 	// Schedules Direct specific functions that others might someday use.

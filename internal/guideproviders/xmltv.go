@@ -1,6 +1,7 @@
 package guideproviders
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/tellytv/telly/internal/utils"
@@ -84,7 +85,7 @@ func (x *XMLTV) Schedule(daysToGet int, inputChannels []Channel, inputProgrammes
 }
 
 // Refresh causes the provider to request the latest information.
-func (x *XMLTV) Refresh(lineupStateJSON []byte) ([]byte, error) {
+func (x *XMLTV) Refresh(lastStatusJSON *json.RawMessage) ([]byte, error) {
 	xTV, xTVErr := utils.GetXMLTV(x.BaseConfig.XMLTVURL)
 	if xTVErr != nil {
 		return nil, fmt.Errorf("error when getting XMLTV file: %s", xTVErr)
