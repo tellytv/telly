@@ -48,7 +48,7 @@ type VideoSourceTrack struct {
 type VideoSourceTrackAPI interface {
 	InsertVideoSourceTrack(trackStruct VideoSourceTrack) (*VideoSourceTrack, error)
 	DeleteVideoSourceTrack(trackID int) (*VideoSourceTrack, error)
-	UpdateVideoSourceTrack(trackID int, description string) (*VideoSourceTrack, error)
+	UpdateVideoSourceTrack(providerID, trackID int, trackStruct VideoSourceTrack) error
 	GetVideoSourceTrackByID(id int, expanded bool) (*VideoSourceTrack, error)
 	GetTracksForVideoSource(videoSourceID int) ([]VideoSourceTrack, error)
 }
@@ -71,7 +71,7 @@ SELECT
 func (db *VideoSourceTrackDB) InsertVideoSourceTrack(trackStruct VideoSourceTrack) (*VideoSourceTrack, error) {
 	track := VideoSourceTrack{}
 	res, err := db.SQL.NamedExec(`
-    INSERT INTO video_source_track (video_source_id, name, stream_id, logo, type, category, epg_id)
+    INSERT OR REPLACE INTO video_source_track (video_source_id, name, stream_id, logo, type, category, epg_id)
     VALUES (:video_source_id, :name, :stream_id, :logo, :type, :category, :epg_id);`, trackStruct)
 	if err != nil {
 		return &track, err
@@ -112,10 +112,9 @@ func (db *VideoSourceTrackDB) DeleteVideoSourceTrack(trackID int) (*VideoSourceT
 }
 
 // UpdateVideoSourceTrack updates a track.
-func (db *VideoSourceTrackDB) UpdateVideoSourceTrack(trackID int, description string) (*VideoSourceTrack, error) {
-	track := VideoSourceTrack{}
-	err := db.SQL.Get(&track, `UPDATE video_source_track SET description = $2 WHERE id = $1 RETURNING *`, trackID, description)
-	return &track, err
+func (db *VideoSourceTrackDB) UpdateVideoSourceTrack(providerID, streamID int, trackStruct VideoSourceTrack) error {
+	_, err := db.SQL.Exec(`UPDATE video_source_track SET category = ?, epg_id = ? WHERE video_source_id = ? AND stream_id = ?`, trackStruct.Category, trackStruct.EPGID, providerID, streamID)
+	return err
 }
 
 // GetTracksForVideoSource returns a slice of VideoSourceTracks for the given video source ID.

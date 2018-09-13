@@ -81,7 +81,9 @@ func NewCContext(log *logrus.Logger) (*CContext, error) {
 	if upErr != nil {
 		log.WithError(upErr).Panicln("error migrating database to newer version")
 	}
-	log.Debugf("successfully applied %d migrations to database", numMigrations)
+	if numMigrations > 0 {
+		log.Debugf("successfully applied %d migrations to database", numMigrations)
+	}
 
 	api := models.NewAPICollection(sql, log)
 

@@ -83,6 +83,11 @@ SELECT
 // InsertVideoSource inserts a new VideoSource into the database.
 func (db *VideoSourceDB) InsertVideoSource(videoSourceStruct VideoSource) (*VideoSource, error) {
 	videoSource := VideoSource{}
+
+	if videoSourceStruct.UpdateFrequency == "" {
+		videoSourceStruct.UpdateFrequency = "@daily"
+	}
+
 	res, err := db.SQL.NamedExec(`
     INSERT INTO video_source (name, provider, username, password, base_url, m3u_url, max_streams, update_frequency)
     VALUES (:name, :provider, :username, :password, :base_url, :m3u_url, :max_streams, :update_frequency);`, videoSourceStruct)
