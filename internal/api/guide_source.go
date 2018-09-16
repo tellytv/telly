@@ -241,7 +241,7 @@ func match(guideSource *models.GuideSource, provider guideproviders.GuideProvide
 	channelMap := make(map[string]models.GuideSourceChannel)
 
 	for _, channel := range guideSource.Channels {
-		name := channel.XMLTV.DisplayNames[0].Value
+		name := channel.GuideProviderChannel.Name
 		channels = append(channels, name)
 		channelMap[name] = channel
 	}

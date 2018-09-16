@@ -7,7 +7,6 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/tellytv/telly/internal/guideproviders"
-	"github.com/tellytv/telly/internal/xmltv"
 	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
@@ -41,9 +40,9 @@ type GuideSourceChannel struct {
 	Data         json.RawMessage `db:"data"`
 	ImportedAt   *time.Time      `db:"imported_at"`
 
-	GuideSource     *GuideSource
-	GuideSourceName string
-	XMLTV           *xmltv.Channel `json:"-"`
+	GuideSource          *GuideSource
+	GuideSourceName      string
+	GuideProviderChannel *guideproviders.Channel `json:"-"`
 }
 
 // GuideSourceChannelAPI contains all methods for the User struct
@@ -99,7 +98,7 @@ func (db *GuideSourceChannelDB) InsertGuideSourceChannel(guideID int, channel gu
 	if getErr := db.SQL.Get(&outputChannel, "SELECT * FROM guide_source_channel WHERE id = $1", rowID); getErr != nil {
 		return nil, getErr
 	}
-	if unmarshalErr := json.Unmarshal(outputChannel.Data, &outputChannel.XMLTV); unmarshalErr != nil {
+	if unmarshalErr := json.Unmarshal(outputChannel.Data, &outputChannel.GuideProviderChannel); unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
 	return &outputChannel, err
@@ -122,6 +121,11 @@ func (db *GuideSourceChannelDB) GetGuideSourceChannelByID(id int, expanded bool)
 			return nil, guideErr
 		}
 		channel.GuideSource = guide
+
+		if unmarshalErr := json.Unmarshal(channel.Data, &channel.GuideProviderChannel); unmarshalErr != nil {
+			return nil, unmarshalErr
+		}
+
 	}
 	return &channel, err
 }
