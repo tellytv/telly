@@ -142,7 +142,7 @@ func (db *GuideSourceProgrammeDB) UpdateGuideSourceProgramme(programmeID string,
 // GetProgrammesForActiveChannels returns a slice of GuideSourceProgrammes for actively assigned channels.
 func (db *GuideSourceProgrammeDB) GetProgrammesForActiveChannels() ([]GuideSourceProgramme, error) {
 	programmes := make([]GuideSourceProgramme, 0)
-	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_programme").Where("channel IN (SELECT xmltv_id FROM guide_source_channel WHERE id IN (SELECT guide_channel_id FROM lineup_channel)) AND start >= datetime('now') AND start <= datetime('now', '+12 hours')").OrderBy("start ASC").ToSql()
+	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_programme").Where("channel IN (SELECT xmltv_id FROM guide_source_channel WHERE id IN (SELECT guide_channel_id FROM lineup_channel)) AND (start >= datetime('now') OR end >= datetime('now')) AND start <= datetime('now', '+7 days')").OrderBy("start ASC").ToSql()
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
@@ -162,7 +162,7 @@ func (db *GuideSourceProgrammeDB) GetProgrammesForActiveChannels() ([]GuideSourc
 // GetProgrammesForChannel returns a slice of GuideSourceProgrammes for the given XMLTV channel ID.
 func (db *GuideSourceProgrammeDB) GetProgrammesForChannel(channelID string) ([]GuideSourceProgramme, error) {
 	programmes := make([]GuideSourceProgramme, 0)
-	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_programme").Where(fmt.Sprintf("channel = '%s' AND start >= datetime('now') AND start <= datetime('now', '+6 hours')", channelID)).ToSql()
+	sql, args, sqlGenErr := squirrel.Select("*").From("guide_source_programme").Where(fmt.Sprintf("channel = '%s' AND (start >= datetime('now') OR end >= datetime('now')) AND start <= datetime('now', '+7 days')", channelID)).ToSql()
 	if sqlGenErr != nil {
 		return nil, sqlGenErr
 	}
