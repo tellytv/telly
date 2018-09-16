@@ -19,7 +19,7 @@ func FireVideoUpdatesCommand() {
 }
 
 func fireVideoUpdates(cc *context.CContext, provider *models.VideoSource) error {
-	log.Debugf("Video source update is beginning for provider", provider.Name)
+	log.Debugln("Video source update is beginning for provider", provider.Name)
 
 	channels, channelsErr := cc.VideoSourceProviders[provider.ID].Channels()
 	if channelsErr != nil {
