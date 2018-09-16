@@ -385,7 +385,7 @@ func (s *SchedulesDirect) Refresh(lastStatusJSON *json.RawMessage) ([]byte, erro
 
 	lineupsMetadataMap := make(map[string]schedulesdirect.Lineup)
 	var lastStatus schedulesdirect.StatusResponse
-	if len(*lastStatusJSON) > 0 {
+	if lastStatusJSON != nil && len(*lastStatusJSON) > 0 {
 		if unmarshalErr := json.Unmarshal(*lastStatusJSON, &lastStatus); unmarshalErr != nil {
 			return nil, fmt.Errorf("error unmarshalling cached status JSON: %s", unmarshalErr)
 		}
