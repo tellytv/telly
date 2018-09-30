@@ -3,6 +3,7 @@
 IPTV proxy for Plex Live written in Golang
 
 # Setup
+> **This readme refers to version ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+) 1.0.X ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+). It does not apply to later versions.**
 
 > **If you are looking for information about the new config-file based ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) PRERELEASE BETA ![#f03c15](https://placehold.it/15/f03c15/000000?text=+), go to the [dev branch](https://github.com/tellytv/telly/tree/dev)**
 
