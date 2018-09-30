@@ -28,8 +28,6 @@ docker run -d \
 
 Please free to open an issue if you run into any problems at all, we'll be more than happy to help.
 
-## This is an ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+) unsupported branch ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+).  It is under active development and prereleases based on it [1.5.x] should not be used by anyone who is intolerant of breakage.
-
 # Social
 
 We have [a Discord server you can join!](https://discord.gg/bnNC8qX)
