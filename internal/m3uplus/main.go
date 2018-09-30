@@ -1,4 +1,5 @@
-package m3u
+// Package m3uplus provides a M3U Plus parser.
+package m3uplus
 
 import (
 	"bytes"
@@ -13,15 +14,17 @@ import (
 
 // Playlist is a type that represents an m3u playlist containing 0 or more tracks
 type Playlist struct {
-	Tracks []*Track
+	Tracks []Track
 }
 
 // Track represents an m3u track
 type Track struct {
-	Name   string
-	Length float64
-	URI    string
-	Tags   map[string]string
+	Name       string
+	Length     float64
+	URI        string
+	Tags       map[string]string
+	Raw        string
+	LineNumber int
 }
 
 // UnmarshalTags will decode the Tags map into a struct containing fields with `m3u` tags matching map keys.
@@ -69,22 +72,25 @@ func decode(playlist *Playlist, buf *bytes.Buffer) error {
 		}
 
 		if lineNum == 1 && !strings.HasPrefix(strings.TrimSpace(line), "#EXTM3U") {
-			return fmt.Errorf("malformed M3U provided")
+			return fmt.Errorf("malformed M3U provided, got: %s", buf.String())
 		}
 
-		if err = decodeLine(playlist, line); err != nil {
+		if err = decodeLine(playlist, line, lineNum); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func decodeLine(playlist *Playlist, line string) error {
+func decodeLine(playlist *Playlist, line string, lineNumber int) error {
 	line = strings.TrimSpace(line)
 
 	switch {
 	case strings.HasPrefix(line, "#EXTINF:"):
-		track := new(Track)
+		track := Track{
+			Raw:        line,
+			LineNumber: lineNumber,
+		}
 
 		track.Length, track.Name, track.Tags = decodeInfoLine(line)
 
@@ -120,7 +126,7 @@ func decodeInfoLine(line string) (float64, string, map[string]string) {
 		if val == "" { // If empty string find a number in [3]
 			val = match[3]
 		}
-		keyMap[match[1]] = val
+		keyMap[strings.ToLower(match[1])] = val
 	}
 
 	return durationFloat, title, keyMap

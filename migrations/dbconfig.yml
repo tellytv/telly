@@ -1,0 +1,11 @@
+development:
+  dialect: sqlite3
+  datasource: telly.db
+  dir: migrations
+  table: migrations
+
+production:
+  dialect: sqlite3
+  datasource: telly.db
+  dir: migrations
+  table: migrations

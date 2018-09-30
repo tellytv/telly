@@ -26,36 +26,96 @@
 
 
 [[constraint]]
-  name = "github.com/gin-gonic/gin"
+  branch = "master"
+  name = "github.com/NebulousLabs/go-upnp"
+
+[[constraint]]
+  name = "github.com/gin-contrib/cors"
   version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/gin-gonic/gin"
+  version = "1.3.0"
+
+[[constraint]]
+  name = "github.com/gobuffalo/packr"
+  version = "1.13.5"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/jmoiron/sqlx"
 
 [[constraint]]
   name = "github.com/koron/go-ssdp"
   branch = "master"
 
 [[constraint]]
-  branch = "master"
+  name = "github.com/kr/pretty"
+  version = "0.1.0"
+
+[[constraint]]
+  name = "github.com/mattn/go-sqlite3"
+  version = "1.9.0"
+
+[[constraint]]
   name = "github.com/mitchellh/mapstructure"
+  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
-  version = "0.8.0"
+  branch = "master"
 
 [[constraint]]
   branch = "master"
   name = "github.com/prometheus/common"
 
 [[constraint]]
+  name = "github.com/robfig/cron"
+  version = "1.1.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/rubenv/sql-migrate"
+
+[[constraint]]
+  name = "github.com/satori/go.uuid"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/schollz/closestmatch"
+  version = "2.1.0"
+
+[[constraint]]
   name = "github.com/sirupsen/logrus"
   version = "1.0.6"
+
+[[constraint]]
+  name = "github.com/spf13/pflag"
+  version = "1.0.2"
+
+[[constraint]]
+  name = "github.com/spf13/viper"
+  version = "1.1.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/tellytv/go.schedulesdirect"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/tellytv/go.xtream-codes"
 
 [[constraint]]
   branch = "master"
   name = "github.com/zsais/go-gin-prometheus"
 
 [[constraint]]
-  name = "gopkg.in/alecthomas/kingpin.v2"
-  version = "2.2.6"
+  branch = "master"
+  name = "golang.org/x/net"
+
+[[constraint]]
+  name = "gopkg.in/Masterminds/squirrel.v1"
+  version = "1.0"
 
 [prune]
   go-tests = true
