@@ -4,7 +4,9 @@ IPTV proxy for Plex Live written in Golang
 
 # Setup
 
-> **If you are looking for information about the new config-file based ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) PRERELEASE BETA ![#f03c15](https://placehold.it/15/f03c15/000000?text=+), go to the [dev branch](https://github.com/tellytv/telly/tree/dev)**
+> **If you are looking for information about the new config-file based ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) PRERELEASE BETA 1.1 ![#f03c15](https://placehold.it/15/f03c15/000000?text=+), go to the [dev branch](https://github.com/tellytv/telly/tree/dev)**
+
+> **If you are looking for information about the web-based ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) UNSUPPORTED ALPHA 1.5 ![#f03c15](https://placehold.it/15/f03c15/000000?text=+), go to the [telly Discord](https://discord.gg/bnNC8qX); there is no 1.5 documentation on github as yet.**
 
 > **See end of setup section for an important note about channel filtering**
 
