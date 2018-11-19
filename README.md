@@ -13,7 +13,7 @@ IPTV proxy for Plex Live written in Golang
 
 > **See end of setup section for an important note about channel filtering**
 
-The Wiki includes walkthroughs for most platforms that go into more detail than listed below:
+The [Wiki](https://github.com/tellytv/telly/wiki) includes walkthroughs for most platforms that go into more detail than listed below:
 
 ## Quickstart:
 
