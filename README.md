@@ -3,7 +3,7 @@
 IPTV proxy for Plex Live written in Golang
 
 # Setup
-> **This readme refers to version ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+) 1.0.X ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+). It does not apply to later versions.**
+## This readme refers to version ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+) 1.0.x ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+).  It does not apply to versions other than that.
 
 ## Most users should use version 1.1 from the dev branch.
 
