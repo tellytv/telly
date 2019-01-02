@@ -44,7 +44,7 @@ func (v *vader) Name() string {
 }
 
 func (v *vader) PlaylistURL() string {
-	return fmt.Sprintf("http://api.vaders.tv/vget?username=%s&password=%s&vod=%t&format=ts", v.BaseConfig.Username, v.BaseConfig.Password, v.BaseConfig.VideoOnDemand)
+	return fmt.Sprintf("http://vaders.tv/vget?username=%s&password=%s&vod=%t&format=ts", v.BaseConfig.Username, v.BaseConfig.Password, v.BaseConfig.VideoOnDemand)
 }
 
 func (v *vader) EPGURL() string {
