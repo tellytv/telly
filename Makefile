@@ -26,13 +26,21 @@ vet:
 	@echo ">> vetting code"
 	@$(GO) vet $(pkgs)
 
+cross: promu
+	@echo ">> crossbuilding binaries"
+	@$(PROMU) crossbuild
+
+tarballs: promu
+	@echo ">> creating release tarballs"
+	@$(PROMU) crossbuild tarballs
+
 build: promu
 	@echo ">> building binaries"
 	@$(PROMU) build --prefix $(PREFIX)
 
 tarball: promu
 	@echo ">> building release tarball"
-	@$(PROMU) tarball --prefix $(PREFIX) $(BIN_DIR)
+	@$(PROMU) tarball $(BIN_DIR)
 
 docker:
 	@echo ">> building docker image"
