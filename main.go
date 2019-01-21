@@ -180,6 +180,10 @@ func validateConfig() {
 		}
 	}
 
+	if !(viper.IsSet("source")) {
+		log.Warnln("There is no source element in the configuration, the config file is likely missing.")
+	}
+
 	var addrErr error
 	if _, addrErr = net.ResolveTCPAddr("tcp", viper.GetString("web.listenaddress")); addrErr != nil {
 		log.WithError(addrErr).Panic("Error when parsing Listen address, please check the address and try again.")
