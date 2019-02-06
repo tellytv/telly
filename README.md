@@ -17,9 +17,13 @@ Please refer to the [Wiki](https://github.com/tellytv/telly/wiki) for the most c
 
 The [Wiki](https://github.com/tellytv/telly/wiki) includes walkthroughs for most platforms that go into more detail than listed below:
 
+Go to the [Wiki](https://github.com/tellytv/telly/wiki).
+
 ## Quickstart:
 
 Please read through to the end before trying to run telly.  With 1.0, you will need at minimum two parameters, a playlist and a filter.
+
+0) Go to the [Wiki](https://github.com/tellytv/telly/wiki).
 
 1) Go to the releases page and download the correct version for your operating system
 2) Mark the file as executable for non-windows platforms `chmod a+x <FILENAME>`
@@ -49,6 +53,8 @@ Please read through to the end before trying to run telly.  With 1.0, you will n
 8) You're done! Enjoy using `telly`. :-)
 
 # Docker
+
+Go to the [Wiki](https://github.com/tellytv/telly/wiki).
 
 ## `docker run`
 ```
