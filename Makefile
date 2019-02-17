@@ -41,15 +41,27 @@ vet:
 
 build: promu
 	@echo ">> building binaries"
-	@$(PROMU) build --prefix $(PREFIX)
+	@$(PROMU) build -v --prefix $(PREFIX)
+
+crossbuild: promu
+	@echo ">> building binaries"
+	@$(PROMU) crossbuild -v
 
 tarball: promu
 	@echo ">> building release tarball"
-	@$(PROMU) tarball --prefix $(PREFIX) $(BIN_DIR)
+	@$(PROMU) tarball $(BIN_DIR)
 
-docker:
+tarballs: promu
+	@echo ">> building release tarball"
+	@$(PROMU) crossbuild tarballs
+
+docker: crossbuild
 	@echo ">> building docker image"
 	@docker build -t "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)" .
+
+docker-150:
+	@echo ">> building docker image"
+	@docker build -t "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):v1.5.0" .
 
 docker-publish:
 	@echo ">> publishing docker image"

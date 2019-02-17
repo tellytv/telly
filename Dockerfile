@@ -2,7 +2,7 @@ FROM jrottenberg/ffmpeg:4.0-alpine
 
 RUN apk update && apk upgrade && apk add --update --no-cache ca-certificates musl-dev
 
-COPY telly /bin/telly
+COPY .build/linux-amd64/telly /bin/telly
 
 USER       nobody
 EXPOSE     6077
