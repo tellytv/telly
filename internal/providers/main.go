@@ -23,6 +23,8 @@ type Configuration struct {
 	M3U string `json:"-"`
 	EPG string `json:"-"`
 
+	Udpxy string `json:"udpxy"`
+
 	VideoOnDemand bool `json:"-"`
 
 	Filter    string
