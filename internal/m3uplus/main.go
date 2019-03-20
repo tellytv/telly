@@ -96,7 +96,7 @@ func decodeLine(playlist *Playlist, line string, lineNumber int) error {
 
 		playlist.Tracks = append(playlist.Tracks, track)
 
-	case strings.HasPrefix(line, "http"):
+	case strings.HasPrefix(line, "http") || strings.HasPrefix(line, "udp"):
 		playlist.Tracks[len(playlist.Tracks)-1].URI = line
 	}
 
