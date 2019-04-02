@@ -1,4 +1,7 @@
-FROM alpine
+FROM ubuntu
+
+ ARG DEBIAN_FRONTEND=noninteractive
+ ENV LANG='C.UTF-8' LANGUAGE='C.UTF-8' LC_ALL='C.UTF-8'
 
 # Add s6 script
 
@@ -9,20 +12,11 @@ RUN tar xzf /tmp/s6-overlay-amd64.tar.gz -C /
 
 COPY s6/ /etc
 
-# Add telly executable file
+# Add necessary packages
 
-ADD https://github.com/Nottt/telly/raw/master/files/app /usr/bin/telly
+RUN apt-get update && apt install -y wget xz-utils 
 
-# Create necessary folders 
-
-mkdir -p /config && \
-
-# Create user and set permissions
-
-adduser --disabled-login --no-create-home --gecos "" telly && \
-usermod -G users telly && \
 
 EXPOSE 6077
 VOLUME /config
 ENTRYPOINT ["/init"]
-

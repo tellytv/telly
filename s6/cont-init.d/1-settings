@@ -1,13 +1,35 @@
 #!/usr/bin/with-contenv bash
 source /etc/env
 
+# Download version 1.1 or 1.5
+
+wget -q https://github.com/Nottt/telly/raw/master/files/app -O /usr/bin/telly
+
+# Add ffmpeg file
+
+wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -P /tmp
+
+tar -xf /tmp/ffmpeg-release-amd64-static.tar.xz  --no-anchored --strip-components=1 -C /usr/bin/ 'ffmpeg' 
+
 # Make sure folders exist
 
 mkdir -p /config
+mkdir -p /etc/telly
+
+# Create user and set permissions
+
+adduser --disabled-login --no-create-home --gecos "" telly
 
 # Fix permissions
 
-groupmod -o -g "$PGID" deluge
-usermod -o -u "$PUID" deluge
+groupmod -o -g "$PGID" telly
+usermod -o -u "$PUID" telly
 
-chown -R telly:telly /config
+chown -R telly:telly /config /usr/bin/telly
+
+chmod +x /usr/bin/telly 
+chmod +x /usr/bin/ffmpeg
+
+# Symlink config directory to /etc/telly
+
+ln -sfn /config/* /etc/telly/

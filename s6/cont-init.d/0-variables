@@ -7,6 +7,5 @@ RUNNING ENVIRONMENT
 -----------------------------------------------
 PUID           | $PUID
 PGID           | $PGID
-PASSWORD       | $PASSWORD
 -----------------------------------------------
 "
