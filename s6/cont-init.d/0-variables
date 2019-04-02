@@ -7,5 +7,14 @@ RUNNING ENVIRONMENT
 -----------------------------------------------
 PUID           | $PUID
 PGID           | $PGID
+VERSION        | $VERSION
+STREAMS        | $STREAMS
+FFMPEG         | $FFMPEG
+BASE           | $BASE
+M3U            | $M3U
+EPG            | $EPG
+FILTER         | $FILTER
+PERSISTENCE    | $PERSISTENCE
 -----------------------------------------------
 "
+
