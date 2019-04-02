@@ -1,0 +1,15 @@
+#!/usr/bin/with-contenv bash
+
+source /etc/env
+
+echo "
+RUNNING ENVIRONMENT
+-----------------------------------------------
+PUID           | $PUID
+PGID           | $PGID
+PASSWORD       | $PASSWORD
+-----------------------------------------------
+"
+
+groupmod -o -g "$PGID" deluge
+usermod -o -u "$PUID" deluge
