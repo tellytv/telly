@@ -1,26 +1,28 @@
-FROM golang:alpine as builder
+FROM alpine
 
-# Download and install the latest release of dep
-ADD https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 /usr/bin/dep
-RUN chmod +x /usr/bin/dep
+# Add s6 script
 
-# Install git because gin/yaml needs it
-RUN apk update && apk upgrade && apk add git
+ADD https://github.com/just-containers/s6-overlay/releases/download/v1.22.1.0/s6-overlay-amd64.tar.gz /tmp/
+RUN tar xzf /tmp/s6-overlay-amd64.tar.gz -C /
 
-# Copy the code from the host and compile it
-WORKDIR $GOPATH/src/github.com/tellytv/telly
-COPY Gopkg.toml Gopkg.lock ./
-RUN dep ensure --vendor-only
-COPY . ./
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix nocgo -o /app .
+# Copy S6 init scripts
 
-# install ca root certificates + listen on 0.0.0.0 + build
-RUN apk add --no-cache ca-certificates \
-  && find . -type f -print0 | xargs -0 sed -i 's/"listen", "localhost/"listen", "0.0.0.0/g' \
-  && CGO_ENABLED=0 GOOS=linux go install -ldflags '-w -s -extldflags "-static"'
+COPY s6/ /etc
 
-FROM scratch
-COPY --from=builder /app ./
-COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
+# Add telly executable file
+
+ADD https://github.com/Nottt/telly/raw/master/files/app /usr/bin/telly
+
+# Create necessary folders 
+
+mkdir -p /config && \
+
+# Create user and set permissions
+
+adduser --disabled-login --no-create-home --gecos "" telly && \
+usermod -G users telly && \
+
 EXPOSE 6077
-ENTRYPOINT ["./app"]
+VOLUME /config
+ENTRYPOINT ["/init"]
+

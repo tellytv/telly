@@ -10,6 +10,3 @@ PGID           | $PGID
 PASSWORD       | $PASSWORD
 -----------------------------------------------
 "
-
-groupmod -o -g "$PGID" deluge
-usermod -o -u "$PUID" deluge

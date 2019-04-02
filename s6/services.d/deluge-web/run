@@ -1,5 +1,0 @@
-#!/usr/bin/with-contenv bash
-
-source /etc/env
-
-exec s6-setuidgid deluge /usr/bin/deluge-web  -c  /config/deluge-web --loglevel=info -l /config/deluge-web/deluge-web.log

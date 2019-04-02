@@ -3,95 +3,11 @@ source /etc/env
 
 # Make sure folders exist
 
-mkdir -p /downloads/add/games /downloads/add/music /downloads/complete /downloads/incomplete /downloads/seed /config/deluged/plugins /config/deluge-web/plugins
-
-# If password isn't set, create one
-
-auth1=/config/deluged/auth
-auth2=/config/deluge-web/auth
-
-if [ -f $auth1 ] && [ -s $auth1 ] && [ -f $auth2 ] && [ -s $auth2 ] && cmp $auth1 $auth2 &>/dev/null; then
-  :
-else
-
-if [ -z $PASSWORD ]; then
-  PASSWORD=$(tr -dc '[:alnum:]' </dev/urandom | dd bs=1 count=32 2>/dev/null)
-  echo "Password wasn't given, auth file doesn't exist or are not equal, use this password for GTK access with user docker :" $PASSWORD
-else
-:
-fi
-fi
-
-# Check if auth files exist, are equal and not empty if not create them
-
-if [ -f $auth1 ] && [ -s $auth1 ] && [ -f $auth2 ] && [ -s $auth2 ] && cmp $auth1 $auth2 &>/dev/null; then
-    : 
-else
-cat > $auth1 <<EOF
-localclient:$PASSWORD:10
-docker:$PASSWORD:10
-EOF
-
-cat > $auth2 <<EOF
-localclient:$PASSWORD:10
-docker:$PASSWORD:10
-EOF
-fi
-
-# Check if conf files exists, if not copy it 
-
-core=/config/deluged/core.conf
-web=/config/deluge-web/web.conf
-
-if [ -s $core ]; then
-:
-else
-mv /root/core.conf $core
-fi
-
-
-if [ -s $web ]; then
-:
-else
-mv /root/web.conf $web
-fi
-
-
-# Move plugins if they don't exist already
-
-plugins=/config/deluged/plugins
-
-if [ ! -e /config/deluge-web/plugins/AutoRemovePlus-0.6.1-py2.7.egg ]; then
- cp /root/AutoRemovePlus-0.6.1-py2.7.egg /config/deluge-web/plugins
-fi
-
-if [ -z "$(ls -A $plugins)" ]; then
-mv /root/*.egg $plugins
-else
-rm /root/*.egg
-fi
-
-# Customize plugins
-
-if [ -s /config/deluged/label.conf ]; then
-rm /root/label.conf
-else
-mv /root/label.conf /config/deluged 
-fi
-
-if [ -s /config/deluged/autoadd.conf ]; then
-rm /root/autoadd.conf
-else
-mv /root/autoadd.conf /config/deluged
-fi
-
-if [ -s /config/deluged/simpleextractor.conf ]; then
-rm /root/simpleextractor.conf
-else
-mv /root/simpleextractor.conf /config/deluged
-fi
-
+mkdir -p /config
 
 # Fix permissions
 
-chown -R deluge:deluge /config /downloads /root
+groupmod -o -g "$PGID" deluge
+usermod -o -u "$PUID" deluge
+
+chown -R telly:telly /config
