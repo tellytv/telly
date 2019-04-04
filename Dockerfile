@@ -14,7 +14,7 @@ COPY s6/ /etc
 
 # Add necessary packages
 
-RUN apt-get update && apt install -y wget xz-utils 
+RUN apt-get update && apt install -y wget xz-utils tzdata
 
 
 EXPOSE 6077
