@@ -2,7 +2,7 @@
 
 A IPTV proxy for Plex Live written in Golang
 
-A docker create template for *nix systems (see [here for OS X and Windows)]():
+A docker create template for *nix systems (see [here for OS X and Windows)](https://github.com/Nottt/telly/blob/master/README.md#os-x-and-windows):
 
 ```
 docker create --rm \
@@ -30,7 +30,7 @@ docker create --rm \
 * `-e BASE` - IP address or domain that Plex will use to connect to telly (must be reachable by plex)
 * `-e FILTER` - A regular expression [or "regex"] that will include entries from the input M3U to get it below 420 channels
 * `-e FFMPEG` - Enable FFMPEG to improve plex playback, optional variable, don't use it to turn it off
-* `-e PERSISTENCE` - If you customize your config file and don't want to reset it after every restart set it to true, see below for use cases
+* `-e PERSISTENCE` - For specific IPTV providers and be able to customize your configuration file [see here]()
 * `-v /opt/telly:/config` - Directory where configuration files are stored
 * `-v /etc/localtime:/etc/localtime:ro` - Sync time with host
 * `-p *:*` - Ports used, only change the left ports.
@@ -52,13 +52,15 @@ time="2019-04-02T04:03:23Z" level=info msg="EPG URL: http://0.0.0.0:6077/epg.xml
 
 If you see this, procceed to [Adding Telly to Plex](https://github.com/tellytv/telly/wiki/Adding-Telly-to-Plex) if not check your variables.
 
-### OS X and Windows
+#### OS X and Windows
 
-Windows and OS X platforms does not have `/etc/localtime` to retrieve timezone information, so you need to add a `-e TZ` variable to your docker command and remove `-v /etc/localtime:/etc/localtime:ro \`
+Windows and OS X platforms does not have `/etc/localtime` to retrieve timezone information, so you need to add a `-e TZ=Europe/Amsterdam` variable to your docker command and remove `-v /etc/localtime:/etc/localtime:ro \`. 
 
-### Customizing the configuration file and persistence 
+[List of Time Zones here](https://timezonedb.com/time-zones)
 
-If your IPTV provider is any of those : ***IPTV Vaders, area51, Iris and IPTV-EPG***
+#### Customizing the configuration file 
+
+If your IPTV provider is any of those: **Vaders, Area51, Iris or IPTV-EPG** you'll need to edit the configuration file directly and use the variable `-e PERSISTENCE=true` so the file won't be overwritten. See how [here](https://github.com/tellytv/telly/wiki/Running-Telly%3A-Config-File)
 
 # How to contribute
 
