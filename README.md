@@ -54,8 +54,8 @@ If you see this, procceed to [Adding Telly to Plex](https://github.com/tellytv/t
 
 #### Path of M3U and EPG files
 
-If you decide to use a file instead of a URL, you need to start your path with /config.
-Example: With `-v /opt/telly:/config \` your m3u file should be inside `/opt/telly` in your host and your M3U variable should be `-e M3U=/config/file.m3u`
+If you decide to use a file instead of a URL, you need to start your path with `/config`.
+Example: With `-v /opt/telly:/config` your m3u file should be inside `/opt/telly` in your host and your M3U variable should be `-e M3U=/config/file.m3u`
 
 #### OS X and Windows
 
