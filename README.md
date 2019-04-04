@@ -30,7 +30,7 @@ docker create --rm \
 * `-e BASE` - IP address or domain that Plex will use to connect to telly (must be reachable by plex)
 * `-e FILTER` - A regular expression [or "regex"] that will include entries from the input M3U to get it below 420 channels
 * `-e FFMPEG` - Enable FFMPEG to improve plex playback, optional variable, don't use it to turn it off
-* `-e PERSISTENCE` - For specific IPTV providers and be able to customize your configuration file [see here](https://github.com/Nottt/telly#customizing-the-configuration-file)
+* `-e PERSISTENCE` - If you need to customize your configuration file for some reason [see here](https://github.com/Nottt/telly#customizing-the-configuration-file)
 * `-v /opt/telly:/config` - Directory where configuration files are stored
 * `-v /etc/localtime:/etc/localtime:ro` - Sync time with host
 * `-p *:*` - Ports used, only change the left ports.
@@ -65,7 +65,7 @@ Windows and OS X platforms does not have `/etc/localtime` to retrieve timezone i
 
 #### Customizing the configuration file 
 
-If your IPTV provider is any of those: **Vaders, Area51, Iris or IPTV-EPG** you'll need to edit the configuration file directly and use the variable `-e PERSISTENCE=true` so the file won't be overwritten. See how [here](https://github.com/tellytv/telly/wiki/Running-Telly%3A-Config-File)
+If need to edit the configuration file directly for some reason use the variable `-e PERSISTENCE=true` so the file won't be overwritten. See how [here](https://github.com/tellytv/telly/wiki/Running-Telly%3A-Config-File)
 
 # How to contribute
 
