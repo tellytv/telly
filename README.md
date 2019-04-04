@@ -25,12 +25,12 @@ docker create --rm \
 * `-e PGID` for GroupID
 * `-e PUID` for UserID 
 * `-e STREAMS` - Number of simultaneous streams allowed by your IPTV provider
-* `-e M3U` - Link provided by your IPTV provider or a full path to a file (must start with /config)
-* `-e EPG` - Link provided by your IPTV provider or a full path to a file (must start with /config)
+* `-e M3U` - Link provided by your IPTV provider or a [full path to a file]()
+* `-e EPG` - Link provided by your IPTV provider or a [full path to a file]()
 * `-e BASE` - IP address or domain that Plex will use to connect to telly (must be reachable by plex)
 * `-e FILTER` - A regular expression [or "regex"] that will include entries from the input M3U to get it below 420 channels
 * `-e FFMPEG` - Enable FFMPEG to improve plex playback, optional variable, don't use it to turn it off
-* `-e PERSISTENCE` - For specific IPTV providers and be able to customize your configuration file [see here]()
+* `-e PERSISTENCE` - For specific IPTV providers and be able to customize your configuration file [see here](https://github.com/Nottt/telly#customizing-the-configuration-file)
 * `-v /opt/telly:/config` - Directory where configuration files are stored
 * `-v /etc/localtime:/etc/localtime:ro` - Sync time with host
 * `-p *:*` - Ports used, only change the left ports.
@@ -41,7 +41,7 @@ For shell access while the container is running do `docker exec -it telly bash`.
 
 ## Setting up the application 
 
-If you have done everything correctly you should see output similar to this wih `docker logs telly`
+If you have done everything correctly you should see output similar to this with `docker logs telly`
 
 ```
 time="2019-04-02T04:03:23Z" level=info msg="Loaded 3 channels into the lineup from "
@@ -51,6 +51,11 @@ time="2019-04-02T04:03:23Z" level=info msg="EPG URL: http://0.0.0.0:6077/epg.xml
 ```
 
 If you see this, procceed to [Adding Telly to Plex](https://github.com/tellytv/telly/wiki/Adding-Telly-to-Plex) if not check your variables.
+
+#### Path of M3U and EPG files
+
+If you decide to use a file instead of a URL, you need to start your path with /config.
+Example: With `-v /opt/telly:/config \` your m3u file should be inside /opt/telly in your host and your M3U variable should be `-e M3U=/config/file.m3u \`
 
 #### OS X and Windows
 
