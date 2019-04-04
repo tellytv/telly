@@ -69,7 +69,7 @@ If need to edit the configuration file directly for some reason use the variable
 
 # How to contribute
 
-1. Clone the branch with `git clone https://github.com/Nottt/telly`
+1. Clone the branch with `git clone -b docker-experimental https://github.com/tellytv/telly`
 2. Go inside the created directory and build the new docker with `docker build -t telly_dev .`
 3. Run it with :
 ```
