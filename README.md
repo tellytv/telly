@@ -69,21 +69,26 @@ If your IPTV provider is any of those: **Vaders, Area51, Iris or IPTV-EPG** you'
 
 # How to contribute
 
-1. Clone the dev branch with `git clone https://github.com/Nottt/telly`
+1. Clone the branch with `git clone https://github.com/Nottt/telly`
 2. Go inside the created directory and build the new docker with `docker build -t telly_dev .`
 3. Run it with :
 ```
-docker run --rm \
+docker create --rm \
            --name dev1 \
-           -p 6089:6077 \
+           -p 6069:6077 \
            -e PUID=1000 \
            -e PGID=1000 \
-           -e PASSWORD=password \
+           -e STREAMS=1 \
+           -e M3U=/config/iptv.m3u \
+           -e EPG=/config/epg.xml \
+           -e BASE=127.0.0.1:6077 \
+           -e FILTERS="THIS|THAT|THEOTHER" \
            -v /etc/localtime:/etc/localtime:ro \
-           -v /opt/telly-dev:/config \
+           -v /opt/telly:/config \
            telly_dev
 ```
-4. Test your features
-5. Pull 
+5. Run it with `docker start dev1`
+6. Test your features
+7. Pull 
 
 OBS: Don't forget to change the ports, folders and --name and clean up the folders if you rebuild the docker after changing stuff
