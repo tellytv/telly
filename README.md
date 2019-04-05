@@ -38,6 +38,7 @@ docker create --rm \
 **When editing `-v` and `-p` paremeters, the host is always the left and the docker the right. Only change the left**
 
 For shell access while the container is running do `docker exec -it telly bash`.
+To retrieve telly version while the container is running do `docker exec -it telly telly --version`
 
 ## Setting up the application 
 
