@@ -1,26 +1,22 @@
-FROM golang:alpine as builder
+FROM ubuntu
 
-# Download and install the latest release of dep
-ADD https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 /usr/bin/dep
-RUN chmod +x /usr/bin/dep
+ ARG DEBIAN_FRONTEND=noninteractive
+ ENV LANG='C.UTF-8' LANGUAGE='C.UTF-8' LC_ALL='C.UTF-8'
 
-# Install git because gin/yaml needs it
-RUN apk update && apk upgrade && apk add git
+# Add s6 script
 
-# Copy the code from the host and compile it
-WORKDIR $GOPATH/src/github.com/tellytv/telly
-COPY Gopkg.toml Gopkg.lock ./
-RUN dep ensure --vendor-only
-COPY . ./
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix nocgo -o /app .
+ADD https://github.com/just-containers/s6-overlay/releases/download/v1.22.1.0/s6-overlay-amd64.tar.gz /tmp/
+RUN tar xzf /tmp/s6-overlay-amd64.tar.gz -C /
 
-# install ca root certificates + listen on 0.0.0.0 + build
-RUN apk add --no-cache ca-certificates \
-  && find . -type f -print0 | xargs -0 sed -i 's/"listen", "localhost/"listen", "0.0.0.0/g' \
-  && CGO_ENABLED=0 GOOS=linux go install -ldflags '-w -s -extldflags "-static"'
+# Copy S6 init scripts
 
-FROM scratch
-COPY --from=builder /app ./
-COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
+COPY s6/ /etc
+
+# Add necessary packages
+
+RUN apt-get update && apt install -y wget xz-utils tzdata
+
+
 EXPOSE 6077
-ENTRYPOINT ["./app"]
+VOLUME /config
+ENTRYPOINT ["/init"]

@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+
+source /etc/env
+
+exec s6-setuidgid telly /usr/bin/telly
