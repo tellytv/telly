@@ -3,7 +3,7 @@ source /etc/env
 
 # Download version 1.1
 
-wget -q https://github.com/tellytv/telly/raw/docker-experimental/files/telly-11-latest-amd64 -O /usr/bin/telly
+wget -q https://github.com/tellytv/telly/raw/docker/files/telly-11-latest-amd64 -O /usr/bin/telly
 
 # Add ffmpeg file & cleanup /tmp
 
