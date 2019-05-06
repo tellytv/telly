@@ -63,23 +63,23 @@ Here's an example configuration file. **You will need to create this file.**  It
   Base-Address = "0.0.0.0:6077"   # Set this to the IP address of the machine telly runs on
   Listen-Address = "0.0.0.0:6077" # this can stay as-is
 
-# THIS SECTION IS OPTIONAL ========================================================================
+# THIS SECTION IS NOT USEFUL ======================================================================
 #[SchedulesDirect]           # If you have a Schedules Direct account, fill in details and then
                              # UNCOMMENT THIS SECTION
-#  Username = ""             # This is under construction; Vader is the only provider
-#  Password = ""             # that works with it fully at this time
+#  Username = ""             # This is under construction; no provider
+#  Password = ""             # works with it at this time
 
 # AT LEAST ONE SOURCE IS REQUIRED #################################################################
 # DELETE OR COMMENT OUT SOURCES THAT YOU ARE NOT USING ############################################
 # NONE OF THESE EXAMPLES WORK AS-IS; IF YOU DON'T CHANGE IT, DELETE IT ############################
 [[Source]]
   Name = ""                 # Name is optional and is used mostly for logging purposes
-  Provider = "Vaders"       # named providers currently supported are "Vaders", "area51", "Iris"
+  Provider = "Iris"         # named providers currently supported are "area51" and "Iris"
 # IF YOUR PROVIDER IS NOT ONE OF THE ABOVE, CONFIGURE IT AS A "Custom" PROVIDER; SEE BELOW
   Username = "YOUR_IPTV_USERNAME"
   Password = "YOUR_IPTV_PASSWORD"
   # THE FOLLOWING KEYS ARE OPTIONAL IN THEORY, REQUIRED IN PRACTICE
-  Filter = "Sports|Premium Movies|United States.*|USA"
+  Filter = "YOUR|FILTER|*REGEX"
   FilterKey = "group-title" # FilterKey normally defaults to whatever the provider file says is best, 
                             # otherwise you must set this.
   FilterRaw = false         # FilterRaw will run your regex on the entire line instead of just specific keys.

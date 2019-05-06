@@ -48,8 +48,6 @@ type Configuration struct {
 
 func (i *Configuration) GetProvider() (Provider, error) {
 	switch strings.ToLower(i.Provider) {
-	case "vaders":
-		return newVaders(i)
 	case "iptv-epg", "iptvepg":
 		return newIPTVEPG(i)
 	case "iris", "iristv":
