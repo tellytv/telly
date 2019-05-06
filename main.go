@@ -56,7 +56,7 @@ var (
 func main() {
 
 	// Discovery flags
-	flag.Int("discovery.device-id", 12345678, "8 digits used to uniquely identify the device. $(TELLY_DISCOVERY_DEVICE_ID)")
+	flag.String("discovery.device-id", "12345678", "8 alpha-numeric characters used to uniquely identify the device. $(TELLY_DISCOVERY_DEVICE_ID)")
 	flag.String("discovery.device-friendly-name", "telly", "Name exposed via discovery. Useful if you are running two instances of telly and want to differentiate between them $(TELLY_DISCOVERY_DEVICE_FRIENDLY_NAME)")
 	flag.String("discovery.device-auth", "telly123", "Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICE_AUTH)")
 	flag.String("discovery.device-manufacturer", "Silicondust", "Manufacturer exposed via discovery. $(TELLY_DISCOVERY_DEVICE_MANUFACTURER)")
@@ -154,7 +154,7 @@ func main() {
 	validateConfig()
 
 	viper.Set("discovery.device-friendly-name", fmt.Sprintf("HDHomerun (%s)", viper.GetString("discovery.device-friendly-name")))
-	viper.Set("discovery.device-uuid", fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", viper.GetInt("discovery.device-id")))
+	viper.Set("discovery.device-uuid", fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", viper.GetString("discovery.device-id")))
 
 	if log.Level == logrus.DebugLevel {
 		js, jsErr := json.MarshalIndent(viper.AllSettings(), "", "    ")
