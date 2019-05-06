@@ -24,7 +24,7 @@ Here's an example configuration file. **You will need to create this file.**  It
 # THIS SECTION IS REQUIRED ########################################################################
 [Discovery]                                    # most likely you won't need to change anything here
   Device-Auth = "telly123"                     # These settings are all related to how telly identifies
-  Device-ID = 12345678                         # itself to Plex.
+  Device-ID = "12345678"                       # itself to Plex.
   Device-UUID = ""
   Device-Firmware-Name = "hdhomeruntc_atsc"
   Device-Firmware-Version = "20150826"

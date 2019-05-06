@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"strconv"
 
 	"github.com/spf13/viper"
 )
@@ -24,7 +23,7 @@ func getDiscoveryData() DiscoveryData {
 		FirmwareName:    viper.GetString("discovery.device-firmware-name"),
 		TunerCount:      viper.GetInt("iptv.streams"),
 		FirmwareVersion: viper.GetString("discovery.device-firmware-version"),
-		DeviceID:        strconv.Itoa(viper.GetInt("discovery.device-id")),
+		DeviceID:        viper.GetString("discovery.device-id"),
 		DeviceAuth:      viper.GetString("discovery.device-auth"),
 		BaseURL:         fmt.Sprintf("http://%s", viper.GetString("web.base-address")),
 		LineupURL:       fmt.Sprintf("http://%s/lineup.json", viper.GetString("web.base-address")),
