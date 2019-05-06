@@ -153,7 +153,6 @@ func main() {
 
 	validateConfig()
 
-	viper.Set("discovery.device-friendly-name", fmt.Sprintf("HDHomerun (%s)", viper.GetString("discovery.device-friendly-name")))
 	viper.Set("discovery.device-uuid", fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", viper.GetString("discovery.device-id")))
 
 	if log.Level == logrus.DebugLevel {
