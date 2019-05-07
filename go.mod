@@ -1,0 +1,41 @@
+module github.com/tellytv/telly
+
+go 1.12
+
+require (
+	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
+	github.com/fsnotify/fsnotify v1.4.7
+	github.com/gin-contrib/cors v0.0.0-20170318125340-cf4846e6a636
+	github.com/gin-contrib/sse v0.0.0-20170109093832-22d885f9ecc7
+	github.com/gin-gonic/gin v0.0.0-20170702092826-d459835d2b07
+	github.com/gobuffalo/packr v1.13.2
+	github.com/golang/protobuf v1.1.0
+	github.com/hashicorp/hcl v0.0.0-20180404174102-ef8a98b0bbce
+	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
+	github.com/kr/pretty v0.1.0
+	github.com/kr/text v0.1.0
+	github.com/magiconair/properties v1.8.0
+	github.com/mattn/go-isatty v0.0.0-20170307163044-57fdcb988a5c
+	github.com/matttproud/golang_protobuf_extensions v1.0.1
+	github.com/mitchellh/mapstructure v0.0.0-20180715050151-f15292f7a699
+	github.com/pelletier/go-toml v1.2.0
+	github.com/pkg/errors v0.8.0
+	github.com/prometheus/client_golang v0.8.0
+	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910
+	github.com/prometheus/common v0.0.0-20180801064454-c7de2306084e
+	github.com/prometheus/procfs v0.0.0-20180725123919-05ee40e3a273
+	github.com/sirupsen/logrus v1.0.6
+	github.com/spf13/afero v1.1.1
+	github.com/spf13/cast v1.2.0
+	github.com/spf13/jwalterweatherman v0.0.0-20180814060501-14d3d4c51834
+	github.com/spf13/pflag v1.0.2
+	github.com/spf13/viper v1.1.0
+	github.com/tellytv/go.schedulesdirect v0.0.0-20180828235349-49735fc3ed77
+	github.com/ugorji/go v0.0.0-20170215201144-c88ee250d022
+	golang.org/x/crypto v0.0.0-20180808211826-de0752318171
+	golang.org/x/net v0.0.0-20180811021610-c39426892332
+	golang.org/x/sys v0.0.0-20180810173357-98c5dad5d1a0
+	golang.org/x/text v0.3.0
+	gopkg.in/go-playground/validator.v8 v8.18.1
+	gopkg.in/yaml.v2 v2.0.0-20160928153709-a5b47d31c556
+)
