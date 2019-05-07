@@ -215,6 +215,7 @@ func stream(lineup *lineup) gin.HandlerFunc {
 			}()
 
 			continueStream := true
+			c.Header("Content-Type", `video/mpeg; codecs="avc1.4D401E"`)
 
 			c.Stream(func(w io.Writer) bool {
 				defer func() {
