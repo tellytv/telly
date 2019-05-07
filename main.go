@@ -153,7 +153,7 @@ func main() {
 
 	validateConfig()
 
-	viper.Set("discovery.device-uuid", fmt.Sprintf("%d-AE2A-4E54-BBC9-33AF7D5D6A92", viper.GetString("discovery.device-id")))
+	viper.Set("discovery.device-uuid", fmt.Sprintf("%s-AE2A-4E54-BBC9-33AF7D5D6A92", viper.GetString("discovery.device-id")))
 
 	if log.Level == logrus.DebugLevel {
 		js, jsErr := json.MarshalIndent(viper.AllSettings(), "", "    ")
