@@ -4,7 +4,6 @@ jobs:
     docker:
       - image: circleci/golang:1
 
-    working_directory: /go/src/github.com/tellytv/telly
     steps:
       - checkout
       # - run: go get -u github.com/alecthomas/gometalinter
