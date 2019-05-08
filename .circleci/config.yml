@@ -4,12 +4,9 @@ jobs:
     docker:
       - image: circleci/golang:1
 
-    working_directory: /go/src/github.com/tellytv/telly
     steps:
       - checkout
-      - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
       # - run: go get -u github.com/alecthomas/gometalinter
       # - run: gometalinter --install
-      - run: dep ensure -vendor-only
       - run: go test -v ./...
       # - run: gometalinter --config=.gometalinter.json ./...
