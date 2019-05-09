@@ -42,7 +42,7 @@ tarball: promu
 	@echo ">> building release tarball"
 	@$(PROMU) tarball $(BIN_DIR)
 
-docker:
+docker: cross
 	@echo ">> building docker image"
 	@docker build -t "$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)" .
 
