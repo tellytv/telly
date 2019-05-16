@@ -18,7 +18,7 @@ docker create --rm \
            -e FFMPEG=true \
            -v /etc/localtime:/etc/localtime:ro \
            -v /opt/telly:/config \
-           telly
+           tellytv/telly:docker
 ```
 ## Parameters
 
