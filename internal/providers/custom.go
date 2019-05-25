@@ -1,9 +1,13 @@
 package providers
 
 import (
+	"fmt"
+	"net"
+	"net/url"
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	m3u "github.com/tellytv/telly/internal/m3uplus"
 	"github.com/tellytv/telly/internal/xmltv"
 )
@@ -61,6 +65,19 @@ func (i *customProvider) ParseTrack(track m3u.Track, channelMap map[string]xmltv
 		StreamFormat: "Unknown",
 		Track:        track,
 		OnDemand:     false,
+	}
+
+	// If Udpxy is set in the provider configuration and StreamURL is a multicast stream,
+	// rewrite the URL to point to the Udpxy instance.
+	if i.BaseConfig.Udpxy != "" {
+		trackURI, err := url.Parse(pChannel.StreamURL)
+		if err != nil {
+			return nil, err
+		}
+		if IP := net.ParseIP(trackURI.Hostname()); IP != nil && IP.IsMulticast() {
+			pChannel.StreamURL = fmt.Sprintf("http://%s/udp/%s/", i.BaseConfig.Udpxy, trackURI.Host)
+			log.Debugf("Multicast stream detected and udpxy is configured, track URL rewritten from %s to %s", track.URI, pChannel.StreamURL)
+		}
 	}
 
 	epgVal := track.Tags["tvg-id"]
