@@ -28,7 +28,6 @@
   "Exclude": [
     "^vendor\/",
     ".*-packr.go.*",
-    ".*squirrel.v1.*",
     ".*tableName is unused.*",
     "error return value not checked .*c.AbortWithError.*"
   ],
