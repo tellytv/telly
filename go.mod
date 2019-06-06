@@ -3,51 +3,47 @@ module github.com/tellytv/telly
 go 1.12
 
 require (
-	github.com/beorn7/perks v1.0.0
-	github.com/fsnotify/fsnotify v1.4.7
-	github.com/gin-contrib/cors v0.0.0-20170318125340-cf4846e6a636
-	github.com/gin-contrib/sse v0.0.0-20170109093832-22d885f9ecc7
-	github.com/gin-gonic/gin v0.0.0-20170702092826-d459835d2b07
-	github.com/go-logfmt/logfmt v0.4.0 // indirect
-	github.com/gobuffalo/depgen v0.1.1 // indirect
-	github.com/gobuffalo/genny v0.1.1 // indirect
-	github.com/gobuffalo/gogen v0.1.1 // indirect
+	github.com/Masterminds/squirrel v1.1.0
+	github.com/NebulousLabs/go-upnp v0.0.0-20181203152547-b32978b8ccbf
+	github.com/gin-contrib/cors v1.3.0
+	github.com/gin-contrib/sse v0.1.0 // indirect
+	github.com/gin-gonic/gin v1.4.0
+	github.com/go-sql-driver/mysql v1.4.1 // indirect
+	github.com/gobuffalo/packd v0.1.0 // indirect
 	github.com/gobuffalo/packr v1.25.0
-	github.com/gogo/protobuf v1.2.1 // indirect
-	github.com/golang/protobuf v1.3.1
-	github.com/hashicorp/hcl v0.0.0-20180404174102-ef8a98b0bbce
-	github.com/karrick/godirwalk v1.10.0 // indirect
-	github.com/kisielk/errcheck v1.2.0 // indirect
+	github.com/gofrs/uuid v3.2.0+incompatible
+	github.com/jmoiron/sqlx v1.2.0
+	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/koron/go-ssdp v0.0.0-20180514024734-4a0ed625a78b
 	github.com/kr/pretty v0.1.0
-	github.com/kr/pty v1.1.4 // indirect
-	github.com/kr/text v0.1.0
-	github.com/magiconair/properties v1.8.0
-	github.com/markbates/grift v1.0.1 // indirect
-	github.com/mattn/go-isatty v0.0.0-20170307163044-57fdcb988a5c
-	github.com/matttproud/golang_protobuf_extensions v1.0.1
-	github.com/mitchellh/mapstructure v0.0.0-20180715050151-f15292f7a699
-	github.com/pelletier/go-toml v1.2.0
-	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v0.9.2
-	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
-	github.com/prometheus/common v0.3.0
-	github.com/prometheus/procfs v0.0.0-20190507164030-5867b95ac084
-	github.com/prometheus/promu v0.3.0 // indirect
-	github.com/sirupsen/logrus v1.4.1
-	github.com/spf13/afero v1.1.1
-	github.com/spf13/cast v1.2.0
-	github.com/spf13/jwalterweatherman v0.0.0-20180814060501-14d3d4c51834
+	github.com/lib/pq v1.1.1 // indirect
+	github.com/magiconair/properties v1.8.1 // indirect
+	github.com/mattn/go-isatty v0.0.8 // indirect
+	github.com/mattn/go-sqlite3 v1.10.0
+	github.com/mitchellh/mapstructure v1.1.2
+	github.com/onsi/ginkgo v1.8.0 // indirect
+	github.com/onsi/gomega v1.5.0 // indirect
+	github.com/pelletier/go-toml v1.4.0 // indirect
+	github.com/prometheus/client_golang v0.9.3
+	github.com/prometheus/common v0.4.1
+	github.com/prometheus/procfs v0.0.2 // indirect
+	github.com/robfig/cron v1.1.0
+	github.com/rubenv/sql-migrate v0.0.0-20190327083759-54bad0a9b051
+	github.com/schollz/closestmatch v2.1.0+incompatible
+	github.com/sirupsen/logrus v1.4.2
+	github.com/spf13/afero v1.2.2 // indirect
+	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.3
-	github.com/spf13/viper v1.1.0
-	github.com/stretchr/objx v0.2.0 // indirect
-	github.com/tellytv/go.schedulesdirect v0.0.0-20180828235349-49735fc3ed77
-	github.com/ugorji/go v0.0.0-20170215201144-c88ee250d022
-	golang.org/x/crypto v0.0.0-20190506204251-e1dfcc566284
-	golang.org/x/net v0.0.0-20190503192946-f4e77d36d62c
-	golang.org/x/sys v0.0.0-20190509141414-a5b02f93d862
-	golang.org/x/text v0.3.2
-	golang.org/x/tools v0.0.0-20190509014725-d996b19ee77c // indirect
-	gopkg.in/go-playground/validator.v8 v8.18.1
-	gopkg.in/yaml.v2 v2.2.2
+	github.com/spf13/viper v1.4.0
+	github.com/tellytv/go.schedulesdirect v0.0.0-20180903021109-bb2d9eec79e9
+	github.com/tellytv/go.xtream-codes v0.0.0-20190427212115-45e8162ba888
+	github.com/ugorji/go v1.1.5-pre // indirect
+	github.com/ziutek/mymysql v1.5.4 // indirect
+	github.com/zsais/go-gin-prometheus v0.0.0-20181030200533-58963fb32f54
+	gitlab.com/NebulousLabs/go-upnp v0.0.0-20181011194642-3a71999ed0d3 // indirect
+	golang.org/x/net v0.0.0-20190603091049-60506f45cf65
+	golang.org/x/sys v0.0.0-20190606122018-79a91cf218c4 // indirect
+	golang.org/x/text v0.3.2 // indirect
+	google.golang.org/appengine v1.6.0 // indirect
+	gopkg.in/gorp.v1 v1.7.2 // indirect
 )
