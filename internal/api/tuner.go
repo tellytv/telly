@@ -11,8 +11,8 @@ import (
 
 	upnp "github.com/NebulousLabs/go-upnp/goupnp"
 	"github.com/gin-gonic/gin"
+	"github.com/gofrs/uuid"
 	"github.com/koron/go-ssdp"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	ccontext "github.com/tellytv/telly/internal/context"
 	"github.com/tellytv/telly/internal/metrics"

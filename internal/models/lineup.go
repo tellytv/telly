@@ -9,8 +9,8 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	upnp "github.com/NebulousLabs/go-upnp/goupnp"
+	"github.com/gofrs/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/satori/go.uuid"
 )
 
 // LineupDB is a struct containing initialized the SQL connection as well as the APICollection.
