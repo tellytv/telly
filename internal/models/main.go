@@ -1,9 +1,9 @@
 package models
 
 import (
+	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/Masterminds/squirrel.v1"
 )
 
 var sq = squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar) // nolint

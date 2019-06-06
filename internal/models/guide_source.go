@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	"github.com/tellytv/telly/internal/guideproviders"
-	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // GuideSourceDB is a struct containing initialized the SQL connection as well as the APICollection.

@@ -34,6 +34,20 @@ var (
 
 func main() {
 
+	// Discovery flags
+	flag.String("discovery.device-id", "12345678", "8 alpha-numeric characters used to uniquely identify the device. $(TELLY_DISCOVERY_DEVICE_ID)")
+	flag.String("discovery.device-friendly-name", "telly", "Name exposed via discovery. Useful if you are running two instances of telly and want to differentiate between them $(TELLY_DISCOVERY_DEVICE_FRIENDLY_NAME)")
+	flag.String("discovery.device-auth", "telly123", "Only change this if you know what you're doing $(TELLY_DISCOVERY_DEVICE_AUTH)")
+	flag.String("discovery.device-manufacturer", "Silicondust", "Manufacturer exposed via discovery. $(TELLY_DISCOVERY_DEVICE_MANUFACTURER)")
+	flag.String("discovery.device-model-number", "HDTC-2US", "Model number exposed via discovery. $(TELLY_DISCOVERY_DEVICE_MODEL_NUMBER)")
+	flag.String("discovery.device-firmware-name", "hdhomeruntc_atsc", "Firmware name exposed via discovery. $(TELLY_DISCOVERY_DEVICE_FIRMWARE_NAME)")
+	flag.String("discovery.device-firmware-version", "20150826", "Firmware version exposed via discovery. $(TELLY_DISCOVERY_DEVICE_FIRMWARE_VERSION)")
+	flag.Bool("discovery.ssdp", true, "Turn on SSDP announcement of telly to the local network $(TELLY_DISCOVERY_SSDP)")
+
+	// Regex/filtering flags
+	flag.Bool("filter.regex-inclusive", false, "Whether the provided regex is inclusive (whitelisting) or exclusive (blacklisting). If true (--filter.regex-inclusive), only channels matching the provided regex pattern will be exposed. If false (--no-filter.regex-inclusive), only channels NOT matching the provided pattern will be exposed. $(TELLY_FILTER_REGEX_INCLUSIVE)")
+	flag.String("filter.regex", ".*", "Use regex to filter for channels that you want. A basic example would be .*UK.*. $(TELLY_FILTER_REGEX)")
+
 	// Web flags
 	flag.StringP("web.listen-address", "l", ":6077", "Address to listen on for web interface, API and telemetry $(TELLY_WEB_LISTEN_ADDRESS)")
 
@@ -88,6 +102,8 @@ func main() {
 	log.Debugln("Build context", version.BuildContext())
 
 	validateConfig()
+
+	viper.Set("discovery.device-uuid", fmt.Sprintf("%s-AE2A-4E54-BBC9-33AF7D5D6A92", viper.GetString("discovery.device-id")))
 
 	if log.Level == logrus.DebugLevel {
 		js, jsErr := json.MarshalIndent(viper.AllSettings(), "", "    ")
@@ -146,6 +162,10 @@ func main() {
 }
 
 func validateConfig() {
+	if !(viper.IsSet("source")) {
+		log.Warnln("There is no source element in the configuration, the config file is likely missing.")
+	}
+
 	var addrErr error
 	if _, addrErr = net.ResolveTCPAddr("tcp", viper.GetString("web.listenaddress")); addrErr != nil {
 		log.WithError(addrErr).Panic("Error when parsing Listen address, please check the address and try again.")

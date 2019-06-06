@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
-	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // LineupChannelDB is a struct containing initialized the SQL connection as well as the APICollection.

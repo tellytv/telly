@@ -3,9 +3,9 @@ package models
 import (
 	"time"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	"github.com/tellytv/telly/internal/videoproviders"
-	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // VideoSourceDB is a struct containing initialized the SQL connection as well as the APICollection.

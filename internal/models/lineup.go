@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/squirrel"
 	upnp "github.com/NebulousLabs/go-upnp/goupnp"
+	"github.com/gofrs/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/satori/go.uuid"
-	squirrel "gopkg.in/Masterminds/squirrel.v1"
 )
 
 // LineupDB is a struct containing initialized the SQL connection as well as the APICollection.
