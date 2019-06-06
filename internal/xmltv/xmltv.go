@@ -4,7 +4,7 @@ package xmltv
 import (
 	"encoding/xml"
 	"fmt"
-	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -69,8 +69,7 @@ func (p *Date) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) 
 		dateFormat = "2006"
 	}
 
-	v, e := time.Parse(dateFormat, content)
-	if e != nil {
+	if v, e := time.Parse(dateFormat, content); e != nil {
 		return fmt.Errorf("the type Date field of %s is not a time, value is: %s", start.Name.Local, content)
 	}
 	*p = Date(v)

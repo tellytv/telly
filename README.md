@@ -26,7 +26,7 @@ docker run -d \
 
 # Troubleshooting
 
-Please free to open an issue if you run into any problems at all, we'll be more than happy to help.
+Please free to [open an issue](https://github.com/tellytv/telly/issues) if you run into any problems at all, we'll be more than happy to help.
 
 # Social
 

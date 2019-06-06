@@ -1,5 +1,6 @@
-# Ensure GOBIN is not set during build so that promu is installed to the correct path
-unexport GOBIN
+GO    := go
+GOPATH ?= $(HOME)/go
+PROMU := $(GOPATH)/bin/promu
 
 GO                      ?= go
 GOFMT                   ?= $(GO)fmt
@@ -33,11 +34,19 @@ test:
 
 format:
 	@echo ">> formatting code"
-	@$(GOFMT) .
+	@$(GO) fmt ./...
 
 vet:
 	@echo ">> vetting code"
 	@$(GO) vet ./...
+
+cross: promu
+	@echo ">> crossbuilding binaries"
+	@$(PROMU) crossbuild
+
+tarballs: promu
+	@echo ">> creating release tarballs"
+	@$(PROMU) crossbuild tarballs
 
 build: promu
 	@echo ">> building binaries"
@@ -51,11 +60,7 @@ tarball: promu
 	@echo ">> building release tarball"
 	@$(PROMU) tarball $(BIN_DIR)
 
-tarballs: promu
-	@echo ">> building release tarball"
-	@$(PROMU) crossbuild tarballs
-
-docker: crossbuild
+docker: cross
 	@echo ">> building docker image"
 	@docker build -t "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)" .
 
@@ -71,7 +76,10 @@ docker-tag-latest:
 	@docker tag "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)" "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):latest"
 
 promu:
-	GOOS= GOARCH= $(GO) get -u github.com/prometheus/promu
+	@GO111MODULE=off \
+		    GOOS=$(shell uname -s | tr A-Z a-z) \
+	        GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m))) \
+	        $(GO) get -u github.com/prometheus/promu
 
 
 .PHONY: all style dep format build test vet tarball docker docker-publish docker-tag-latest promu
