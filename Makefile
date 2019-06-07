@@ -8,7 +8,6 @@ FIRST_GOPATH            := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
 PROMU                   := $(FIRST_GOPATH)/bin/promu
 
 GOMETALINTER_BINARY     := $(FIRST_GOPATH)/bin/gometalinter
-DEP_BINARY              := $(FIRST_GOPATH)/bin/dep
 
 PREFIX                  ?= $(shell pwd)
 BIN_DIR                 ?= $(shell pwd)
@@ -17,16 +16,13 @@ DOCKER_IMAGE_TAG        ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
 DOCKER_REPO             ?= tellytv
 
 
-all: dep style build test
+all: style build test
 
 style:
 	@echo ">> checking code style"
 	@$(GO) get -u github.com/alecthomas/gometalinter
 	@$(GOMETALINTER_BINARY) --config=.gometalinter.json --install ./...
 
-dep: $(DEP_BINARY)
-	@echo ">> installing dependencies"
-	@$(DEP_BINARY) ensure -vendor-only -v
 
 test:
 	@echo ">> running tests"
@@ -82,7 +78,7 @@ promu:
 	        $(GO) get -u github.com/prometheus/promu
 
 
-.PHONY: all style dep format build test vet tarball docker docker-publish docker-tag-latest promu
+.PHONY: all style format build test vet tarball docker docker-publish docker-tag-latest promu
 
 
 run:
