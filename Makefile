@@ -7,7 +7,7 @@ GOFMT                   ?= $(GO)fmt
 FIRST_GOPATH            := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
 PROMU                   := $(FIRST_GOPATH)/bin/promu
 
-GOMETALINTER_BINARY     := $(FIRST_GOPATH)/bin/gometalinter
+GOLANGCILINT_BINARY     := $(FIRST_GOPATH)/bin/golangci-lint
 
 PREFIX                  ?= $(shell pwd)
 BIN_DIR                 ?= $(shell pwd)
@@ -20,9 +20,8 @@ all: style build test
 
 style:
 	@echo ">> checking code style"
-	@$(GO) get -u github.com/alecthomas/gometalinter
-	@$(GOMETALINTER_BINARY) --config=.gometalinter.json --install ./...
-
+	@$(GO) get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+	@$(GOLANGCILINT_BINARY) run ./...
 
 test:
 	@echo ">> running tests"
