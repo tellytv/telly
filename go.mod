@@ -24,9 +24,8 @@ require (
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.4.0 // indirect
-	github.com/prometheus/client_golang v0.9.3
+	github.com/prometheus/client_golang v0.9.4
 	github.com/prometheus/common v0.4.1
-	github.com/prometheus/procfs v0.0.2 // indirect
 	github.com/robfig/cron v1.1.0
 	github.com/rubenv/sql-migrate v0.0.0-20190327083759-54bad0a9b051
 	github.com/schollz/closestmatch v2.1.0+incompatible
@@ -37,13 +36,12 @@ require (
 	github.com/spf13/viper v1.4.0
 	github.com/tellytv/go.schedulesdirect v0.0.0-20180903021109-bb2d9eec79e9
 	github.com/tellytv/go.xtream-codes v0.0.0-20190427212115-45e8162ba888
-	github.com/ugorji/go v1.1.5-pre // indirect
+	github.com/ugorji/go/codec v1.1.5-pre // indirect
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	github.com/zsais/go-gin-prometheus v0.0.0-20181030200533-58963fb32f54
 	gitlab.com/NebulousLabs/go-upnp v0.0.0-20181011194642-3a71999ed0d3 // indirect
-	golang.org/x/net v0.0.0-20190603091049-60506f45cf65
-	golang.org/x/sys v0.0.0-20190606122018-79a91cf218c4 // indirect
-	golang.org/x/text v0.3.2 // indirect
-	google.golang.org/appengine v1.6.0 // indirect
+	golang.org/x/net v0.0.0-20190607175257-26fcbda1b1be
+	golang.org/x/sys v0.0.0-20190606203320-7fc4e5ec1444 // indirect
+	google.golang.org/appengine v1.6.1 // indirect
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 )
