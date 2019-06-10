@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tellytv/go.schedulesdirect"
+	schedulesdirect "github.com/tellytv/go.schedulesdirect"
 	"github.com/tellytv/telly/internal/utils"
 	"github.com/tellytv/telly/internal/xmltv"
 )

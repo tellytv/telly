@@ -122,7 +122,7 @@ type httpError struct {
 	Contents      string
 }
 
-func newHTTPError(err error, code int, reader io.ReadCloser) httpError {
+func newHTTPError(err error, code int, reader io.Reader) httpError {
 	buf := &bytes.Buffer{}
 	if reader != nil {
 		if _, copyErr := io.Copy(buf, reader); copyErr != nil {

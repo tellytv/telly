@@ -8,7 +8,7 @@ import (
 	"github.com/gobuffalo/packr"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3" // the SQLite driver
-	"github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/tellytv/telly/internal/guideproviders"
