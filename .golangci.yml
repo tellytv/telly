@@ -1,8 +1,11 @@
 linters-settings:
   goimports:
     local-prefixes: github.com/telly/telly
+  errcheck:
+    ignore: fmt:.*,AbortWithError
 
 linters:
+  enable-all: false
   enable:
     - deadcode
     - errcheck
@@ -19,12 +22,12 @@ linters:
     - nakedret
     - structcheck
     - unconvert
-    - unparam
     - varcheck
     - vet
     - vetshadow
   disable:
     - unused
+    - unparam
 
 run:
   skip-files:
