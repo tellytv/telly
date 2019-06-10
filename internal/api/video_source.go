@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tellytv/telly/internal/context"
@@ -63,8 +64,47 @@ func addVideoSource(cc *context.CContext, c *gin.Context) {
 			}
 			newProvider.Tracks = append(newProvider.Tracks, *newTrack)
 		}
-		c.JSON(http.StatusOK, newProvider)
+		c.JSON(http.StatusCreated, newProvider)
 	}
+}
+
+func saveVideoSource(cc *context.CContext, c *gin.Context) {
+	videoSourceID := c.Param("sourceId")
+
+	iVideoSourceID, err := strconv.ParseInt(videoSourceID, 0, 32)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	var payload models.VideoSource
+	if c.BindJSON(&payload) == nil {
+		provider, providerErr := cc.API.VideoSource.UpdateVideoSource(int(iVideoSourceID), payload)
+		if providerErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, providerErr)
+			return
+		}
+
+		c.JSON(http.StatusOK, provider)
+	}
+}
+
+func deleteVideoSource(cc *context.CContext, c *gin.Context) {
+	videoSourceID := c.Param("sourceId")
+
+	iVideoSourceID, err := strconv.ParseInt(videoSourceID, 0, 32)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	err = cc.API.VideoSource.DeleteVideoSource(int(iVideoSourceID))
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func getAllTracks(cc *context.CContext, c *gin.Context) {

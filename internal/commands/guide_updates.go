@@ -49,7 +49,7 @@ func fireGuideUpdates(cc *context.CContext, provider *models.GuideSource) error 
 		return fmt.Errorf("error when refreshing for provider %s (%s): %s", provider.Name, provider.Provider, reloadErr)
 	}
 
-	if updateErr := cc.API.GuideSource.UpdateGuideSource(provider.ID, lineupMetadata); updateErr != nil {
+	if updateErr := cc.API.GuideSource.UpdateProviderData(provider.ID, lineupMetadata); updateErr != nil {
 		return fmt.Errorf("error when updating guide source provider metadata: %s", updateErr)
 	}
 

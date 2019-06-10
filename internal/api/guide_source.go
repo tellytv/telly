@@ -42,7 +42,7 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 			return
 		}
 
-		if updateErr := cc.API.GuideSource.UpdateGuideSource(newGuide.ID, lineupMetadata); updateErr != nil {
+		if updateErr := cc.API.GuideSource.UpdateProviderData(newGuide.ID, lineupMetadata); updateErr != nil {
 			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error while updating guide source with provider state: %s", updateErr))
 			return
 		}
@@ -66,6 +66,45 @@ func addGuide(cc *context.CContext, c *gin.Context) {
 
 		c.JSON(http.StatusOK, newGuide)
 	}
+}
+
+func saveGuideSource(cc *context.CContext, c *gin.Context) {
+	guideSourceID := c.Param("sourceId")
+
+	iGuideSourceID, err := strconv.ParseInt(guideSourceID, 0, 32)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	var payload models.GuideSource
+	if c.BindJSON(&payload) == nil {
+		provider, providerErr := cc.API.GuideSource.UpdateGuideSource(int(iGuideSourceID), payload)
+		if providerErr != nil {
+			c.AbortWithError(http.StatusInternalServerError, providerErr)
+			return
+		}
+
+		c.JSON(http.StatusOK, provider)
+	}
+}
+
+func deleteGuideSource(cc *context.CContext, c *gin.Context) {
+	guideSourceID := c.Param("sourceId")
+
+	iGuideSourceID, err := strconv.ParseInt(guideSourceID, 0, 32)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	err = cc.API.GuideSource.DeleteGuideSource(int(iGuideSourceID))
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func getGuideSources(cc *context.CContext, c *gin.Context) {
@@ -149,7 +188,7 @@ func subscribeToLineup(guideSource *models.GuideSource, provider guideproviders.
 		return
 	}
 
-	if updateErr := cc.API.GuideSource.UpdateGuideSource(guideSource.ID, lineupMetadata); updateErr != nil {
+	if updateErr := cc.API.GuideSource.UpdateProviderData(guideSource.ID, lineupMetadata); updateErr != nil {
 		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error while updating guide source with provider state: %s", updateErr))
 		return
 	}

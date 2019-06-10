@@ -60,8 +60,9 @@ func (g *GuideSource) ProviderConfiguration() *guideproviders.Configuration {
 // GuideSourceAPI contains all methods for the User struct
 type GuideSourceAPI interface {
 	InsertGuideSource(guideSourceStruct GuideSource, providerData interface{}) (*GuideSource, error)
-	DeleteGuideSource(guideSourceID int) (*GuideSource, error)
-	UpdateGuideSource(guideSourceID int, providerData interface{}) error
+	DeleteGuideSource(guideSourceID int) error
+	UpdateGuideSource(guideSourceID int, guideSourceStruct GuideSource) (*GuideSource, error)
+	UpdateProviderData(guideSourceID int, providerData interface{}) error
 	GetGuideSourceByID(id int) (*GuideSource, error)
 	GetAllGuideSources(includeChannels bool) ([]GuideSource, error)
 	GetGuideSourcesForLineup(lineupID int) ([]GuideSource, error)
@@ -123,14 +124,29 @@ func (db *GuideSourceDB) GetGuideSourceByID(id int) (*GuideSource, error) {
 }
 
 // DeleteGuideSource marks a guideSource with the given ID as deleted.
-func (db *GuideSourceDB) DeleteGuideSource(guideSourceID int) (*GuideSource, error) {
-	guideSource := GuideSource{}
-	err := db.SQL.Get(&guideSource, `DELETE FROM guide_source WHERE id = $1`, guideSourceID)
-	return &guideSource, err
+func (db *GuideSourceDB) DeleteGuideSource(guideSourceID int) error {
+	_, err := db.SQL.Exec(`DELETE FROM guide_source WHERE id = $1`, guideSourceID)
+	return err
 }
 
 // UpdateGuideSource updates a guideSource.
-func (db *GuideSourceDB) UpdateGuideSource(guideSourceID int, providerData interface{}) error {
+func (db *GuideSourceDB) UpdateGuideSource(guideSourceID int, guideSourceStruct GuideSource) (*GuideSource, error) {
+	guideSourceStruct.ID = guideSourceID
+
+	_, err := db.SQL.NamedQuery(`
+		UPDATE guide_source
+		SET name = :name, provider = :provider, username = :username, password = :password,
+		xmltv_url = :xmltv_url, update_frequency = :update_frequency
+		WHERE id = :id`, guideSourceStruct)
+	if err != nil {
+		return nil, err
+	}
+
+	return &guideSourceStruct, nil
+}
+
+// UpdateProviderData updates provider_data.
+func (db *GuideSourceDB) UpdateProviderData(guideSourceID int, providerData interface{}) error {
 	_, err := db.SQL.Exec(`UPDATE guide_source SET provider_data = ? WHERE id = ?`, providerData, guideSourceID)
 	return err
 }
