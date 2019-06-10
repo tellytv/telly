@@ -60,8 +60,8 @@ func (v *VideoSource) ProviderConfiguration() *videoproviders.Configuration {
 // VideoSourceAPI contains all methods for the User struct
 type VideoSourceAPI interface {
 	InsertVideoSource(videoSourceStruct VideoSource) (*VideoSource, error)
-	DeleteVideoSource(videoSourceID int) (*VideoSource, error)
-	UpdateVideoSource(videoSourceID int, description string) (*VideoSource, error)
+	DeleteVideoSource(videoSourceID int) error
+	UpdateVideoSource(videoSourceID int, videoSourceStruct VideoSource) (*VideoSource, error)
 	GetVideoSourceByID(id int) (*VideoSource, error)
 	GetAllVideoSources(includeTracks bool) ([]VideoSource, error)
 }
@@ -116,17 +116,25 @@ func (db *VideoSourceDB) GetVideoSourceByID(id int) (*VideoSource, error) {
 }
 
 // DeleteVideoSource marks a videoSource with the given ID as deleted.
-func (db *VideoSourceDB) DeleteVideoSource(videoSourceID int) (*VideoSource, error) {
-	videoSource := VideoSource{}
-	err := db.SQL.Get(&videoSource, `DELETE FROM video_source WHERE id = $1`, videoSourceID)
-	return &videoSource, err
+func (db *VideoSourceDB) DeleteVideoSource(videoSourceID int) error {
+	_, err := db.SQL.Exec(`DELETE FROM video_source WHERE id = $1`, videoSourceID)
+	return err
 }
 
 // UpdateVideoSource updates a videoSource.
-func (db *VideoSourceDB) UpdateVideoSource(videoSourceID int, description string) (*VideoSource, error) {
-	videoSource := VideoSource{}
-	err := db.SQL.Get(&videoSource, `UPDATE video_source SET description = $2 WHERE id = $1 RETURNING *`, videoSourceID, description)
-	return &videoSource, err
+func (db *VideoSourceDB) UpdateVideoSource(videoSourceID int, videoSourceStruct VideoSource) (*VideoSource, error) {
+	videoSourceStruct.ID = videoSourceID
+
+	_, err := db.SQL.NamedQuery(`
+		UPDATE video_source
+		SET name = :name, provider = :provider, username = :username, password = :password,
+		base_url = :base_url, m3u_url = :m3u_url, max_streams = :max_streams, update_frequency = :update_frequency
+		WHERE id = :id`, videoSourceStruct)
+	if err != nil {
+		return nil, err
+	}
+
+	return &videoSourceStruct, nil
 }
 
 // GetAllVideoSources returns all video sources in the database.

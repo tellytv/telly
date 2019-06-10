@@ -40,6 +40,8 @@ func ServeAPI(cc *context.CContext) {
 
 	apiGroup.GET("/guide_sources", wrapContext(cc, getGuideSources))
 	apiGroup.POST("/guide_sources", wrapContext(cc, addGuide))
+	apiGroup.PUT("/guide_sources/:sourceId", wrapContext(cc, saveGuideSource))
+	apiGroup.DELETE("/guide_sources/:sourceId", wrapContext(cc, deleteGuideSource))
 	apiGroup.GET("/guide_sources/channels", wrapContext(cc, getAllChannels))
 	apiGroup.GET("/guide_sources/programmes", wrapContext(cc, getAllProgrammes))
 
@@ -52,6 +54,8 @@ func ServeAPI(cc *context.CContext) {
 
 	apiGroup.GET("/video_sources", wrapContext(cc, getVideoSources))
 	apiGroup.POST("/video_sources", wrapContext(cc, addVideoSource))
+	apiGroup.PUT("/video_sources/:sourceId", wrapContext(cc, saveVideoSource))
+	apiGroup.DELETE("/video_sources/:sourceId", wrapContext(cc, deleteVideoSource))
 	apiGroup.GET("/video_sources/tracks", wrapContext(cc, getAllTracks))
 
 	apiGroup.GET("/streams", func(c *gin.Context) {
