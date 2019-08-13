@@ -2,7 +2,7 @@
 
 A IPTV proxy for Plex Live written in Golang
 
-A docker create template for *nix systems (see [here for OS X and Windows)](https://github.com/tellytv/telly/blob/master/README.md#os-x-and-windows):
+A docker create template for *nix systems (see [here for OS X and Windows)](https://github.com/tellytv/telly/blob/docker/README.md#os-x-and-windows):
 
 ```
 docker create --rm \
@@ -25,8 +25,8 @@ docker create --rm \
 * `-e PGID` for GroupID
 * `-e PUID` for UserID 
 * `-e STREAMS` - Number of simultaneous streams allowed by your IPTV provider
-* `-e M3U` - Link provided by your IPTV provider or a [full path to a file](https://github.com/tellytv/telly#path-of-m3u-and-epg-files)
-* `-e EPG` - Link provided by your IPTV provider or a [full path to a file](https://github.com/tellytv/telly#path-of-m3u-and-epg-files)
+* `-e M3U` - Link provided by your IPTV provider or a [full path to a file](https://github.com/tellytv/telly/blob/docker/README.md#path-of-m3u-and-epg-files)
+* `-e EPG` - Link provided by your IPTV provider or a [full path to a file](https://github.com/tellytv/telly/blob/docker/README.md#path-of-m3u-and-epg-files)
 * `-e BASE` - IP address or domain that Plex will use to connect to telly (must be reachable by plex)
 * `-e FILTER` - A regular expression [or "regex"] that will include entries from the input M3U to get it below 420 channels
 * `-e FFMPEG` - Enable FFMPEG to improve plex playback, optional variable, don't use it to turn it off
