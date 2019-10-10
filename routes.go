@@ -205,6 +205,7 @@ func stream(lineup *lineup) gin.HandlerFunc {
 				log.WithError(startErr).Errorln("Error starting ffmpeg")
 				return
 			}
+			defer run.Wait()
 
 			go func() {
 				scanner := bufio.NewScanner(stderr)
