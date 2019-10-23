@@ -60,7 +60,7 @@ Example: With `-v /opt/telly:/config` your m3u file should be inside `/opt/telly
 
 #### OS X and Windows
 
-Windows and OS X platforms does not have `/etc/localtime` to retrieve timezone information, so you need to add a `-e TZ=Europe/Amsterdam` variable to your docker command and remove `-v /etc/localtime:/etc/localtime:ro \`. 
+Windows and OS X platforms do not have `/etc/localtime` to retrieve timezone information, so you need to add a `-e TZ=Europe/Amsterdam` variable to your docker command and remove `-v /etc/localtime:/etc/localtime:ro \`.  Of course, the variable you add should reflect your desired time zone if it is not `Europe/Amsterdam`.
 
 [List of Time Zones here](https://timezonedb.com/time-zones)
 
