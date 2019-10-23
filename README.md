@@ -28,7 +28,7 @@ docker create --rm \
 * `-e M3U` - Link provided by your IPTV provider or a [full path to a file](https://github.com/tellytv/telly/blob/docker/README.md#path-of-m3u-and-epg-files)
 * `-e EPG` - Link provided by your IPTV provider or a [full path to a file](https://github.com/tellytv/telly/blob/docker/README.md#path-of-m3u-and-epg-files)
 * `-e BASE` - IP address or domain that Plex will use to connect to telly (must be reachable by plex)
-* `-e FILTER` - A regular expression [or "regex"] that will include entries from the input M3U to get it below 420 channels
+* `-e FILTER` - A regular expression [or "regex"] that will include entries from the input M3U to get it below 420 channels.  The filter shown above WILL NOT WORK.
 * `-e FFMPEG` - Enable FFMPEG to improve plex playback, optional variable, don't use it to turn it off
 * `-e PERSISTENCE` - If you need to customize your configuration file for some reason [see here](https://github.com/tellytv/telly#customizing-the-configuration-file)
 * `-v /opt/telly:/config` - Directory where configuration files are stored
@@ -66,7 +66,9 @@ Windows and OS X platforms do not have `/etc/localtime` to retrieve timezone inf
 
 #### Customizing the configuration file 
 
-If need to edit the configuration file directly for some reason use the variable `-e PERSISTENCE=true` so the file won't be overwritten. See how [here](https://github.com/tellytv/telly/wiki/Running-Telly%3A-Config-File)
+The docker command above will overwrite your config file if one exists.  If you have edited the configuration file directly for some reason and do not want that to happen use the variable `-e PERSISTENCE=true` so the file won't be overwritten. 
+
+Information on the content of the config file [here](https://github.com/tellytv/telly/wiki/Running-Telly%3A-Config-File)
 
 # How to contribute
 
