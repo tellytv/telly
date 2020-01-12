@@ -51,7 +51,7 @@ time="2019-04-02T04:03:23Z" level=info msg="Broadcasting from http://0.0.0.0:607
 time="2019-04-02T04:03:23Z" level=info msg="EPG URL: http://0.0.0.0:6077/epg.xml"
 ```
 
-If you see this, procceed to [Adding Telly to Plex](https://github.com/tellytv/telly/wiki/Adding-Telly-to-Plex) if not check your variables.
+If you see this, proceed to [Adding Telly to Plex](https://github.com/tellytv/telly/wiki/Adding-Telly-to-Plex) if not check your variables.
 
 #### Path of M3U and EPG files
 
