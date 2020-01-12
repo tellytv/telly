@@ -11,3 +11,6 @@ vendor/
 /.tarballs
 *.tar.gz
 telly.config.*
+.idea/*
+telly.db
+a_main-packr.go
