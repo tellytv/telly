@@ -30,7 +30,7 @@ cross: promu
 	@echo ">> crossbuilding binaries"
 	@$(PROMU) crossbuild
 
-tarballs: promu
+tarballs: promu cross
 	@echo ">> creating release tarballs"
 	@$(PROMU) crossbuild tarballs
 
