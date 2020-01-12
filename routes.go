@@ -180,16 +180,24 @@ func stream(lineup *lineup) gin.HandlerFunc {
 		}
 
 		if channel, ok := lineup.channels[channelID]; ok {
+			channelURI := channel.providerChannel.Track.URI
+
 			log.Infof("Serving channel number %d", channelID)
 
-			if !viper.IsSet("iptv.ffmpeg") {
-				c.Redirect(http.StatusMovedPermanently, channel.providerChannel.Track.URI)
+			useFFMpeg := viper.IsSet("iptv.ffmpeg")
+			if useFFMpeg {
+				useFFMpeg = viper.GetBool("iptv.ffmpeg")
+			}
+
+			if !useFFMpeg {
+				log.Debugf("Redirecting caller to %s", channelURI)
+				c.Redirect(http.StatusMovedPermanently, channelURI)
 				return
 			}
 
 			log.Infoln("Remuxing stream with ffmpeg")
 
-			run := exec.Command("ffmpeg", "-i", channel.providerChannel.Track.URI, "-codec", "copy", "-f", "mpegts", "pipe:1")
+			run := exec.Command("ffmpeg", "-i", channelURI, "-codec", "copy", "-f", "mpegts", "pipe:1")
 			ffmpegout, err := run.StdoutPipe()
 			if err != nil {
 				log.WithError(err).Errorln("StdoutPipe Error")
