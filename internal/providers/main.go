@@ -50,12 +50,6 @@ type Configuration struct {
 
 func (i *Configuration) GetProvider() (Provider, error) {
 	switch strings.ToLower(i.Provider) {
-	case "iptv-epg", "iptvepg":
-		return newIPTVEPG(i)
-	case "iris", "iristv":
-		return newIris(i)
-	case "area51":
-		return newArea51(i)
 	default:
 		return newCustomProvider(i)
 	}
