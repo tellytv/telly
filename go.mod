@@ -8,6 +8,7 @@ require (
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
+	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/gobuffalo/packd v0.1.0 // indirect
 	github.com/gobuffalo/packr v1.25.0
@@ -36,7 +37,7 @@ require (
 	github.com/spf13/viper v1.4.0
 	github.com/tellytv/go.schedulesdirect v0.0.0-20180903021109-bb2d9eec79e9
 	github.com/tellytv/go.xtream-codes v0.0.0-20190427212115-45e8162ba888
-	github.com/ugorji/go/codec v1.1.5-pre // indirect
+	github.com/ugorji/go v1.1.5-pre // indirect
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	github.com/zsais/go-gin-prometheus v0.0.0-20181030200533-58963fb32f54
 	gitlab.com/NebulousLabs/go-upnp v0.0.0-20181011194642-3a71999ed0d3 // indirect
