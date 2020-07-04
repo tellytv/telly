@@ -100,8 +100,9 @@ func serve(lineup *lineup) {
 	router.StaticFS("/manage", box)
 
 	log.Infof("telly is live and on the air!")
-	log.Infof("Broadcasting from http://%s/", viper.GetString("web.listen-address"))
-	log.Infof("EPG URL: http://%s/epg.xml", viper.GetString("web.listen-address"))
+	log.Infof("Broadcasting from http://%s/", viper.GetString("web.base-address"))
+	log.Infof("EPG URL: http://%s/epg.xml", viper.GetString("web.base-address"))
+	log.Infof("Lineup JSON: http://%s/lineup.json", viper.GetString("web.base-address"))
 
 	if err := router.Run(viper.GetString("web.listen-address")); err != nil {
 		log.WithError(err).Panicln("Error starting up web server")
