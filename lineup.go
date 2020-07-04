@@ -205,6 +205,10 @@ func (l *lineup) processProvider(provider providers.Provider) (int, error) {
 
 	log.Infof("Loaded %d channels into the lineup from %s", addedChannels, provider.Name())
 
+	if addedChannels == 0 {
+		log.Infof("Check your filter; %d channels were blocked by it", len(failedChannels))
+	}
+
 	return addedChannels, nil
 }
 
