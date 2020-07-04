@@ -26,6 +26,13 @@ func (t *Time) MarshalXMLAttr(name xml.Name) (xml.Attr, error) {
 
 // UnmarshalXMLAttr is used to unmarshal a time in the XMLTV format to a time.Time.
 func (t *Time) UnmarshalXMLAttr(attr xml.Attr) error {
+	// This is a barebones handling of broken XMLTV entries like this one:
+	// <programme start="20200630200000 -0400" stop="-00011130000000 -0500" channel="WHATEVER" >
+	// What's that negative stop time about?  Ignore it
+	if strings.HasPrefix(attr.Value, "-") {
+		return nil
+	}
+
 	t1, err := time.Parse("20060102150405 -0700", attr.Value)
 	if err != nil {
 		return err
