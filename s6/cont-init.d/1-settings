@@ -1,0 +1,86 @@
+#!/usr/bin/with-contenv bash
+source /etc/env
+
+# Download version 1.1
+
+wget -q https://github.com/tellytv/telly/raw/docker/files/telly-11-latest-amd64 -O /usr/bin/telly
+
+# Add ffmpeg file & cleanup /tmp
+
+wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -P /tmp
+
+tar -xf /tmp/ffmpeg-release-amd64-static.tar.xz  --no-anchored --strip-components=1 -C /usr/bin/ 'ffmpeg' 
+
+rm /tmp/ffmpeg-release-amd64-static.tar.xz && rm /tmp/s6-overlay-amd64.tar.gz
+
+# Make sure folders exist
+
+mkdir -p /config
+mkdir -p /etc/telly
+
+# Create user and set permissions
+
+adduser --disabled-login --no-create-home --gecos "" telly > /dev/null 2>&1
+
+# Handling FFMPEG variable for config file
+
+if [ "$FFMPEG" == "true" ]; then FFMPEG="FFMpeg = true"; fi
+
+# Create config file if persist flag is not set or file doesn't exist already
+
+if [ ! -f /config/telly.config.toml ] || [ -z "$PERSISTENCE" ]; then
+
+cat << EOF > /config/telly.config.toml
+[Discovery]                                   
+  Device-Auth = "telly123"                    
+  Device-ID = 12345678                        
+  Device-UUID = ""
+  Device-Firmware-Name = "hdhomeruntc_atsc"
+  Device-Firmware-Version = "20150826"
+  Device-Friendly-Name = "telly"
+  Device-Manufacturer = "Silicondust"
+  Device-Model-Number = "HDTC-2US"
+  SSDP = true
+
+[IPTV]
+  Streams = $STREAMS               
+  Starting-Channel = 10000 
+  XMLTV-Channels = true     
+  ${FFMPEG:+"$FFMPEG"}              
+
+[Log]
+  Level = "info"            
+  Requests = true           
+
+[Web]
+  Base-Address = "$BASE"  
+  Listen-Address = "0.0.0.0:6077" 
+
+[[Source]]
+  Provider = "Custom"
+  M3U = "$M3U"  
+  EPG = "$EPG"       
+  Filter = "${FILTER:+"$FILTER"}"
+  FilterKey = "group-title" 
+  FilterRaw = false        
+  Sort = "group-title"     
+
+# Documentation at: https://github.com/tellytv/telly/wiki/Running-Telly%3A-Config-File 
+EOF
+
+fi
+
+# Fix permissions
+
+groupmod -o -g "$PGID" telly > /dev/null 2>&1
+usermod -o -u "$PUID" telly > /dev/null 2>&1
+
+chown -R telly:telly /config /usr/bin/telly
+
+chmod +x /usr/bin/telly 
+chmod +x /usr/bin/ffmpeg
+
+# Symlink config directory to /etc/telly
+
+ln -sfn /config/* /etc/telly/
+
