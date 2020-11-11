@@ -70,40 +70,7 @@ Here's an example configuration file. **You will need to create this file.**  It
 #  Password = ""             # works with it at this time
 
 # AT LEAST ONE SOURCE IS REQUIRED #################################################################
-# DELETE OR COMMENT OUT SOURCES THAT YOU ARE NOT USING ############################################
 # NONE OF THESE EXAMPLES WORK AS-IS; IF YOU DON'T CHANGE IT, DELETE IT ############################
-[[Source]]
-  Name = ""                 # Name is optional and is used mostly for logging purposes
-  Provider = "Iris"         # named providers currently supported are "area51" and "Iris"
-# IF YOUR PROVIDER IS NOT ONE OF THE ABOVE, CONFIGURE IT AS A "Custom" PROVIDER; SEE BELOW
-  Username = "YOUR_IPTV_USERNAME"
-  Password = "YOUR_IPTV_PASSWORD"
-  # THE FOLLOWING KEYS ARE OPTIONAL IN THEORY, REQUIRED IN PRACTICE
-  Filter = "YOUR|FILTER|*REGEX"
-  FilterKey = "group-title" # FilterKey normally defaults to whatever the provider file says is best, 
-                            # otherwise you must set this.
-  FilterRaw = false         # FilterRaw will run your regex on the entire line instead of just specific keys.
-  Sort = "group-title"      # Sort will alphabetically sort your channels by the M3U key provided
-
-[[Source]]
-  Name = ""                    # Name is optional and is used mostly for logging purposes
-  Provider = "IPTV-EPG"        # DO NOT CHANGE THIS IF YOU ARE USING THIS PROVIDER
-  Username = "M3U-Identifier"  # From http://iptv-epg.com/[M3U-Identifier].m3u
-  Password = "XML-Identifier"  # From http://iptv-epg.com/[XML-Identifier].xml
-  # NOTE: THOSE KEY NAMES DO NOT MAKE SENSE FOR THIS PROVIDER ################
-  # THIS IS JUST AN IMPLEMENTATION DETAIL.  JUST GO WITH IT.
-  # For this purpose, IPTV-EPG does not have a "username" and "password", HOWEVER,
-  # telly's scaffolding for a "Named provider" does. Rather than special-casing this provider,
-  # the username and password are used to hold the two required bits of information.
-  # THIS IS JUST AN IMPLEMENTATION DETAIL.  JUST GO WITH IT.
-  # NOTE: THOSE KEY NAMES DO NOT MAKE SENSE FOR THIS PROVIDER ################
-  # THE FOLLOWING KEYS ARE OPTIONAL HERE; IF YOU"RE USING IPTV-EPG YOU'VE PROBABLY DONE YOUR
-  # FILTERING THERE ALREADY
-  # Filter = ""
-  # FilterKey = ""
-  # FilterRaw = false
-  # Sort = ""
-
 [[Source]]
   Name = ""                 # Name is optional and is used mostly for logging purposes
   Provider = "Custom"       # DO NOT CHANGE THIS IF YOU ARE ENTERING URLS OR FILE PATHS
