@@ -115,12 +115,14 @@ func decodeInfoLine(line string) (float64, string, map[string]string) {
 
 	keyMap := make(map[string]string)
 
-	for _, match := range matches[1 : len(matches)-1] {
-		val := match[2]
-		if val == "" { // If empty string find a number in [3]
-			val = match[3]
+	if len(matches) > 1 {
+		for _, match := range matches[1 : len(matches)-1] {
+			val := match[2]
+			if val == "" { // If empty string find a number in [3]
+				val = match[3]
+			}
+			keyMap[match[1]] = val
 		}
-		keyMap[match[1]] = val
 	}
 
 	return durationFloat, title, keyMap
