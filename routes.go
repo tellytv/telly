@@ -193,7 +193,7 @@ func stream(lineup *lineup) gin.HandlerFunc {
 			if useFFMpeg {
 				useFFMpeg = viper.GetBool("iptv.ffmpeg")
 				if viper.IsSet("iptv.ffmpegcachesize") {
-					args = append(args, "-rfbufsize", viper.GetString("iptv.ffmpegcachesize"))
+					args = append(args, "-rtbufsize", viper.GetString("iptv.ffmpegcachesize"))
 				}
 			}
 
