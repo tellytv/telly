@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	"github.com/tellytv/go.schedulesdirect"
+	schedulesdirect "github.com/tellytv/go.schedulesdirect"
 	m3u "github.com/tellytv/telly/internal/m3uplus"
 	"github.com/tellytv/telly/internal/providers"
 	"github.com/tellytv/telly/internal/xmltv"
@@ -191,6 +191,7 @@ func (l *lineup) processProvider(provider providers.Provider) (int, error) {
 		channel, processErr := l.processProviderChannel(channel, programmeMap)
 		if processErr != nil {
 			log.WithError(processErr).Errorln("error processing track")
+			continue
 		} else if channel == nil {
 			log.Infof("Channel %s was returned empty from the provider (%s)", track.Name, provider.Name())
 			continue
