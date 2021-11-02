@@ -58,7 +58,7 @@ func (i *iptvepg) ParseTrack(track m3u.Track, channelMap map[string]xmltv.Channe
 		Name:         nameVal,
 		Logo:         logoVal,
 		Number:       channelNumber,
-		StreamURL:    track.URI,
+		StreamURL:    track.URI.String(),
 		StreamID:     channelNumber,
 		HD:           strings.Contains(strings.ToLower(track.Name), "hd"),
 		StreamFormat: "Unknown",

@@ -59,7 +59,7 @@ func (i *customProvider) ParseTrack(track m3u.Track, channelMap map[string]xmltv
 		Name:         nameVal,
 		Logo:         logoVal,
 		Number:       chanNum,
-		StreamURL:    track.URI,
+		StreamURL:    track.URI.String(),
 		StreamID:     chanNum,
 		HD:           strings.Contains(strings.ToLower(track.Name), "hd"),
 		StreamFormat: "Unknown",

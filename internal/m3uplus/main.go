@@ -22,7 +22,7 @@ type Playlist struct {
 type Track struct {
 	Name       string
 	Length     float64
-	URI        string
+	URI        *url.URL
 	Tags       map[string]string
 	Raw        string
 	LineNumber int
@@ -98,7 +98,8 @@ func decodeLine(playlist *Playlist, line string, lineNumber int) error {
 		playlist.Tracks = append(playlist.Tracks, track)
 
 	case IsUrl(line):
-		playlist.Tracks[len(playlist.Tracks)-1].URI = line
+		uri, _ := url.Parse(line)
+		playlist.Tracks[len(playlist.Tracks)-1].URI = uri
 	}
 
 	return nil
