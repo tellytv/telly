@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	"github.com/tellytv/go.schedulesdirect"
+	schedulesdirect "github.com/tellytv/go.schedulesdirect"
 	m3u "github.com/tellytv/telly/internal/m3uplus"
 	"github.com/tellytv/telly/internal/providers"
 	"github.com/tellytv/telly/internal/xmltv"
@@ -70,6 +70,8 @@ type lineup struct {
 	channels map[int]hdHomeRunLineupItem
 
 	sd *schedulesdirect.Client
+
+	FfmpegEnabled bool
 }
 
 // newLineup returns a new lineup for the given config struct.
@@ -95,10 +97,16 @@ func newLineup() *lineup {
 		})
 	}
 
+	useFFMpeg := viper.IsSet("iptv.ffmpeg")
+	if useFFMpeg {
+		useFFMpeg = viper.GetBool("iptv.ffmpeg")
+	}
+
 	lineup := &lineup{
 		assignedChannelNumber: viper.GetInt("iptv.starting-channel"),
 		xmlTVChannelNumbers:   viper.GetBool("iptv.xmltv-channels"),
 		channels:              make(map[int]hdHomeRunLineupItem),
+		FfmpegEnabled:         useFFMpeg,
 	}
 
 	if viper.IsSet("schedulesdirect.username") && viper.IsSet("schedulesdirect.password") {
@@ -191,6 +199,7 @@ func (l *lineup) processProvider(provider providers.Provider) (int, error) {
 		channel, processErr := l.processProviderChannel(channel, programmeMap)
 		if processErr != nil {
 			log.WithError(processErr).Errorln("error processing track")
+			continue
 		} else if channel == nil {
 			log.Infof("Channel %s was returned empty from the provider (%s)", track.Name, provider.Name())
 			continue
@@ -225,6 +234,12 @@ func (l *lineup) prepareProvider(provider providers.Provider) (*m3u.Playlist, ma
 	if err != nil {
 		log.WithError(err).Errorln("unable to parse m3u file")
 		return nil, nil, nil, err
+	}
+
+	for _, playlistTrack := range rawPlaylist.Tracks {
+		if (playlistTrack.URI.Scheme == "http" || playlistTrack.URI.Scheme == "udp") && !l.FfmpegEnabled {
+			log.Errorf("The playlist you tried to add has at least one entry using a protocol other than http or udp and you have ffmpeg disabled in your config. This will most likely not work. Offending URI is %s", playlistTrack.URI)
+		}
 	}
 
 	if closeM3UErr := reader.Close(); closeM3UErr != nil {

@@ -47,7 +47,7 @@ func (i *iris) ParseTrack(track m3u.Track, channelMap map[string]xmltv.Channel) 
 		Name:         nameVal,
 		Logo:         logoVal,
 		Number:       0,
-		StreamURL:    track.URI,
+		StreamURL:    track.URI.String(),
 		StreamID:     0,
 		HD:           strings.Contains(strings.ToLower(track.Name), "hd"),
 		StreamFormat: "Unknown",

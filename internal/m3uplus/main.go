@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,7 +22,7 @@ type Playlist struct {
 type Track struct {
 	Name       string
 	Length     float64
-	URI        string
+	URI        *url.URL
 	Tags       map[string]string
 	Raw        string
 	LineNumber int
@@ -96,11 +97,18 @@ func decodeLine(playlist *Playlist, line string, lineNumber int) error {
 
 		playlist.Tracks = append(playlist.Tracks, track)
 
-	case strings.HasPrefix(line, "http") || strings.HasPrefix(line, "udp"):
-		playlist.Tracks[len(playlist.Tracks)-1].URI = line
+	case IsUrl(line):
+		uri, _ := url.Parse(line)
+		playlist.Tracks[len(playlist.Tracks)-1].URI = uri
 	}
 
 	return nil
+}
+
+// From https://stackoverflow.com/questions/25747580/ensure-a-uri-is-valid/25747925#25747925
+func IsUrl(str string) bool {
+	u, err := url.Parse(str)
+	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
 var infoRegex = regexp.MustCompile(`([^\s="]+)=(?:"(.*?)"|(\d+))(?:,([.*^,]))?|#EXTINF:(-?\d*\s*)|,(.*)`)
