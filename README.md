@@ -4,11 +4,11 @@ IPTV proxy for Plex Live written in Golang
 
 Please refer to the [Wiki](https://github.com/tellytv/telly/wiki) for the most current documentation.
 
-## This readme refers to version ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+) 1.1.x ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+).  It does not apply to versions other than that.
+## This readme refers to version 1.1.x .  It does not apply to versions other than that.
 
 The [Wiki](https://github.com/tellytv/telly/wiki) includes walkthroughs for most platforms that go into more detail than listed below:
 
-## ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) THIS IS A DEVELOPMENT BRANCH ![#f03c15](https://placehold.it/15/f03c15/000000?text=+)
+## THIS IS A DEVELOPMENT BRANCH
 
 It is under active development and things may change quickly and dramatically.  Please join the discord server if you use this branch and be prepared for some tinkering and breakage.
 
@@ -87,7 +87,6 @@ Here's an example configuration file. **You will need to create this file.**  It
   Sort = "group-title"      # Sort will alphabetically sort your channels by the M3U key provided
 # END TELLY CONFIG  ###############################################################################
 ```
-![#f03c15](https://placehold.it/15/f03c15/000000?text=+) You only need one source; the ones you are not using should be commented out or deleted.![#f03c15](https://placehold.it/15/f03c15/000000?text=+)  The name and filter-related keys can be used with any of the sources.
 
 # FFMpeg
 
