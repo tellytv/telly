@@ -4,9 +4,13 @@ telly
 .DS_Store
 /.GOPATH
 /bin
-*.xml
+/*.xml
 vendor/
 /.build
 /.release
 /.tarballs
 *.tar.gz
+telly.config.*
+.idea/*
+telly.db
+a_main-packr.go

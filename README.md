@@ -2,98 +2,139 @@
 
 IPTV proxy for Plex Live written in Golang
 
-## Please refer to the [Wiki](https://github.com/tellytv/telly/wiki) for the most current documentation.
+Please refer to the [Wiki](https://github.com/tellytv/telly/wiki) for the most current documentation.
 
-Seriously, if you have problems the first thing we're going to ask is, "Have you gone through the walkthrough in the wiki?"
-
-# Setup
-## This readme refers to version ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+) 1.0.x ![#0eaf29](https://placehold.it/15/0eaf29/000000?text=+).  It does not apply to versions other than that.
-
-## Most users should use version 1.1 from the dev branch.
-
-> **If you are looking for information about the new config-file based ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) PRERELEASE BETA 1.1 ![#f03c15](https://placehold.it/15/f03c15/000000?text=+), go to the [dev branch](https://github.com/tellytv/telly/tree/dev)**
-
-> **If you are looking for information about the web-based ![#f03c15](https://placehold.it/15/f03c15/000000?text=+) UNSUPPORTED ALPHA 1.5 ![#f03c15](https://placehold.it/15/f03c15/000000?text=+), go to the [telly Discord](https://discord.gg/bnNC8qX); there is no 1.5 documentation on github as yet.**
-
-> **See end of setup section for an important note about channel filtering**
+## This readme refers to version 1.1.x .  It does not apply to versions other than that.
 
 The [Wiki](https://github.com/tellytv/telly/wiki) includes walkthroughs for most platforms that go into more detail than listed below:
 
-Go to the [Wiki](https://github.com/tellytv/telly/wiki).
+## THIS IS A DEVELOPMENT BRANCH
 
-## Quickstart:
+It is under active development and things may change quickly and dramatically.  Please join the discord server if you use this branch and be prepared for some tinkering and breakage.
 
-Please read through to the end before trying to run telly.  With 1.0, you will need at minimum two parameters, a playlist and a filter.
+# Configuration
 
-0) Go to the [Wiki](https://github.com/tellytv/telly/wiki).
+Here's an example configuration file. **You will need to create this file.**  It should be placed in `/etc/telly/telly.config.toml` or `$HOME/.telly/telly.config.toml` or `telly.config.toml` in the directory that telly is running from.
 
-1) Go to the releases page and download the correct version for your operating system
-2) Mark the file as executable for non-windows platforms `chmod a+x <FILENAME>`
-3) Rename the file to "telly" if desired; note that from here this readme will refer to "telly"; the file you downloaded is probably called "telly-linux-amd64.dms" or something like that.
-**If you do not rename the file, then substitute references here to "telly" with the name of the file you've downloaded.**
-**Under Windows, don't forget the `.exe`; i.e. `telly.exe`.**
-4) Have the .m3u file on hand from your IPTV provider of choice
-**Any command arguments can also be supplied as environment variables, for example --iptv.playlist can also be provided as the TELLY_IPTV_PLAYLIST environment variable**
-5) Run `telly` with the `--iptv.playlist` commandline argument pointing to your .m3u file. (This can be a local file or a URL) For example: `./telly --iptv.playlist=/home/github/myiptv.m3u`
-6) If you would like multiple streams/tuners use the `--iptv.streams` commandline option. Default is 1. When setting or changing this option, `plexmediaserver` will need to be completely **restarted**.
-7) If you would like `telly` to attempt to the filter the m3u a bit, add the `--filter.regex` commandline option. If you would like to use your own regex, run `telly` with `--filter.regex="<regex>"`, for example `--filter.regex=".*UK.*"`  Regex behavior is by default a blacklist; telly will EXCLUDE channels that match your regex [and if unspecified the filter matches ALL channels]; to reverse this and INCLUDE channels that match your regex, add `--filter.regex-inclusive` to the command line.
-8) If `telly` tells you `[telly] [info] listening on ...` - great! Your .m3u file was successfully parsed and `telly` is running. Check below for how to add it into Plex.
-9) If `telly` fails to run, check the error. If it's self explanatory, great. If you don't understand, feel free to open an issue and we'll help you out.
-10) For your IPTV provider m3u, try using option `type=m3u_plus` and `output=ts`.
+> NOTE "the directory telly is running from" is your CURRENT WORKING DIRECTORY.  For example, if telly and its config file file are in `/opt/telly/` and you run telly from your home directory, telly will not find its config file because it will be looking for it in your home directory.  If this makes little sense to you, use one of the other two locations OR cd into the directory where telly is located before running it from the command line.
 
-> **Regex handling changed in 1.0.  `filter.regex` has become a blacklist which defaults to blocking everything.  If you are not using a regex to filter your M3U file, you will need to add at a minimum `--filter.regex-inclusive` to the command line.  If you do not add this, telly will by default EXCLUDE everything in your M3U.  The symptom here is typically telly seeming to start up just fine but reporting 0 channels.**
+> ATTENTION Windows users: be sure that there isn’t a hidden extension on the file.  Telly can't read its config file if it's named something like `telly.config.toml.txt`.
 
-# Adding it into Plex
+```toml
+# THIS SECTION IS REQUIRED ########################################################################
+[Discovery]                                    # most likely you won't need to change anything here
+  Device-Auth = "telly123"                     # These settings are all related to how telly identifies
+  Device-ID = "12345678"                       # itself to Plex.
+  Device-UUID = ""
+  Device-Firmware-Name = "hdhomeruntc_atsc"
+  Device-Firmware-Version = "20150826"
+  Device-Friendly-Name = "telly"
+  Device-Manufacturer = "Silicondust"
+  Device-Model-Number = "HDTC-2US"
+  SSDP = true
 
-1) Once `telly` is running, you can add it to Plex. **Plex Live requires Plex Pass at the time of writing**
-2) Navigate to `app.plex.tv` and make sure you're logged in. Go to Settings -> Server -> Live TV & DVR
-3) Click 'Setup' or 'Add'. The Telly virtual DVR should show up automatically.  If it doesn't, press the text to add it manually - input `THE_IP_WHERE_TELLY_IS:6077` (or whatever port you're using - you can change it using the `-listen` commandline argument, i.e. `-listen THE_IP_WHERE_TELLY_IS:12345`)
-4) Plex will find your device (in some cases it continues to load but the continue button becomes orange, i.e. clickable. Click it) - select the country in the bottom left and ensure Plex has found the channels. Proceed.
-5) Once you get to the channel listing, `telly` currently __doesn't__ have any idea of EPG data so it __starts the channel numbers at 10000 to avoid complications__ with selecting channels at this stage. EPG APIs will come in the future, but for now you'll have to manually match up what `telly` is telling Plex to the actual channel numbers. For UK folk, `Sky HD` is the best option I've found.
-6) Once you've matched up all the channels, hit next and Plex will start downloading necessary EPG data.
-7) Once that is done, you might need to restart Plex so the telly tuner is not marked as dead.
-8) You're done! Enjoy using `telly`. :-)
+# Note on running multiple instances of telly
+# There are three things that make up a "key" for a given Telly Virtual DVR:
+# Device-ID [required], Device-UUID [optional], and port [required]
+# When you configure your additional telly instances, change:
+# the Device-ID [above] AND
+# the Device-UUID [above, if you're entering one] AND
+# the port [below in the "Web" section]
+
+# THIS SECTION IS REQUIRED ########################################################################
+[IPTV]
+  Streams = 1               # number of simultaneous streams that the telly virtual DVR will provide
+                            # This is often 1, but is set by your iptv provider; for example, 
+                            # Vaders provides 5
+  Starting-Channel = 10000  # When telly assigns channel numbers it will start here
+  XMLTV-Channels = true     # if true, any channel numbers specified in your M3U file will be used.
+# FFMpeg = true             # if this is uncommented, streams are buffered through ffmpeg; 
+                            # ffmpeg must be installed and on your $PATH
+                            # if you want to use this with Docker, be sure you use the correct docker image
+# if you DO NOT WANT TO USE FFMPEG leave this commented; DO NOT SET IT TO FALSE
+  
+# THIS SECTION IS REQUIRED ########################################################################
+[Log]
+  Level = "info"            # Only log messages at or above the given level. [debug, info, warn, error, fatal]
+  Requests = true           # Log HTTP requests made to telly
+
+# THIS SECTION IS REQUIRED ########################################################################
+[Web]
+  Base-Address = "0.0.0.0:6077"   # Set this to the IP address of the machine telly runs on
+  Listen-Address = "0.0.0.0:6077" # this can stay as-is
+
+# THIS SECTION IS NOT USEFUL ======================================================================
+#[SchedulesDirect]           # If you have a Schedules Direct account, fill in details and then
+                             # UNCOMMENT THIS SECTION
+#  Username = ""             # This is under construction; no provider
+#  Password = ""             # works with it at this time
+
+# AT LEAST ONE SOURCE IS REQUIRED #################################################################
+# NONE OF THESE EXAMPLES WORK AS-IS; IF YOU DON'T CHANGE IT, DELETE IT ############################
+[[Source]]
+  Name = ""                 # Name is optional and is used mostly for logging purposes
+  Provider = "Custom"       # DO NOT CHANGE THIS IF YOU ARE ENTERING URLS OR FILE PATHS
+                            # "Custom" is telly's internal identifier for this 'Provider'
+                            # If you change it to "NAMEOFPROVIDER" telly's reaction will be
+                            # "I don't recognize a provider called 'NAMEOFPROVIDER'."
+  M3U = "http://myprovider.com/playlist.m3u"  # These can be either URLs or fully-qualified paths.
+  EPG = "http://myprovider.com/epg.xml"
+  # THE FOLLOWING KEYS ARE OPTIONAL IN THEORY, REQUIRED IN PRACTICE
+  Filter = "Sports|Premium Movies|United States.*|USA"
+  FilterKey = "group-title" # FilterKey normally defaults to whatever the provider file says is best, 
+                            # otherwise you must set this.
+  FilterRaw = false         # FilterRaw will run your regex on the entire line instead of just specific keys.
+  Sort = "group-title"      # Sort will alphabetically sort your channels by the M3U key provided
+# END TELLY CONFIG  ###############################################################################
+```
+
+# FFMpeg
+
+Telly can buffer the streams to Plex through ffmpeg.  This has the potential for several benefits, but today it primarily:
+
+1. Allows support for stream formats that may cause problems for Plex directly.
+1. Eliminates the use of redirects and makes it possible for telly to report exactly why a given stream failed.
+
+To take advantage of this, ffmpeg must be installed and available in your path.
 
 # Docker
 
-Go to the [Wiki](https://github.com/tellytv/telly/wiki).
+There are two different docker images available:
+
+## tellytv/telly:dev
+The standard docker image for the dev branch
+
+## tellytv/telly:dev-ffmpeg
+This docker image has ffmpeg preinstalled.  If you want to use the ffmpeg feature, use this image.  It may be safest to use this image generally, since it is not much larger than the standard image and allows you to turn the ffmpeg features on and off without requiring changes to your docker run command.  The examples below use this image.
 
 ## `docker run`
 ```
 docker run -d \
   --name='telly' \
   --net='bridge' \
-  -e TZ="Europe/Amsterdam" \
-  -e 'TELLY_IPTV_PLAYLIST'='/home/github/myiptv.m3u' \
-  -e TELLY_IPTV_STREAMS=1 \
-  -e TELLY_FILTER_REGEX='.*UK.*' \
+  -e TZ="America/Chicago" \
   -p '6077:6077/tcp' \
-  -v '/tmp/telly':'/tmp':'rw' \
-  tellytv/telly --web.base-address=localhost:6077
+  -v /host/path/to/telly.config.toml:/etc/telly/telly.config.toml \
+  --restart unless-stopped \
+  tellytv/telly:dev-ffmpeg
 ```
 
 ## docker-compose
 ```
 telly:
-  image: tellytv/telly
+  image: tellytv/telly:dev-ffmpeg
   ports:
     - "6077:6077"
   environment:
     - TZ=Europe/Amsterdam
-    - TELLY_IPTV_PLAYLIST=/home/github/myiptv.m3u
-    - TELLY_FILTER_REGEX='.*UK.*'
-    - TELLY_WEB_LISTEN_ADDRESS=telly:6077
-    - TELLY_IPTV_STREAMS=1
-    - TELLY_DISCOVERY_FRIENDLYNAME=Tuner1
-    - TELLY_DISCOVERY_DEVICEID=12345678
-  command: -base=telly:6077
+  volumes:
+    - /host/path/to/telly.config.toml:/etc/telly/telly.config.toml
   restart: unless-stopped
 ```
 
-
 # Troubleshooting
 
-Please free to open an issue if you run into any issues at all, I'll be more than happy to help.
+Please free to [open an issue](https://github.com/tellytv/telly/issues) if you run into any problems at all, we'll be more than happy to help.
 
 # Social
 

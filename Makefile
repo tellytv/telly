@@ -1,6 +1,6 @@
-GO    := GO15VENDOREXPERIMENT=1 go
+GO    := go
+GOPATH ?= $(HOME)/go
 PROMU := $(GOPATH)/bin/promu
-pkgs   = $(shell $(GO) list ./... | grep -v /vendor/)
 
 PREFIX                  ?= $(shell pwd)
 BIN_DIR                 ?= $(shell pwd)
@@ -16,15 +16,23 @@ style:
 
 test:
 	@echo ">> running tests"
-	@$(GO) test -short $(pkgs)
+	@$(GO) test -short ./...
 
 format:
 	@echo ">> formatting code"
-	@$(GO) fmt $(pkgs)
+	@$(GO) fmt ./...
 
 vet:
 	@echo ">> vetting code"
-	@$(GO) vet $(pkgs)
+	@$(GO) vet ./...
+
+cross: promu
+	@echo ">> crossbuilding binaries"
+	@$(PROMU) crossbuild
+
+tarballs: promu cross
+	@echo ">> creating release tarballs"
+	@$(PROMU) crossbuild tarballs
 
 build: promu
 	@echo ">> building binaries"
@@ -32,14 +40,15 @@ build: promu
 
 tarball: promu
 	@echo ">> building release tarball"
-	@$(PROMU) tarball --prefix $(PREFIX) $(BIN_DIR)
+	@$(PROMU) tarball $(BIN_DIR)
 
-docker:
+docker: cross
 	@echo ">> building docker image"
 	@docker build -t "$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)" .
 
 promu:
-	@GOOS=$(shell uname -s | tr A-Z a-z) \
+	@GO111MODULE=off \
+		    GOOS=$(shell uname -s | tr A-Z a-z) \
 	        GOARCH=$(subst x86_64,amd64,$(patsubst i%86,386,$(shell uname -m))) \
 	        $(GO) get -u github.com/prometheus/promu
 

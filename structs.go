@@ -1,57 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"net"
-	"regexp"
-	"strconv"
-
-	"github.com/tellytv/telly/m3u"
 )
-
-type config struct {
-	RegexInclusive bool
-	Regex          *regexp.Regexp
-
-	DirectMode        bool
-	M3UPath           string
-	ConcurrentStreams int
-	StartingChannel   int
-
-	DeviceAuth      string
-	DeviceID        int
-	DeviceUUID      string
-	FriendlyName    string
-	Manufacturer    string
-	ModelNumber     string
-	FirmwareName    string
-	FirmwareVersion string
-	SSDP            bool
-
-	LogRequests bool
-	LogLevel    string
-
-	ListenAddress *net.TCPAddr
-	BaseAddress   *net.TCPAddr
-
-	lineup []LineupItem
-}
-
-func (c *config) DiscoveryData() DiscoveryData {
-	return DiscoveryData{
-		FriendlyName:    c.FriendlyName,
-		Manufacturer:    c.Manufacturer,
-		ModelNumber:     c.ModelNumber,
-		FirmwareName:    c.FirmwareName,
-		TunerCount:      c.ConcurrentStreams,
-		FirmwareVersion: c.FirmwareVersion,
-		DeviceID:        strconv.Itoa(c.DeviceID),
-		DeviceAuth:      c.DeviceAuth,
-		BaseURL:         fmt.Sprintf("http://%s", c.BaseAddress),
-		LineupURL:       fmt.Sprintf("http://%s/lineup.json", c.BaseAddress),
-	}
-}
 
 // DiscoveryData contains data about telly to expose in the HDHomeRun format for Plex detection.
 type DiscoveryData struct {
@@ -87,29 +40,12 @@ func (d *DiscoveryData) UPNP() UPNP {
 
 // LineupStatus exposes the status of the channel lineup.
 type LineupStatus struct {
-	ScanInProgress int
-	ScanPossible   int
-	Source         string
-	SourceList     []string
-}
-
-// LineupItem is a single channel found in the playlist.
-type LineupItem struct {
-	GuideNumber string
-	GuideName   string
-	URL         string
-}
-
-// Track describes a single M3U segment. This struct includes m3u.Track as well as specific IPTV fields we want to get.
-type Track struct {
-	*m3u.Track
-	Catchup       string `m3u:"catchup"`
-	CatchupDays   string `m3u:"catchup-days"`
-	CatchupSource string `m3u:"catchup-source"`
-	GroupTitle    string `m3u:"group-title"`
-	TvgID         string `m3u:"tvg-id"`
-	TvgLogo       string `m3u:"tvg-logo"`
-	TvgName       string `m3u:"tvg-name"`
+	ScanInProgress convertibleBoolean
+	ScanPossible   convertibleBoolean `json:",omitempty"`
+	Source         string             `json:",omitempty"`
+	SourceList     []string           `json:",omitempty"`
+	Progress       int                `json:",omitempty"` // Percent complete
+	Found          int                `json:",omitempty"` // Number of found channels
 }
 
 type upnpVersion struct {
@@ -133,4 +69,53 @@ type UPNP struct {
 	SpecVersion upnpVersion `xml:"specVersion"`
 	URLBase     string      `xml:"URLBase"`
 	Device      upnpDevice  `xml:"device"`
+}
+
+type convertibleBoolean bool
+
+func (bit *convertibleBoolean) MarshalJSON() ([]byte, error) {
+	var bitSetVar int8
+	if *bit {
+		bitSetVar = 1
+	}
+
+	return json.Marshal(bitSetVar)
+}
+
+func (bit *convertibleBoolean) UnmarshalJSON(data []byte) error {
+	asString := string(data)
+	if asString == "1" || asString == "true" {
+		*bit = true
+	} else if asString == "0" || asString == "false" {
+		*bit = false
+	} else {
+		return fmt.Errorf("Boolean unmarshal error: invalid input %s", asString)
+	}
+	return nil
+}
+
+// MarshalXML used to determine if the element is present or not. see https://stackoverflow.com/a/46516243
+func (bit *convertibleBoolean) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	var bitSetVar int8
+	if *bit {
+		bitSetVar = 1
+	}
+
+	return e.EncodeElement(bitSetVar, start)
+}
+
+// UnmarshalXML used to determine if the element is present or not. see https://stackoverflow.com/a/46516243
+func (bit *convertibleBoolean) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	var asString string
+	if decodeErr := d.DecodeElement(&asString, &start); decodeErr != nil {
+		return decodeErr
+	}
+	if asString == "1" || asString == "true" {
+		*bit = true
+	} else if asString == "0" || asString == "false" {
+		*bit = false
+	} else {
+		return fmt.Errorf("Boolean unmarshal error: invalid input %s", asString)
+	}
+	return nil
 }
